@@ -171,9 +171,9 @@ exec_kernal:
 	lda #$FD
 	sta STORE_PROG_SP ; set prog sp to $FA
 	
-	lda #<@wrong_rts
+	lda #< ( program_exit - 1)
 	sta STORE_PROG_STACK + $FE 
-	lda #>@wrong_rts
+	lda #> ( program_exit - 1)
 	sta STORE_PROG_STACK + $FF
 	
 	lda #1
@@ -181,18 +181,19 @@ exec_kernal:
 	lda $04
 	sta process_priority, X
 	
-	lda prog_bank
-	sta ROM_BANK ; restore bank 
+	lda ROM_BANK ; return new program PID in .A
+	
+	ldx prog_bank
+	stx ROM_BANK ; restore bank 
 	cli
 	
 	rts 
 
-; if a program returns via rts instead of brk, assume return val of 1 (error)
-@wrong_rts:
-	lda ROM_BANK
-	sta prog_bank
+; if a program returns via rts instead of brk, return value in .A
+program_exit:
+	ldx ROM_BANK
+	stx prog_bank
 	
-	lda #1
 	jmp handle_prog_exit
 	
 ;

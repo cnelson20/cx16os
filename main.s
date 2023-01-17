@@ -45,7 +45,7 @@ test_irq:
 prog_test:
 	.asciiz "prog.bin"
 incp_test:
-	.asciiz "incp.bin"
+	.asciiz "print.bin"
 
 .export irq_handler
 irq_handler:
@@ -83,6 +83,10 @@ irq_handler:
 irq_re_caller:
 	sei
 	lda prog_proc_status
+	and #$10
+	beq :+
+	jmp switch_prog ; a brk means a process gives back its execution time
+	:
 	
 	; an actual irq ;
 	lda vera_status
@@ -96,7 +100,7 @@ irq_re_caller:
 handle_prog_exit:
 	ldx prog_bank ; bank = process id
 	stz process_table, X ; declare id as now unused
-	sta process_table, X ; store return value
+	sta return_table, X ; store return value
 	
 	txa ; pid in A 
 	ldx #0
@@ -142,6 +146,8 @@ switch_prog:
 	jmp same_prog
 @not_same_prog:
 	phx
+	ldx prog_bank
+	stx ROM_BANK
 	
 	lda prog_reg_a
 	sta STORE_REG_A
@@ -205,7 +211,7 @@ run_next_prog:
 	bne :-
 	ldx STORE_PROG_SP
 	txs	
-		
+	
 same_prog:	
 	; run actual irq handler ;
 	jmp return_to_user
@@ -255,20 +261,20 @@ vera_status:
 
 ; holds whether each process is active
 .export process_table
-process_table := * - 32
+process_table := $9200 ;* - 32
 	.res (256 - 32)
 
 ; holds priority level for each task (higher means more cpu time)	
 .export process_priority
-process_priority := * - 32
+process_priority := $9300 ;* - 32
 	.res (256 - 32)
 	
 ; holds return values for all programs
 .export return_table
-return_table := * - 32
+return_table := $9400 ; * - 32
 	.res (256 - 32)
 
 ; table that holds the pid of each ram bank ;
 .export mem_table
-mem_table:
+mem_table := $9500
 	.res $100 
