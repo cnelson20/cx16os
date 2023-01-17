@@ -36,6 +36,9 @@
 *.x86_64
 *.hex
 
+# x16 program files
+*.prg
+
 # Debug files
 *.dSYM/
 *.su
