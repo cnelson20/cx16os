@@ -17,6 +17,9 @@ memory_copy := $FEE7
 .SEGMENT "CODE"
 	
 init:
+	lda #$0f
+	jsr $FFD2
+	
 	jsr setup_call_table
 	jsr test_irq
 	rts
@@ -25,13 +28,8 @@ test_irq:
 	;lda ROM_BANK
 	;pha 
 	
-	lda #<prog_test
-	ldx #>prog_test
-	ldy #10
-	jsr $9D06
-	
-	lda #<incp_test
-	ldx #>incp_test
+	lda #<shell_name
+	ldx #>shell_name
 	ldy #10
 	jsr $9D06
 	
@@ -42,13 +40,24 @@ test_irq:
 	
 	rts
 	
-prog_test:
-	.asciiz "prog.bin"
-incp_test:
-	.asciiz "print.bin"
+shell_name:
+	.asciiz "shell"
+
+irq_in_use:
+	.byte 0
 
 .export irq_handler
 irq_handler:
+	pha 
+	lda irq_in_use
+	beq :+
+	pla
+	rti
+	:
+	lda #1
+	sta irq_in_use
+	pla
+
 	sta prog_reg_a
 	stx prog_reg_x
 	sty prog_reg_y
@@ -81,7 +90,7 @@ irq_handler:
 	jmp ($FFFE)
 
 irq_re_caller:
-	sei
+	sei	
 	lda prog_proc_status
 	and #$10
 	beq :+
@@ -159,6 +168,15 @@ switch_prog:
 	lda prog_curr_ram_bank
 	sta STORE_RAM_BANK
 	
+	; copy zp from $20 to $2F to $C010 to $C01F
+	ldx #0
+	:
+	lda $20, X
+	sta STORE_RAM_ZP, X
+	inx 
+	cpx #$10
+	bcc :-
+	
 	lda prog_proc_status
 	sta STORE_REG_STATUS
 	
@@ -198,6 +216,15 @@ run_next_prog:
 	lda STORE_RAM_BANK
 	sta prog_curr_ram_bank
 	
+	; copy zp from $20 to $2F to $C010 to $C01F
+	ldx #0
+	:
+	lda STORE_RAM_ZP, X
+	sta $20, X
+	inx 
+	cpx #$10
+	bcc :-
+	
 	lda STORE_PROG_ADDR
 	sta prog_addr
 	lda STORE_PROG_ADDR + 1
@@ -223,14 +250,20 @@ return_to_user:
 	lda prog_curr_ram_bank
 	sta RAM_BANK
 	
+	lda prog_addr + 1
+	pha 
+	lda prog_addr
+	pha
 	lda prog_proc_status
+	
 	pha ; push status to stack 	
 	lda prog_reg_a
 	ldx prog_reg_x
 	ldy prog_reg_y
 	
-	plp ; pull status back into status register	
-	jmp (prog_addr)
+	stz irq_in_use
+	
+	rti
 
 .export prog_addr
 prog_addr:

@@ -1,4 +1,4 @@
-CHRIN := $FFCF
+CHRIN := $FFE4
 CHROUT := $FFD2
 
 SETLFS := $FFBA
@@ -54,26 +54,32 @@ putchar_kernal:
 	sta ROM_BANK
 	rts
 
+
+filename_buffer:
+	.res 32
 exec_kernal:
 	stx $03
 	sta $02
-	tax
 	
 	sty $04 ; process priority
 	
 	lda ROM_BANK
 	sta prog_bank
-	stz ROM_BANK
 	
 	ldy #0
 	:
 	lda ($02), Y
+	sta filename_buffer, Y
 	beq :+
 	iny
 	bne :-
 	:
 	tya
-	ldy $03
+	
+	stz ROM_BANK
+	
+	ldx #<filename_buffer
+	ldy #>filename_buffer
 	jsr SETNAM
 	
 	lda #11
@@ -195,7 +201,15 @@ program_exit:
 	stx prog_bank
 	
 	jmp handle_prog_exit
-	
+
+; get info about a process in .A
+process_info_kernal:
+	tay
+	ldx process_priority, Y
+	lda process_table, Y
+	rts
+
+
 ;
 ; system call table ; starts at $9d00
 ;
@@ -203,6 +217,7 @@ to_copy_call_table:
 	jmp getchar_kernal
 	jmp putchar_kernal
 	jmp exec_kernal
+	jmp process_info_kernal
 to_copy_call_table_end:	
 
 .export setup_call_table
