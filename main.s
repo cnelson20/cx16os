@@ -30,7 +30,7 @@ test_irq:
 	
 	lda #<shell_name
 	ldx #>shell_name
-	ldy #10
+	ldy #1
 	jsr $9D06
 	
 	jsr run_first_prog

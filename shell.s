@@ -3,6 +3,7 @@ CHROUT = $9D03
 
 EXEC = $9D06
 PROCESS_INFO = $9D09
+ALLOC_BANK = $9D0B
 
 UNDERSCORE = $5F
 LEFT_CURSOR = $9D
@@ -54,11 +55,15 @@ take_input:
 	lda #LEFT_CURSOR
 	jsr CHROUT
 @left_side_line:
-		
 	jmp @input_loop
+	
 @type_key:
     jsr CHROUT
 	tya
+	cmp #$A0
+	bne @dont_fix_reverse_space
+	lda #$20
+@dont_fix_reverse_space:	
 	sta buffer, X
 	lda #UNDERSCORE
 	jsr CHROUT
@@ -69,6 +74,31 @@ take_input:
 @newline:
     lda #0
     sta buffer, X
+
+parse_input:
+	ldx #0
+	ldy #1
+@space_loop:
+	lda buffer, X
+	beq @end_space_loop
+	cmp #$20
+	bne @not_space
+	lda #0
+	sta buffer, X
+	
+	inx
+	lda @was_space_last
+	stx @was_space_last
+	bne @space_loop
+	iny	
+	jmp @space_loop
+@not_space:
+	lda #0
+	sta @was_space_last
+	inx 
+	bne @space_loop
+@end_space_loop:
+	phy
 	
 	lda #$20
 	jsr CHROUT
@@ -77,6 +107,7 @@ take_input:
 
     lda #<buffer
     ldx #>buffer
+	ply ; num args
     jsr EXEC
     sta child_pid
 @wait_loop:
@@ -87,6 +118,9 @@ take_input:
     bne @wait_loop
 
     jmp take_input
+
+@was_space_last:
+	.byte 0
 
 welcome_message:
     .ascii "CX16 OS SHELL"

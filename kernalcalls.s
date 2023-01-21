@@ -58,23 +58,26 @@ putchar_kernal:
 filename_buffer:
 	.res 32
 exec_kernal:
-	stx $03
-	sta $02
+	sta KZP1
+	stx KZP1 + 1
 	
-	sty $04 ; process priority
+	sta KZP3
+	stx KZP3 + 1
+	
+	sty KZP2
 	
 	lda ROM_BANK
 	sta prog_bank
 	
 	ldy #0
 	:
-	lda ($02), Y
+	lda (KZP1), Y
 	sta filename_buffer, Y
 	beq :+
 	iny
 	bne :-
 	:
-	tya
+	tya ; load filename length into .A
 	
 	stz ROM_BANK
 	
@@ -82,9 +85,9 @@ exec_kernal:
 	ldy #>filename_buffer
 	jsr SETNAM
 	
-	lda #11
+	lda #KERNAL_USE_FILENUM
 	ldx #8
-	ldy #11
+	ldy #KERNAL_USE_FILENUM
 	jsr SETLFS
 	
 	jsr OPEN
@@ -103,7 +106,7 @@ exec_kernal:
 	stz ROM_BANK
 	cli
 	
-	ldx #11
+	ldx #KERNAL_USE_FILENUM
 	jsr CHKIN
 	
 	lda #0
@@ -111,8 +114,8 @@ exec_kernal:
 	ldy #>$9000
 	clc
 	jsr MACPTR
-	stx $02
-	sty $03
+	stx KZP1
+	sty KZP1 + 1
 	
 	ldx prog_addr ; restore correct bank
 	sei
@@ -139,15 +142,15 @@ exec_kernal:
 	dex
 	bne @copy_outer_loop
 	
-	ldy $03
-	cmp #2
+	ldy KZP1 + 1
+	cmp #>512
 	bcs @load_loop
 	
 @exec_kernal_end:
 	cli 
 	stz ROM_BANK
 	
-	ldx #11
+	ldx #KERNAL_USE_FILENUM
 	jsr CLOSE
 	jsr CLRCHN
 	
@@ -184,16 +187,64 @@ exec_kernal:
 	
 	lda #1
 	sta process_table, X
-	lda $04
+	lda #10
 	sta process_priority, X
 	
-	lda ROM_BANK ; return new program PID in .A
+	lda #<$C080
+	sta KZP4
+	lda #>$C080
+	sta KZP4 + 1
+	
+	lda ROM_BANK
+	sta @new_prog_bank
+	
+	ldx KZP2 ; number of args
+	stx STORE_PROG_ARGC
+	
+@arg_copy_loop:	
+	ldy prog_bank
+	sty ROM_BANK
+	lda (KZP3)
+	ldy @new_prog_bank
+	sty ROM_BANK
+	sta (KZP4)
+	
+	inc KZP3
+	bne :+
+	inc KZP3 + 1
+	:
+	inc KZP4
+	bne :+
+	inc KZP4 + 1
+	:
+	
+	cmp #0
+	bne @arg_copy_loop
+	
+@end_arg:
+	dex
+	beq @end_arg_copy_loop
+	
+	lda prog_bank
+	sta ROM_BANK
+@skip_repeat_spaces:
+	lda (KZP3) 
+	bne @arg_copy_loop ; if not \0, continue to next iteration of loop
+	inc KZP3
+	bra @skip_repeat_spaces
+	inc KZP3 + 1
+	bra @skip_repeat_spaces
+	
+@end_arg_copy_loop:
+	lda @new_prog_bank
 	
 	ldx prog_bank
 	stx ROM_BANK ; restore bank 
-	cli
-	
+	cli	
 	rts 
+
+@new_prog_bank:
+	.byte 0
 
 ; if a program returns via rts instead of brk, return value in .A
 program_exit:
@@ -209,6 +260,27 @@ process_info_kernal:
 	lda process_table, Y
 	rts
 
+; allocate a bank of storage, returns bank in .A
+alloc_bank_kernal:
+	sei
+	ldy #1
+@loop:
+	lda mem_table, Y
+	bne :+
+	lda ROM_BANK
+	sta mem_table, Y
+	tya
+	bra @exit
+	:
+	iny 
+	bne @loop
+	; if no bank found, return 0
+	lda #0
+@exit:
+	cli
+	rts
+	
+
 
 ;
 ; system call table ; starts at $9d00
@@ -218,6 +290,7 @@ to_copy_call_table:
 	jmp putchar_kernal
 	jmp exec_kernal
 	jmp process_info_kernal
+	jmp alloc_bank_kernal
 to_copy_call_table_end:	
 
 .export setup_call_table
