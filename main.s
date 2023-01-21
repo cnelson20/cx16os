@@ -160,10 +160,10 @@ switch_prog:
 	
 	lda prog_reg_a
 	sta STORE_REG_A
-	lda prog_reg_x
-	sta STORE_REG_X
-	lda prog_reg_y
-	sta STORE_REG_Y
+	ldx prog_reg_x
+	stx STORE_REG_X
+	ldy prog_reg_y
+	sty STORE_REG_Y
 	
 	lda prog_curr_ram_bank
 	sta STORE_RAM_BANK
@@ -186,6 +186,7 @@ switch_prog:
 	sta STORE_PROG_ADDR + 1
 	
 	tsx 
+	inx
 	stx STORE_PROG_SP
 	ldx #128
 	:
@@ -205,10 +206,10 @@ run_next_prog:
 	
 	lda STORE_REG_A
 	sta prog_reg_a
-	lda STORE_REG_X
-	sta prog_reg_x
-	lda STORE_REG_Y
-	sta prog_reg_y
+	ldx STORE_REG_X
+	stx prog_reg_x
+	ldy STORE_REG_Y
+	sty prog_reg_y
 	
 	lda STORE_REG_STATUS
 	sta prog_proc_status

@@ -72,8 +72,8 @@ take_input:
     inx
     bne @input_loop
 @newline:
-    lda #0
-    sta buffer, X
+    stz buffer, X
+	stx buffer_strlength
 
 parse_input:
 	ldx #0
@@ -83,21 +83,40 @@ parse_input:
 	beq @end_space_loop
 	cmp #$20
 	bne @not_space
-	lda #0
-	sta buffer, X
+	stz buffer, X
 	
 	inx
-	lda @was_space_last
-	stx @was_space_last
+	lda was_space_last
+	stx was_space_last
 	bne @space_loop
 	iny	
 	jmp @space_loop
 @not_space:
-	lda #0
-	sta @was_space_last
+	stz was_space_last
 	inx 
 	bne @space_loop
 @end_space_loop:
+
+; check for & as last arg	
+	ldx buffer_strlength
+	dex
+	lda buffer, X
+	cmp #$26 ; ampersand
+	bne @will_wait_child
+	dex 
+	lda buffer, X
+	cmp #0
+	bne @will_wait_child
+	
+	stz wait_for_child
+	dey ; decrement number of args by one, removing & from args list
+	jmp run_child
+	
+@will_wait_child:
+	lda #1
+	sta wait_for_child
+run_child:
+	
 	phy
 	
 	lda #$20
@@ -110,6 +129,10 @@ parse_input:
 	ply ; num args
     jsr EXEC
     sta child_pid
+	
+	lda wait_for_child
+	bne @wait_loop
+	jmp take_input
 @wait_loop:
 	brk
 	lda child_pid
@@ -119,7 +142,7 @@ parse_input:
 
     jmp take_input
 
-@was_space_last:
+was_space_last:
 	.byte 0
 
 welcome_message:
@@ -128,5 +151,10 @@ welcome_message:
 
 child_pid:
     .byte 0
+wait_for_child:
+	.byte 0
+	
 buffer:
     .res 80
+buffer_strlength:
+	.byte 0
