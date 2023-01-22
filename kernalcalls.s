@@ -102,6 +102,9 @@ exec_kernal:
 	:
 	stx prog_addr
 	
+	
+	lda #$C2 ; C000 + 2 pages for program stack and zeropage
+	sta @st_inst_hi
 @load_loop:	
 	stz ROM_BANK
 	cli
@@ -121,8 +124,6 @@ exec_kernal:
 	sei
 	stx ROM_BANK	
 @copy_to_bank:
-	lda #$C2 ; C000 + 2 pages for program stack and zeropage
-	sta @st_inst_hi
 	lda #$90
 	sta @ld_inst_hi
 	
@@ -142,7 +143,7 @@ exec_kernal:
 	dex
 	bne @copy_outer_loop
 	
-	ldy KZP1 + 1
+	lda KZP1 + 1
 	cmp #>512
 	bcs @load_loop
 	

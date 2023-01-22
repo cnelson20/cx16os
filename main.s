@@ -21,22 +21,16 @@ init:
 	jsr $FFD2
 	
 	jsr setup_call_table
-	jsr test_irq
+	jsr load_shell
 	rts
 
-test_irq:
-	;lda ROM_BANK
-	;pha 
-	
+load_shell:
 	lda #<shell_name
 	ldx #>shell_name
 	ldy #1
 	jsr $9D06
 	
 	jsr run_first_prog
-	
-	;pla 
-	;sta ROM_BANK
 	
 	rts
 	
@@ -292,23 +286,24 @@ prog_reg_y:
 schedule_timer:
 	.byte 0
 vera_status:
+	.byte 0
 
 ; holds whether each process is active
 .export process_table
-process_table := $9200 ;* - 32
-	.res (256 - 32)
+process_table:
+	.res (256 - 32), 0
 
 ; holds priority level for each task (higher means more cpu time)	
 .export process_priority
-process_priority := $9300 ;* - 32
-	.res (256 - 32)
+process_priority:
+	.res (256 - 32), 0
 	
 ; holds return values for all programs
 .export return_table
-return_table := $9400 ; * - 32
-	.res (256 - 32)
+return_table:
+	.res (256 - 32), 0
 
 ; table that holds the pid of each ram bank ;
 .export mem_table
-mem_table := $9500
-	.res $100 
+mem_table:
+	.res $100, 0
