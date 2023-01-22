@@ -25,6 +25,7 @@ ROM_BANK := $01
 .import process_priority
 .import return_table
 .import mem_table
+.import file_table
 
 .SEGMENT "CODE"
 
@@ -57,6 +58,8 @@ putchar_kernal:
 
 filename_buffer:
 	.res 32
+	
+; filename in .AX, num args in .Y	
 exec_kernal:
 	sta KZP1
 	stx KZP1 + 1
@@ -91,6 +94,13 @@ exec_kernal:
 	jsr SETLFS
 	
 	jsr OPEN
+	bcc @find_bank
+	; error occured in open ;
+	lda prog_bank
+	sta ROM_BANK
+	lda #0
+	rts
+	
 	
 @find_bank:	
 	ldx #32
@@ -103,8 +113,10 @@ exec_kernal:
 	stx prog_addr
 	
 	
-	lda #$C2 ; C000 + 2 pages for program stack and zeropage
-	sta @st_inst_hi
+	lda #<$C200
+	sta KZP4
+	lda #>$C200
+	sta KZP4 + 1
 @load_loop:	
 	stz ROM_BANK
 	cli
@@ -117,37 +129,53 @@ exec_kernal:
 	ldy #>$9000
 	clc
 	jsr MACPTR
-	stx KZP1
-	sty KZP1 + 1
 	
-	ldx prog_addr ; restore correct bank
+	;
+	; THIS PROBABLY SHOULD JUST CHECK BOTH FOR 0 !! EDIT ONCE CONFIRMATION IS RECEIVED
+	;
+	cpy #0
+	bne :+
+	cpx #2 ; MACPTR has an off by one problem
+	bcs :+
+	jmp @exec_kernal_end_load
+	:
+	
+	lda prog_addr ; restore correct bank
 	sei
-	stx ROM_BANK	
+	sta ROM_BANK
+	
 @copy_to_bank:
-	lda #$90
-	sta @ld_inst_hi
+
+	lda #<$9000
+	sta KZP1
+	lda #>$9000
+	sta KZP1 + 1
 	
-	ldx #2
-@copy_outer_loop:	
-	ldy #0
-@copy_inner_loop:
-@ld_inst_hi := * + 2
-	lda $4400, Y ; the high byte ($44) is always overwritten by instruction above
-@st_inst_hi := * + 2
-	sta $4400, Y ; same with the store
-	iny
-	bne @copy_inner_loop
+	inx
+@copy_loop:
+	dex 
+	bne :+
+	cpy #0
+	beq @copy_loop_end
+	dey 
+	:
+	lda (KZP1)
+	sta (KZP4)
 	
-	inc @ld_inst_hi
-	inc @st_inst_hi
-	dex
-	bne @copy_outer_loop
+	inc KZP1
+	bne :+
+	inc KZP1 + 1
+	:
+	inc KZP4
+	bne :+
+	inc KZP4 + 1
+	:
+	jmp @copy_loop
 	
-	lda KZP1 + 1
-	cmp #>512
-	bcs @load_loop
+@copy_loop_end:
+	jmp @load_loop
 	
-@exec_kernal_end:
+@exec_kernal_end_load:
 	cli 
 	stz ROM_BANK
 	
@@ -281,7 +309,166 @@ alloc_bank_kernal:
 	cli
 	rts
 	
+; filename in .AX
+open_file_kernal:
+	sei
+	sta KZP1
+	stx KZP1 + 1
 
+	ldx #3
+	:
+	lda file_table, X
+	beq @obtained_filenum
+	inx 
+	cpx #15
+	bne :-
+	lda #0 ; fail
+	jmp @end_open_file
+@obtained_filenum:
+	lda ROM_BANK
+	sta prog_bank
+	
+	sta file_table, X
+	
+	ldy #0
+	:
+	lda (KZP1), Y
+	sta filename_buffer, Y
+	beq :+
+	iny 
+	bne :-
+	:
+	tya 
+	
+	phx 
+	
+	stz ROM_BANK
+	ldx #<filename_buffer
+	ldy #>filename_buffer
+	jsr SETNAM
+	
+	pla
+	pha
+	tay
+	ldx #8
+	jsr SETLFS
+	
+	jsr OPEN
+	plx
+	bcc @noerror
+	
+	stz file_table, X
+	ldx #0
+@noerror:
+	txa	
+	
+@end_open_file:
+	ldx prog_bank
+	stx ROM_BANK
+
+	cli
+	rts
+
+; filenum in .A
+close_file_kernal:
+	ldy ROM_BANK
+	phy
+	
+	sei
+	tax
+	stz file_table, X
+	
+	stz ROM_BANK
+	jsr CLOSE
+	cli
+	
+	ply
+	sty ROM_BANK
+	rts
+
+; pointer to buffer in .AX, filenum in .Y, number of bytes on top stack
+read_file_kernal:
+	sei 
+	
+	sta KZP1
+	stx KZP1 + 1
+	
+	lda ROM_BANK
+	sta prog_bank
+	
+	lda file_table, Y
+	beq @exit
+	
+	tsx 
+	lda $103, X ; load number of bytes to load	
+	sta KZP2
+	
+	lda $102, X
+	sta $103, X
+	
+	pla ; increment stack pointer
+	sta $102, X
+	
+	lda KZP2
+	beq @exit
+	
+	phy
+	plx
+	stz ROM_BANK
+	jsr CHKIN ; check in correct file
+	
+	lda KZP2 ; number of bytes to load in .A
+	ldx #<$9000
+	ldy #>$9000
+	clc
+	jsr MACPTR
+	
+	stx KZP2
+	ldy KZP2
+	
+	lda prog_bank
+	sta ROM_BANK
+	:
+	lda $9000, Y
+	sta (KZP1), Y
+	
+	dey 
+	bne :-
+	lda $9000
+	sta (KZP1)
+	
+	stz ROM_BANK
+	jsr CLRCHN
+	
+	lda KZP2 ; return value is number of bytes read
+@exit:	
+	ldy prog_bank
+	sty ROM_BANK
+	cli
+	rts 
+
+print_string_kernal:
+	sei
+	
+	sta KZP1
+	stx KZP1 + 1
+	
+	ldy #0
+	ldx ROM_BANK
+	:
+	stx ROM_BANK
+	lda (KZP1), Y
+	beq @end
+	stz ROM_BANK
+	jsr CHROUT
+	
+	iny
+	bne :-
+	inc KZP1 + 1
+	bne :-
+@end:
+	stx ROM_BANK
+	rts
 
 ;
 ; system call table ; starts at $9d00
@@ -292,6 +479,10 @@ to_copy_call_table:
 	jmp exec_kernal
 	jmp process_info_kernal
 	jmp alloc_bank_kernal
+	jmp open_file_kernal
+	jmp close_file_kernal
+	jmp read_file_kernal
+	jmp print_string_kernal
 to_copy_call_table_end:	
 
 .export setup_call_table

@@ -3,20 +3,21 @@ CHROUT = $9D03
 
 EXEC = $9D06
 PROCESS_INFO = $9D09
-ALLOC_BANK = $9D0B
+ALLOC_BANK = $9D0C
+
+OPEN_FILE = $9D0F
+CLOSE_FILE = $9D12
+READ_FILE = $9D15
+
+PRINT_STR = $9D18
 
 UNDERSCORE = $5F
 LEFT_CURSOR = $9D
 
 main:
-    ldx #0
-@welcome_loop:
-    lda welcome_message, X
-    beq @welcome_loop_end
-    jsr CHROUT
-    inx
-    bne @welcome_loop
-@welcome_loop_end:
+    lda #<welcome_message
+	ldx #>welcome_message
+	jsr PRINT_STR
 
 take_input:
 	lda #$24
@@ -96,7 +97,7 @@ parse_input:
 	inx 
 	bne @space_loop
 @end_space_loop:
-
+	
 ; check for & as last arg	
 	ldx buffer_strlength
 	dex
@@ -128,6 +129,7 @@ run_child:
     ldx #>buffer
 	ply ; num args
     jsr EXEC
+	beq @exec_error ; if pid = 0 that means error
     sta child_pid
 	
 	lda wait_for_child
@@ -141,13 +143,25 @@ run_child:
     bne @wait_loop
 
     jmp take_input
+	
+@exec_error:
+	lda #<exec_error_message
+	ldx #>exec_error_message
+	jsr PRINT_STR
+	
+	jmp take_input
 
 was_space_last:
 	.byte 0
 
+exec_error_message:
+	.ascii "ERROR IN EXEC"
+	.byte $0d, $00
+	
 welcome_message:
     .ascii "CX16 OS SHELL"
     .byte $0d, $00
+
 
 child_pid:
     .byte 0

@@ -20,6 +20,8 @@ init:
 	lda #$0f
 	jsr $FFD2
 	
+	jsr setup_kernal
+	
 	jsr setup_call_table
 	jsr load_shell
 	rts
@@ -307,3 +309,19 @@ return_table:
 .export mem_table
 mem_table:
 	.res $100, 0
+
+.export file_table
+file_table:
+	.res 14, 0
+
+
+setup_kernal:
+	lda #1
+	sta mem_table
+	
+	sta file_table
+	sta file_table + 1
+	sta file_table + 2
+	
+	rts
+	
