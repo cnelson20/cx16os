@@ -15,7 +15,7 @@ os.prg: $(SOURCES)
 SHELL: shell.s
 	$(CASM) -o SHELL -addr 0xc200 shell.s
 
-programs: programs/*.s
+programs: os.img programs/*.s
 	make -C programs/
 
 copy: os.img
@@ -33,4 +33,7 @@ build: os.prg SHELL programs copy
 	rm -rf /tmp/cx16os/
 
 	./scripts/close_sd.sh
+
+clean:
+	rm programs/[A-Z]*[A-Z]
 
