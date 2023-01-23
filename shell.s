@@ -129,35 +129,46 @@ run_child:
     ldx #>buffer
 	ply ; num args
     jsr EXEC
+	cmp #0
 	beq @exec_error ; if pid = 0 that means error
     sta child_pid
 	
 	lda wait_for_child
-	bne @wait_loop
-	jmp take_input
+	beq @end_run_command ; if not waiting for child, jump to key clear check
 @wait_loop:
-	brk
+	wai
 	lda child_pid
     jsr PROCESS_INFO
     cmp #0
     bne @wait_loop
-
+	
+@end_run_command:	
     jmp take_input
 	
 @exec_error:
-	lda #<exec_error_message
-	ldx #>exec_error_message
+	lda #<exec_error_message_p1
+	ldx #>exec_error_message_p1
 	jsr PRINT_STR
 	
-	jmp take_input
+	lda #<buffer
+	ldx #>buffer
+	jsr PRINT_STR
+	
+	lda #<exec_error_message_p2
+	ldx #>exec_error_message_p2
+	jsr PRINT_STR
+	
+	jmp @end_run_command
 
 was_space_last:
 	.byte 0
 
-exec_error_message:
-	.ascii "ERROR IN EXEC"
+exec_error_message_p1:
+	.asciiz "ERROR IN EXEC '"
+exec_error_message_p2:
+	.ascii "'"
 	.byte $0d, $00
-	
+
 welcome_message:
     .ascii "CX16 OS SHELL"
     .byte $0d, $00

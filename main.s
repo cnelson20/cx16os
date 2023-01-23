@@ -86,12 +86,14 @@ irq_handler:
 	jmp ($FFFE)
 
 irq_re_caller:
-	sei	
 	lda prog_proc_status
 	and #$10
 	beq :+
-	jmp switch_prog ; a brk means a process gives back its execution time
+	jmp program_error ; a brk means a process gives back its execution time
 	:
+	lda prog_bank
+	cmp current_program_id
+	bne program_error
 	
 	; an actual irq ;
 	lda vera_status
@@ -104,6 +106,19 @@ irq_re_caller:
 .export handle_prog_exit
 handle_prog_exit:
 	ldx prog_bank ; bank = process id
+	jsr clear_process_info
+	
+	jmp switch_prog
+
+program_error:
+	ldx current_program_id
+	lda #1
+	jsr clear_process_info
+	
+	jmp switch_prog
+
+.export clear_process_info
+clear_process_info:
 	stz process_table, X ; declare id as now unused
 	sta return_table, X ; store return value
 	
@@ -116,9 +131,9 @@ handle_prog_exit:
 	:
 	inx 
 	bne :--
-	
-	jmp switch_prog
-	
+	rts
+
+
 ; no code right now, just return to current task ;
 next_prog:	
 	ldx prog_bank
@@ -152,6 +167,7 @@ switch_prog:
 @not_same_prog:
 	phx
 	ldx prog_bank
+	sei
 	stx ROM_BANK
 	
 	lda prog_reg_a
@@ -199,6 +215,7 @@ run_first_prog:
 run_next_prog:
 	stx prog_bank
 	stx	ROM_BANK
+	stx current_program_id
 	
 	lda STORE_REG_A
 	sta prog_reg_a
@@ -285,6 +302,8 @@ prog_reg_x:
 prog_reg_y:
 	.byte 0
 	
+current_program_id:
+	.byte 0
 schedule_timer:
 	.byte 0
 vera_status:

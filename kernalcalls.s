@@ -9,6 +9,7 @@ CLOSE := $FFC3
 MACPTR := $FF44
 CLRCHN := $FFE7
 CLALL := $FFCC
+READST := $FFB7
 
 ROM_BANK := $01
 
@@ -20,6 +21,7 @@ ROM_BANK := $01
 .import irq_handler
 
 .import handle_prog_exit
+.import clear_process_info
 
 .import process_table
 .import process_priority
@@ -61,6 +63,7 @@ filename_buffer:
 	
 ; filename in .AX, num args in .Y	
 exec_kernal:
+	sei 
 	sta KZP1
 	stx KZP1 + 1
 	
@@ -83,6 +86,7 @@ exec_kernal:
 	tya ; load filename length into .A
 	
 	stz ROM_BANK
+	cli
 	
 	ldx #<filename_buffer
 	ldy #>filename_buffer
@@ -94,13 +98,17 @@ exec_kernal:
 	jsr SETLFS
 	
 	jsr OPEN
-	bcc @find_bank
+	jmp @find_bank
 	; error occured in open ;
+@open_kernal_error:
+	ldx #KERNAL_USE_FILENUM
+	jsr CLOSE
+	jsr CLRCHN
+	
 	lda prog_bank
 	sta ROM_BANK
 	lda #0
 	rts
-	
 	
 @find_bank:	
 	ldx #32
@@ -108,15 +116,18 @@ exec_kernal:
 	lda process_table, X
 	beq :+
 	inx 
-	bra :-
+	bne :-
 	:
 	stx prog_addr
 	
+	lda #1
+	sta	@was_first_load_loop
 	
 	lda #<$C200
 	sta KZP4
 	lda #>$C200
 	sta KZP4 + 1
+	
 @load_loop:	
 	stz ROM_BANK
 	cli
@@ -130,16 +141,18 @@ exec_kernal:
 	clc
 	jsr MACPTR
 	
-	;
-	; THIS PROBABLY SHOULD JUST CHECK BOTH FOR 0 !! EDIT ONCE CONFIRMATION IS RECEIVED
-	;
-	cpy #0
-	bne :+
-	cpx #2 ; MACPTR has an off by one problem
 	bcs :+
-	jmp @exec_kernal_end_load
+	cpy #0
+	bne @continue_load
+	cpx #0 ; MACPTR has an off by one problem
+	bne @continue_load
 	:
-	
+	lda @was_first_load_loop
+	beq @exec_kernal_end_load
+	ldx prog_addr
+	stz process_table, X
+	jmp @open_kernal_error
+@continue_load:
 	lda prog_addr ; restore correct bank
 	sei
 	sta ROM_BANK
@@ -173,10 +186,10 @@ exec_kernal:
 	jmp @copy_loop
 	
 @copy_loop_end:
+	stz @was_first_load_loop
 	jmp @load_loop
 	
 @exec_kernal_end_load:
-	cli 
 	stz ROM_BANK
 	
 	ldx #KERNAL_USE_FILENUM
@@ -273,6 +286,8 @@ exec_kernal:
 	rts 
 
 @new_prog_bank:
+	.byte 0
+@was_first_load_loop:
 	.byte 0
 
 ; if a program returns via rts instead of brk, return value in .A
@@ -470,6 +485,123 @@ print_string_kernal:
 	stx ROM_BANK
 	rts
 
+; kill a process with PID in .A	
+kill_process_kernal:
+	tax
+	cmp ROM_BANK
+	bne :+
+	
+	sta prog_bank
+	lda #RETURN_SUICIDE
+	jsr clear_process_info
+	jmp switch_prog
+	
+	:
+	lda process_table, X
+	bne :+
+	lda #1
+	rts
+	:
+	lda #RETURN_KILL
+	jsr clear_process_info
+	lda #0
+	rts 
+
+; parse a byte number from a string in .AX with radix in .Y
+parse_num_from_string_kernal:
+	sei
+	sta KZP1
+	stx KZP1 + 1
+
+	cpy #16
+	beq parse_hex
+parse_decimal:
+	ldy #0
+	:
+	lda (KZP1), Y
+	beq :+
+	iny 
+	bra :-
+	:
+	dey
+	; y + kzp1 = last byte of string
+	lda (KZP1), Y
+	sec 
+	sbc #$30
+	dey
+	bmi @end_parse_decimal
+	sta KZP3
+	
+	lda (KZP1), Y
+	sec 
+	sbc #$30
+	jsr @mult_10
+	clc 
+	adc KZP3
+	dey
+	bmi @end_parse_decimal
+	sta KZP3
+	
+	lda (KZP1), Y
+	sec 
+	sbc #$30
+	jsr @mult_10
+	jsr @mult_10
+	clc 
+	adc KZP3
+@end_parse_decimal:
+	cli
+	rts
+	
+@mult_10:
+	asl
+	sta KZP2 ; 2x
+	asl ; 4x 
+	sta KZP2 + 1 
+	clc 
+	adc KZP2 + 1 ; 4x + 4x = 8x
+	adc KZP2 ; 8x + 2x = 10x
+	cli
+	rts 
+	
+parse_hex:
+	ldy #0
+	:
+	lda (KZP1), Y
+	beq :+
+	iny 
+	bra :-
+	:
+	dey
+	
+	lda (KZP1), Y
+	jsr @get_hex_digit
+	
+	asl 
+	asl 
+	asl 
+	asl
+	sta KZP2
+	
+	dey
+	lda (KZP1), Y
+	jsr @get_hex_digit
+	ora KZP2
+	
+	cli
+	rts
+@get_hex_digit:
+	cmp #$3A
+	bcc :+
+	and #31
+	clc 
+	adc #9 ; A = $41 -> $1 + $9 = 10
+	rts
+	:
+	sec 
+	sbc #$30
+	rts
+
 ;
 ; system call table ; starts at $9d00
 ;
@@ -483,6 +615,8 @@ to_copy_call_table:
 	jmp close_file_kernal
 	jmp read_file_kernal
 	jmp print_string_kernal
+	jmp kill_process_kernal
+	jmp parse_num_from_string_kernal
 to_copy_call_table_end:	
 
 .export setup_call_table
