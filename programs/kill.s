@@ -1,5 +1,5 @@
-KILL = $9D1B
-PARSE_NUM = $9D1E
+KILL = $9D0F
+PARSE_NUM = $9D24
 
 ARGC = $C07F
 ARGS = $C080
@@ -7,7 +7,6 @@ ARGS = $C080
 ZPBASE = $20
 
 main:
-	stp
 	ldy #0
 loop:
 	lda ARGS, Y
@@ -26,6 +25,7 @@ end_loop:
 	tax 
 	lda ZPBASE
 	ldy #10
+	stp
 	jsr PARSE_NUM
 	
 	jsr KILL

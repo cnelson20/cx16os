@@ -297,12 +297,61 @@ program_exit:
 	
 	jmp handle_prog_exit
 
-; get info about a process in .A
-process_info_kernal:
+; get info about a process in .A, returns if active in .A and priority in .X
+process_status_kernal:
 	tay
 	ldx process_priority, Y
-	lda process_table, Y
+	lda process_table, Y	
 	rts
+
+; pointer to buffer of .Y bytes in .AX, stack = pid
+; not tested 
+process_name_kernal:
+	sei
+	sta KZP1
+	stx KZP1 + 1
+	
+	sty KZP3
+	
+	tsx 
+	lda $103, X ; pid on stack
+	sta KZP2
+	
+	lda $102, X
+	sta $103, X
+	
+	pla ; increment stack pointer
+	sta $102, X
+	
+	lda ROM_BANK
+	sta prog_bank
+	
+	ldy #0
+	ldx KZP3
+	beq @end_copy
+@loop:	
+	dex
+	beq @end_loop
+	lda KZP2
+	sta ROM_BANK
+	lda STORE_PROG_ARGS, Y
+	beq @end_loop
+	pha 
+	lda prog_bank
+	sta ROM_BANK
+	pla 
+	sta (KZP1), Y
+	iny 
+	bne @loop
+@end_loop:
+	lda prog_bank
+	sta ROM_BANK
+	lda #0
+	sta (KZP1), Y
+@end_copy:
+	cli
+	rts
+	
 
 ; allocate a bank of storage, returns bank in .A
 alloc_bank_kernal:
@@ -323,7 +372,19 @@ alloc_bank_kernal:
 @exit:
 	cli
 	rts
-	
+
+free_bank_kernal:
+	tax
+	lda mem_table, X
+	cmp ROM_BANK
+	bne :+
+	stz mem_table, X
+	lda #0
+	rts
+	:
+	lda #1
+	rts
+
 ; filename in .AX
 open_file_kernal:
 	sei
@@ -525,43 +586,71 @@ parse_decimal:
 	:
 	dey
 	; y + kzp1 = last byte of string
+	
+	stz KZP3 
+	stz KZP3 + 1
+	ldx #0
+@parse_decimal_loop:
 	lda (KZP1), Y
 	sec 
 	sbc #$30
+	sta KZP2
+	stz KZP2 + 1
+	
+	jsr @mult_pow_10
+	
+	clc
+	lda KZP2
+	adc KZP3
+	sta KZP3
+	lda KZP2 + 1
+	adc KZP3 + 1
+	sta KZP3 + 1
+@end_of_loop:
+	inx
 	dey
 	bmi @end_parse_decimal
-	sta KZP3
-	
-	lda (KZP1), Y
-	sec 
-	sbc #$30
-	jsr @mult_10
-	clc 
-	adc KZP3
-	dey
-	bmi @end_parse_decimal
-	sta KZP3
-	
-	lda (KZP1), Y
-	sec 
-	sbc #$30
-	jsr @mult_10
-	jsr @mult_10
-	clc 
-	adc KZP3
+	jmp @parse_decimal_loop	
 @end_parse_decimal:
+	lda KZP3
+	ldx KZP3 + 1
+
 	cli
 	rts
-	
+@mult_pow_10:
+	phy
+	phx
+	cpx #0
+	beq :++
+	:
+	jsr @mult_10
+	dex
+	bne :-
+	:
+	plx
+	ply	
+	rts 
 @mult_10:
-	asl
-	sta KZP2 ; 2x
-	asl ; 4x 
-	sta KZP2 + 1 
-	clc 
-	adc KZP2 + 1 ; 4x + 4x = 8x
-	adc KZP2 ; 8x + 2x = 10x
-	cli
+	lda KZP2
+	ldy KZP2 + 1
+	
+	asl KZP2
+	rol KZP2 + 1
+	asl KZP2
+	rol KZP2 + 1
+	
+	clc
+	adc KZP2
+	pha
+	tya
+	adc KZP2 + 1
+	sta KZP2 + 1
+	
+	pla
+	asl A
+	sta KZP2
+	rol KZP2 + 1
+	
 	rts 
 	
 parse_hex:
@@ -574,22 +663,43 @@ parse_hex:
 	:
 	dey
 	
+	stz KZP2
+	stz KZP2 + 1
+	
 	lda (KZP1), Y
 	jsr @get_hex_digit
-	
-	asl 
-	asl 
-	asl 
-	asl
 	sta KZP2
-	
 	dey
+	bmi @end
+	lda (KZP1), Y
+	jsr @mult_16
+	ora KZP2
+	sta KZP2
+	dey
+	bmi @end
+	
 	lda (KZP1), Y
 	jsr @get_hex_digit
-	ora KZP2
+	sta KZP2 + 1
+	dey
+	bmi @end
+	lda (KZP1), Y
+	jsr @mult_16
+	ora KZP2 + 1
+	sta KZP2 + 1
+@end:
+	lda KZP2
+	ldx KZP2 + 1
 	
 	cli
 	rts
+@mult_16:
+	asl A
+	asl A
+	asl A
+	asl A
+	rts
+	
 @get_hex_digit:
 	cmp #$3A
 	bcc :+
@@ -606,28 +716,33 @@ parse_hex:
 ; system call table ; starts at $9d00
 ;
 to_copy_call_table:
-	jmp getchar_kernal
-	jmp putchar_kernal
-	jmp exec_kernal
-	jmp process_info_kernal
-	jmp alloc_bank_kernal
-	jmp open_file_kernal
-	jmp close_file_kernal
-	jmp read_file_kernal
-	jmp print_string_kernal
-	jmp kill_process_kernal
-	jmp parse_num_from_string_kernal
+	jmp getchar_kernal ; $9D00
+	jmp putchar_kernal ; $9D03
+	
+	jmp exec_kernal ; $9D06
+	jmp process_status_kernal ; $9D09
+	jmp process_name_kernal ; $9D0C
+	jmp kill_process_kernal ; $9D0F
+	
+	jmp alloc_bank_kernal ; $9D12
+	jmp free_bank_kernal ; $9D15
+	
+	jmp open_file_kernal ; $9D18
+	jmp close_file_kernal ; $9D1B
+	jmp read_file_kernal ; $9D1E
+	
+	jmp print_string_kernal ; $9D21
+	jmp parse_num_from_string_kernal ; $9D24	
 to_copy_call_table_end:	
 
-.export setup_call_table
-	
+.export setup_call_table	
 setup_call_table:
 	ldx #0 
 	:
 	lda to_copy_call_table, X
 	sta $9D00, X 
 	inx
-	cpx #to_copy_call_table_end - to_copy_call_table
+	cpx #(to_copy_call_table_end - to_copy_call_table)
 	bcc :-
 	rts
 

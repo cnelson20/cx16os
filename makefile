@@ -15,8 +15,10 @@ os.prg: $(SOURCES)
 SHELL: shell.s
 	$(CASM) -o SHELL -addr 0xc200 shell.s
 
-programs: os.img programs/*.s
+programs: FORCE
 	make -C programs/
+
+FORCE: ;
 
 copy: os.img
 	cp blank_sd.img os.img

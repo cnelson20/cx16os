@@ -2,14 +2,15 @@ CHRIN = $9D00
 CHROUT = $9D03
 
 EXEC = $9D06
-PROCESS_INFO = $9D09
-ALLOC_BANK = $9D0C
+PROCESS_STATUS = $9D09
 
-OPEN_FILE = $9D0F
-CLOSE_FILE = $9D12
-READ_FILE = $9D15
+ALLOC_BANK = $9D12
 
-PRINT_STR = $9D18
+OPEN_FILE = $9D18
+CLOSE_FILE = $9D1B
+READ_FILE = $9D1E
+
+PRINT_STR = $9D21
 
 UNDERSCORE = $5F
 LEFT_CURSOR = $9D
@@ -20,7 +21,7 @@ main:
 	jsr PRINT_STR
 
 take_input:
-	lda #$24
+	lda #$24 ; $
 	jsr CHROUT
 	lda #$20
 	jsr CHROUT
@@ -73,7 +74,17 @@ take_input:
     inx
     bne @input_loop
 @newline:
-    stz buffer, X
+	
+	lda #$20
+	jsr CHROUT
+    lda #$d
+    jsr CHROUT ; print return
+
+	cpx #0
+	bne @not_empty_line
+	jmp end_run_command
+@not_empty_line:
+	stz buffer, X
 	stx buffer_strlength
 
 parse_input:
@@ -119,11 +130,6 @@ parse_input:
 run_child:
 	
 	phy
-	
-	lda #$20
-	jsr CHROUT
-    lda #$d
-    jsr CHROUT
 
     lda #<buffer
     ldx #>buffer
@@ -134,16 +140,18 @@ run_child:
     sta child_pid
 	
 	lda wait_for_child
-	beq @end_run_command ; if not waiting for child, jump to key clear check
+	beq end_run_command ; if not waiting for child, jump to key clear check
 @wait_loop:
 	wai
+	lda #0
+	pha
+	ldx #0
+	ldy #0
 	lda child_pid
-    jsr PROCESS_INFO
+    jsr PROCESS_STATUS
     cmp #0
     bne @wait_loop
-	
-@end_run_command:	
-    jmp take_input
+	jmp end_run_command
 	
 @exec_error:
 	lda #<exec_error_message_p1
@@ -158,7 +166,10 @@ run_child:
 	ldx #>exec_error_message_p2
 	jsr PRINT_STR
 	
-	jmp @end_run_command
+	jmp end_run_command
+
+end_run_command:	
+    jmp take_input
 
 was_space_last:
 	.byte 0

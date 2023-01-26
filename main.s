@@ -112,7 +112,7 @@ handle_prog_exit:
 
 program_error:
 	ldx current_program_id
-	lda #1
+	lda #RETURN_PAGE_BREAK
 	jsr clear_process_info
 	
 	jmp switch_prog
@@ -180,14 +180,20 @@ switch_prog:
 	lda prog_curr_ram_bank
 	sta STORE_RAM_BANK
 	
-	; copy zp from $20 to $2F to $C010 to $C01F
-	ldx #0
+	; copy zp from $20-$2F to $C020-$C02F
+	ldx #$0F
 	:
 	lda $20, X
+	sta STORE_RAM_ZP + $10, X
+	dex
+	bpl :-
+	; copy zp from $02-$0F to $C010-$C01D 
+	ldx #( $F - $2 )
+	:
+	lda $02, X
 	sta STORE_RAM_ZP, X
-	inx 
-	cpx #$10
-	bcc :-
+	dex
+	bpl :-
 	
 	lda prog_proc_status
 	sta STORE_REG_STATUS
@@ -230,14 +236,21 @@ run_next_prog:
 	lda STORE_RAM_BANK
 	sta prog_curr_ram_bank
 	
-	; copy zp from $20 to $2F to $C010 to $C01F
-	ldx #0
+	; copy zp from $C020-$C02F to $20-$2F
+	ldx #$0F
+	:
+	lda STORE_RAM_ZP + $10, X
+	sta $20, X
+	dex
+	bpl :-
+	; copy zp from $C010-$C01D to $02-$0F
+	ldx #( $F - $2 )
 	:
 	lda STORE_RAM_ZP, X
-	sta $20, X
-	inx 
-	cpx #$10
-	bcc :-
+	sta $02, X
+	dex
+	bpl :-
+	
 	
 	lda STORE_PROG_ADDR
 	sta prog_addr
