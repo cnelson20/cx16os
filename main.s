@@ -344,7 +344,7 @@ mem_table:
 
 .export file_table
 file_table:
-	.res 14, 0
+	.res 16, 0
 
 
 setup_kernal:

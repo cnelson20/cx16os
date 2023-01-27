@@ -1,3 +1,4 @@
+GETIN := $FFE4
 CHRIN := $FFE4
 CHROUT := $FFD2
 
@@ -445,6 +446,106 @@ open_file_kernal:
 	cli
 	rts
 
+; query dos, pointer to command in .AX
+query_dos_kernal:
+	sei
+	ldy file_table + 15
+	beq :+
+	
+	lda #0 ; 0 return code
+	cli
+	rts
+	:
+	ldy ROM_BANK
+	sty file_table + 15 ; mark sa 15 as in use
+	sty prog_bank
+	
+	sta KZP1
+	stx KZP1 + 1
+	ldy #0
+	:
+	lda (KZP1), Y
+	sta filename_buffer, Y
+	beq :+
+	iny
+	bne :-
+	:
+	
+	tya
+	ldx #<filename_buffer
+	ldy #>filename_buffer
+	stz ROM_BANK
+	jsr SETNAM
+
+	lda #15
+	ldx #8
+	ldy #15
+	jsr SETLFS
+	
+	jsr OPEN
+	
+	lda prog_bank
+	sta ROM_BANK
+	
+	lda #15
+	cli
+	rts
+
+read_dos_kernal:
+	sei
+	sta KZP1
+	stx KZP1 + 1
+	
+	lda ROM_BANK
+	cmp file_table + 15
+	beq :+
+	lda #0
+	cli
+	rts
+	:
+	sta prog_bank
+
+	cpy #0
+	beq @end
+	sty @num_bytes
+
+	ldx #15
+	stz ROM_BANK
+	jsr CHKIN
+	
+	ldy #0
+@loop:
+	phy
+	
+	stz ROM_BANK
+	ldx #15
+	jsr CHKIN
+	jsr GETIN
+	ldy prog_bank 
+	sty ROM_BANK
+	ply
+	phy
+	sta (KZP1), Y
+	stz ROM_BANK
+	jsr READST
+	stp
+	
+	ply
+	iny 
+	cpy @num_bytes
+	bcc @loop
+@end:
+	phy
+	
+	jsr CLRCHN	
+	lda prog_bank
+	sta ROM_BANK
+	pla
+	cli
+	rts
+@num_bytes:
+	.byte 0
+
 ; filenum in .A
 close_file_kernal:
 	ldy ROM_BANK
@@ -733,6 +834,10 @@ to_copy_call_table:
 	
 	jmp print_string_kernal ; $9D21
 	jmp parse_num_from_string_kernal ; $9D24	
+	
+	jmp query_dos_kernal ; $9D27
+	jmp read_dos_kernal ; $9D2A
+	
 to_copy_call_table_end:	
 
 .export setup_call_table	
