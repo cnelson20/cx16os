@@ -1,7 +1,7 @@
 XASM =../../xasm16/xasm
 FLAGS =-addr 0xc200
 
-all: CAT ECHO KILL PS LS
+all: CAT ECHO KILL PS
 
 CAT: cat.s
 	$(XASM) $(FLAGS) -o $@ cat.s
@@ -14,6 +14,3 @@ KILL: kill.s
 
 PS: ps.s
 	$(XASM) $(FLAGS) -o $@ ps.s
-
-LS: ls.s
-	$(XASM) $(FLAGS) -o $@ ls.s -v
