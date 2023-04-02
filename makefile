@@ -21,6 +21,8 @@ programs: FORCE
 FORCE: ;
 
 copy: os.img
+	
+os.img: FORCE
 	cp blank_sd.img os.img
 
 build: os.prg SHELL programs copy

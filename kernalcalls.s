@@ -18,8 +18,10 @@ ROM_BANK := $01
 
 .import prog_bank
 .import prog_addr
-
+.import current_program_id
 .import irq_handler
+
+.import kernal_use
 
 .import handle_prog_exit
 .import clear_process_info
@@ -33,15 +35,18 @@ ROM_BANK := $01
 .SEGMENT "CODE"
 
 getchar_kernal:
-	lda ROM_BANK 
-	sta prog_bank
+	lda #1
+	sta kernal_use
 	
 	stz ROM_BANK
 	jsr CHRIN
 	
 	pha
-	lda prog_bank
+	
+	lda current_program_id
 	sta ROM_BANK
+	stz kernal_use
+	
 	pla 
 	rts
 	
@@ -291,7 +296,7 @@ exec_kernal:
 @was_first_load_loop:
 	.byte 0
 
-; if a program returns via rts instead of brk, return value in .A
+; if a program returns, return value in .A
 program_exit:
 	ldx ROM_BANK
 	stx prog_bank
