@@ -1,16 +1,20 @@
 XASM =../../xasm16/xasm
-FLAGS =-addr 0xc200
+FLAGS =-addr 0xa200
 
-all: CAT ECHO KILL PS
+all: cat echo kill ps
 
-CAT: cat.s
+cat: cat.s
 	$(XASM) $(FLAGS) -o $@ cat.s
+	cp $@ ../mnt/
 
-ECHO: echo.s
+echo: echo.s
 	$(XASM) $(FLAGS) -o $@ echo.s
+	cp $@ ../mnt/
 
-KILL: kill.s
+kill: kill.s
 	$(XASM) $(FLAGS) -o $@ kill.s
+	cp $@ ../mnt/
 
-PS: ps.s
+ps: ps.s
 	$(XASM) $(FLAGS) -o $@ ps.s
+	cp $@ ../mnt/

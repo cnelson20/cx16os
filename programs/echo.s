@@ -1,19 +1,23 @@
 CHROUT = $9D03
 
+ARGS = $A080
+ARGC = $A07F
+
 main:
 	ldx #0
-	ldy $C07F
+	ldy ARGC
+	dey
+	beq end
 
 first_loop:
-	lda $C080, X
+	lda ARGS, X
 	beq end_first_loop
 	inx 
 	jmp first_loop
 end_first_loop:
 	inx
-	dey
 loop:
-	lda $C080, X
+	lda ARGS, X
 	beq end_word
 	jsr CHROUT
 	inx 

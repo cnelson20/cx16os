@@ -17,11 +17,11 @@ memory_copy := $FEE7
 .SEGMENT "CODE"
 	
 init:
+	stz ROM_BANK
 	lda #$0f
 	jsr $FFD2
 	
 	jsr setup_kernal
-	
 	jsr setup_call_table
 	jsr load_shell
 	rts
@@ -30,13 +30,16 @@ load_shell:
 	lda #<shell_name
 	ldx #>shell_name
 	ldy #1
-	jsr $9D06
+	jsr $9D06 ; EXEC
+
+	jsr setup_irq_handler
+	; interrupts still disabled on purpose
 	jsr run_first_prog
 	
 	rts
 	
 shell_name:
-	.asciiz "shell"
+	.literal "shell", 0
 
 irq_in_use:
 	.byte 0
@@ -44,48 +47,62 @@ irq_in_use:
 kernal_use:
 	.byte 0
 
+setup_irq_handler:
+	sei
+
+	lda $0314
+    sta default_irq_handler
+    lda $0315
+    sta default_irq_handler+1
+
+	lda #<irq_handler
+	sta $0314
+	lda #>irq_handler
+	sta $0315
+
+	rts
+
+default_irq_handler:
+	.word 0
+
 .export irq_handler
 irq_handler:
-	sta prog_reg_a
-	stx prog_reg_x
-	sty prog_reg_y
-	
-	lda ROM_BANK
+	lda RAM_BANK
 	sta prog_bank
 	
-	lda RAM_BANK
-	sta prog_curr_ram_bank
-	
 	tsx 
-	lda $102, X
+	lda $105, X
 	sta prog_addr
 	lda #<irq_re_caller
-	sta $102, X
+	sta $105, X
 	
-	lda $103, X 
+	lda $106, X 
 	sta prog_addr + 1
 	lda #>irq_re_caller
-	sta $103, X
+	sta $106, X
 	
-	lda $101, X
+	lda $104, X
 	sta prog_proc_status
 	and #%11101111
 	ora #%00000100 ; irq will be disabled on rti
-	sta $101, X
+	sta $104, X
 	
 	lda $9F27 
 	sta vera_status
 	
-	stz ROM_BANK
-	jmp ($FFFE)
+	jmp (default_irq_handler)
 
 irq_re_caller:
-	sei
+	sta prog_reg_a
+	stx prog_reg_x
+	sty prog_reg_y
+	
+	; sei is set
 	lda irq_in_use
 	bne @jump_to_return_to_user
 	lda kernal_use
 	bne @jump_to_return_to_user
-	
+
 	lda #1
 	sta irq_in_use
 	
@@ -122,24 +139,14 @@ program_error:
 
 .export clear_process_info
 clear_process_info:
-	;stp
 	stz process_table, X ; declare id as now unused
 	sta return_table, X ; store return value
 	
-	txa ; pid in A 
-	ldx #0
-	:
-	cmp mem_table, X
-	bne :+
-	stz mem_table, X
-	:
-	inx 
-	bne :--
 	rts
 
 
 ; no code right now, just return to current task ;
-next_prog:	
+next_prog:
 	ldx current_program_id
 	lda schedule_timer
 	inc A
@@ -170,42 +177,39 @@ switch_prog:
 	jmp same_prog
 @not_same_prog:
 	phx
-	ldx current_program_id
-	stx ROM_BANK
-	
-	lda prog_reg_a
+
+	lda current_program_id
+	sta RAM_BANK
+
+	lda prog_reg_a ; copy current program's registers
 	sta STORE_REG_A
-	ldx prog_reg_x
-	stx STORE_REG_X
-	ldy prog_reg_y
-	sty STORE_REG_Y
-	
-	lda prog_curr_ram_bank
-	sta STORE_RAM_BANK
-	
-	; copy zp from $20-$2F to $C020-$C02F
+	lda prog_reg_x
+	sta STORE_REG_X
+	lda prog_reg_y
+	sta STORE_REG_Y
+	lda prog_proc_status
+	sta STORE_REG_STATUS
+
+	; copy zp from $20-$2F to $A020-$A02F
 	ldx #$0F
 	:
 	lda $20, X
-	sta STORE_RAM_ZP + $10, X
+	sta STORE_RAM_ZP_SET2, X
 	dex
 	bpl :-
-	; copy zp from $02-$0F to $C010-$C01D 
+	; copy zp from $02-$0F to $A010-$A01D 
 	ldx #( $F - $2 )
 	:
-	lda $02, X
-	sta STORE_RAM_ZP, X
+	lda $2, X
+	sta STORE_RAM_ZP_SET1 + $2, X
 	dex
 	bpl :-
-	
-	lda prog_proc_status
-	sta STORE_REG_STATUS
-	
+
 	lda prog_addr
 	sta STORE_PROG_ADDR
 	lda prog_addr + 1
-	sta STORE_PROG_ADDR + 1
-	
+	sta STORE_PROG_ADDR + 1 ; store program counter
+
 	tsx 
 	inx
 	stx STORE_PROG_SP
@@ -218,10 +222,10 @@ switch_prog:
 	
 	plx
 	jmp run_next_prog
-run_first_prog:	
+run_first_prog:
 	ldx #32
 run_next_prog:
-	stx	ROM_BANK
+	stx	RAM_BANK
 	stx current_program_id
 	
 	lda STORE_REG_A
@@ -229,34 +233,30 @@ run_next_prog:
 	ldx STORE_REG_X
 	stx prog_reg_x
 	ldy STORE_REG_Y
-	sty prog_reg_y
+	sty prog_reg_y ; load up program registers
 	
 	lda STORE_REG_STATUS
 	sta prog_proc_status
-	
-	lda STORE_RAM_BANK
-	sta prog_curr_ram_bank
-	
-	; copy zp from $C020-$C02F to $20-$2F
-	ldx #$0F
-	:
-	lda STORE_RAM_ZP + $10, X
-	sta $20, X
-	dex
-	bpl :-
-	; copy zp from $C010-$C01D to $02-$0F
-	ldx #( $F - $2 )
-	:
-	lda STORE_RAM_ZP, X
-	sta $02, X
-	dex
-	bpl :-
-	
-	
+
 	lda STORE_PROG_ADDR
 	sta prog_addr
 	lda STORE_PROG_ADDR + 1
 	sta prog_addr + 1
+	
+	; copy zp from $A020-$A02F to $20-$2F
+	ldx #$0F
+	:
+	lda STORE_RAM_ZP_SET2, X
+	sta $20, X
+	dex
+	bpl :-
+	; copy zp from $A012-$C01F to $02-$0F
+	ldx #( $F - $2 )
+	:
+	lda STORE_RAM_ZP_SET1, X
+	sta $02, X
+	dex
+	bpl :-
 	
 	ldx #128
 	:
@@ -265,20 +265,17 @@ run_next_prog:
 	inx 
 	bne :-
 	ldx STORE_PROG_SP
-	txs	
+	txs
+
+	; now give control to new program ;
 	
 same_prog:	
-	; run actual irq handler ;
-	jmp irq_return_to_user
+	; return to user ;
 
 irq_return_to_user:
 	stz irq_in_use
-
 return_to_user:	
-	
 	lda current_program_id
-	sta ROM_BANK
-	lda prog_curr_ram_bank
 	sta RAM_BANK
 	
 	lda prog_addr + 1
@@ -292,8 +289,8 @@ return_to_user:
 	ldx prog_reg_x
 	ldy prog_reg_y
 	
-	stz irq_in_use
-	
+	;stp
+
 	rti
 
 .export prog_addr
@@ -301,9 +298,6 @@ prog_addr:
 	.word 0
 .export prog_bank
 prog_bank:
-	.byte 0
-.export prog_curr_ram_bank
-prog_curr_ram_bank:
 	.byte 0
 .export prog_proc_status
 prog_proc_status:
@@ -322,6 +316,7 @@ prog_reg_y:
 .export current_program_id
 current_program_id:
 	.byte 0
+.export schedule_timer	
 schedule_timer:
 	.byte 0
 vera_status:
@@ -342,11 +337,6 @@ process_priority:
 return_table:
 	.res 256, 0
 
-; table that holds the pid of each ram bank ;
-.export mem_table
-mem_table:
-	.res $100, 0
-
 .export file_table
 file_table:
 	.res 16, 0
@@ -354,7 +344,7 @@ file_table:
 
 setup_kernal:
 	lda #1
-	sta mem_table
+	sta process_table
 	
 	sta file_table
 	sta file_table + 1

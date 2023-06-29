@@ -5,6 +5,7 @@ CHROUT := $FFD2
 SETLFS := $FFBA
 SETNAM := $FFBD
 OPEN := $FFC0
+LOAD := $FFD5
 CHKIN := $FFC6
 CLOSE := $FFC3
 MACPTR := $FF44
@@ -12,6 +13,7 @@ CLRCHN := $FFE7
 CLALL := $FFCC
 READST := $FFB7
 
+RAM_BANK := $00
 ROM_BANK := $01
 
 .include "prog.inc"
@@ -35,85 +37,63 @@ ROM_BANK := $01
 .SEGMENT "CODE"
 
 getchar_kernal:
-	lda #1
-	sta kernal_use
-	
-	stz ROM_BANK
+	php
+	sei
 	jsr CHRIN
-	
-	pha
-	
-	lda current_program_id
-	sta ROM_BANK
-	stz kernal_use
-	
-	pla 
+	plp
 	rts
 	
 putchar_kernal:
-	pha
-	lda ROM_BANK 
-	sta prog_bank
-	pla
-	stz ROM_BANK
-	
+	php
+	sei
 	jsr CHROUT
-	
-	lda prog_bank
-	sta ROM_BANK
+	plp
 	rts
 
 
 filename_buffer:
 	.res 32
-	
+
 ; filename in .AX, num args in .Y	
 exec_kernal:
-	sei 
+	sei
 	sta KZP1
 	stx KZP1 + 1
 	
-	sta KZP3
-	stx KZP3 + 1
-	
 	sty KZP2
-	
-	lda ROM_BANK
+
+	lda RAM_BANK
 	sta prog_bank
 	
-	ldy #0
-	:
+	ldy #0 ; get length of file name
+@filename_length_loop:
 	lda (KZP1), Y
 	sta filename_buffer, Y
-	beq :+
+	beq @filename_length_loop_exit
 	iny
-	bne :-
-	:
-	tya ; load filename length into .A
-	
-	stz ROM_BANK
-	cli
-	
+	bne @filename_length_loop
+@filename_length_loop_exit:
+	tya
+
 	ldx #<filename_buffer
 	ldy #>filename_buffer
 	jsr SETNAM
 	
-	lda #KERNAL_USE_FILENUM
+	lda #$FF
 	ldx #8
-	ldy #KERNAL_USE_FILENUM
+	ldy #2 ; header-less load
 	jsr SETLFS
 	
-	jsr OPEN
 	jmp @find_bank
 	; error occured in open ;
-@open_kernal_error:
-	ldx #KERNAL_USE_FILENUM
-	jsr CLOSE
-	jsr CLRCHN
-	
+@open_kernal_error:	
+	lda prog_addr ; failed program bank
+	stz process_table, X
+
 	lda prog_bank
-	sta ROM_BANK
-	lda #0
+	sta RAM_BANK
+	lda #0 ; signifies error
+	cli
 	rts
 	
 @find_bank:	
@@ -124,104 +104,36 @@ exec_kernal:
 	inx 
 	bne :-
 	:
-	stx prog_addr
-	
-	lda #1
-	sta	@was_first_load_loop
-	
-	lda #<$C200
-	sta KZP4
-	lda #>$C200
-	sta KZP4 + 1
-	
-@load_loop:	
-	stz ROM_BANK
-	cli
-	
-	ldx #KERNAL_USE_FILENUM
-	jsr CHKIN
-	
-	lda #0
-	ldx #<$9000
-	ldy #>$9000
-	clc
-	jsr MACPTR
-	
-	bcs :+
-	cpy #0
-	bne @continue_load
-	cpx #0 ; MACPTR has an off by one problem
-	bne @continue_load
-	:
-	lda @was_first_load_loop
-	beq @exec_kernal_end_load
-	ldx prog_addr
-	stz process_table, X
-	jmp @open_kernal_error
-@continue_load:
-	lda prog_addr ; restore correct bank
-	sei
-	sta ROM_BANK
-	
-@copy_to_bank:
+	stx prog_addr ; new prog bank stored in prog_addr
 
-	lda #<$9000
-	sta KZP1
-	lda #>$9000
-	sta KZP1 + 1
-	
-	inx
-@copy_loop:
-	dex 
-	bne :+
-	cpy #0
-	beq @copy_loop_end
-	dey 
-	:
-	lda (KZP1)
-	sta (KZP4)
-	
-	inc KZP1
-	bne :+
-	inc KZP1 + 1
-	:
-	inc KZP4
-	bne :+
-	inc KZP4 + 1
-	:
-	jmp @copy_loop
-	
-@copy_loop_end:
-	stz @was_first_load_loop
-	jmp @load_loop
-	
-@exec_kernal_end_load:
-	stz ROM_BANK
-	
-	ldx #KERNAL_USE_FILENUM
-	jsr CLOSE
-	jsr CLRCHN
-	
+@setup_program_execution:
 ; file loaded, setup program execution 	
 	ldx prog_addr ; new program's pid/bank
-	sei
-	stx ROM_BANK
-	
-	lda #<irq_handler
-	sta $FFFE
-	lda #>irq_handler
-	sta $FFFF
+	stx RAM_BANK
+
+	lda #0
+	ldx #<$A200
+	ldy #>$A200
+	jsr LOAD
+
+	; if carry set, an error occured
+	bcs @open_kernal_error
+	cpx #<$A200
+	bne :+
+	cpy #>$A200
+	bne :+
+	jmp @open_kernal_error
+	:
 	
 	stz STORE_REG_A
 	stz STORE_REG_X
 	stz STORE_REG_Y ; set registers to 0
 	
 	stz STORE_REG_STATUS
-	stz STORE_RAM_BANK
 	
-	lda #<$C200
+	lda #<$A200
 	sta STORE_PROG_ADDR
-	lda #>$C200
+	lda #>$A200
 	sta STORE_PROG_ADDR + 1
 	
 	
@@ -233,33 +145,34 @@ exec_kernal:
 	lda #> ( program_exit - 1)
 	sta STORE_PROG_STACK + $FF
 	
+	ldx prog_addr
 	lda #1
 	sta process_table, X
 	lda #10
 	sta process_priority, X
 	
-	lda #<$C080
+	lda #<$A080
 	sta KZP4
-	lda #>$C080
+	lda #>$A080
 	sta KZP4 + 1
 	
-	lda ROM_BANK
-	sta @new_prog_bank
-	
+	lda prog_addr
+	sta @new_prog_bank ; new program's bank was stored in prog_addr
+
 	ldx KZP2 ; number of args
 	stx STORE_PROG_ARGC
 	
 @arg_copy_loop:	
 	ldy prog_bank
-	sty ROM_BANK
-	lda (KZP3)
+	sty RAM_BANK
+	lda (KZP1)
 	ldy @new_prog_bank
-	sty ROM_BANK
+	sty RAM_BANK
 	sta (KZP4)
 	
-	inc KZP3
+	inc KZP1
 	bne :+
-	inc KZP3 + 1
+	inc KZP1 + 1
 	:
 	inc KZP4
 	bne :+
@@ -274,7 +187,7 @@ exec_kernal:
 	beq @end_arg_copy_loop
 	
 	lda prog_bank
-	sta ROM_BANK
+	sta RAM_BANK
 @skip_repeat_spaces:
 	lda (KZP3) 
 	bne @arg_copy_loop ; if not \0, continue to next iteration of loop
@@ -287,14 +200,16 @@ exec_kernal:
 	lda @new_prog_bank
 	
 	ldx prog_bank
-	stx ROM_BANK ; restore bank 
-	cli	
+	stx RAM_BANK ; restore bank 
+
+	ldx #1 ; success
+	cli
 	rts 
 
 @new_prog_bank:
 	.byte 0
-@was_first_load_loop:
-	.byte 0
+
+.import schedule_timer
 
 ; if a program returns, return value in .A
 program_exit:
@@ -307,7 +222,7 @@ program_exit:
 process_status_kernal:
 	tay
 	ldx process_priority, Y
-	lda process_table, Y	
+	lda process_table, Y
 	rts
 
 ; pointer to buffer of .Y bytes in .AX, stack = pid
@@ -329,7 +244,7 @@ process_name_kernal:
 	pla ; increment stack pointer
 	sta $102, X
 	
-	lda ROM_BANK
+	lda current_program_id
 	sta prog_bank
 	
 	ldy #0
@@ -339,211 +254,34 @@ process_name_kernal:
 	dex
 	beq @end_loop
 	lda KZP2
-	sta ROM_BANK
+	sta RAM_BANK
 	lda STORE_PROG_ARGS, Y
 	beq @end_loop
-	pha 
+	sta KZP4 ; like a pha 
 	lda prog_bank
-	sta ROM_BANK
-	pla 
+	sta RAM_BANK
+	lda KZP4 ; like a pla 
 	sta (KZP1), Y
 	iny 
 	bne @loop
 @end_loop:
 	lda prog_bank
-	sta ROM_BANK
+	sta RAM_BANK
 	lda #0
 	sta (KZP1), Y
 @end_copy:
 	cli
 	rts
-	
 
-; allocate a bank of storage, returns bank in .A
-alloc_bank_kernal:
-	sei
-	ldy #1
-@loop:
-	lda mem_table, Y
-	bne :+
-	lda ROM_BANK
-	sta mem_table, Y
-	tya
-	bra @exit
-	:
-	iny 
-	bne @loop
-	; if no bank found, return 0
-	lda #0
-@exit:
-	cli
-	rts
-
-free_bank_kernal:
-	tax
-	lda mem_table, X
-	cmp ROM_BANK
-	bne :+
-	stz mem_table, X
-	lda #0
-	rts
-	:
-	lda #1
-	rts
-
-; filename in .AX
-open_file_kernal:
-	sei
-	sta KZP1
-	stx KZP1 + 1
-
-	ldx #3
-	:
-	lda file_table, X
-	beq @obtained_filenum
-	inx 
-	cpx #15
-	bne :-
-	lda #0 ; fail
-	jmp @end_open_file
-@obtained_filenum:
-	lda ROM_BANK
-	sta prog_bank
-	
-	sta file_table, X
-	
-	ldy #0
-	:
-	lda (KZP1), Y
-	sta filename_buffer, Y
-	beq :+
-	iny 
-	bne :-
-	:
-	tya 
-	
-	phx 
-	
-	stz ROM_BANK
-	ldx #<filename_buffer
-	ldy #>filename_buffer
-	jsr SETNAM
-	
-	pla
-	pha
-	tay
-	ldy #0
-	ldx #8
-	stp
-	jsr SETLFS
-	
-	jsr OPEN
-	plx
-	bcc @noerror
-	
-	stz file_table, X
-	ldx #0
-@noerror:
-	txa	
-	
-@end_open_file:
-	ldx prog_bank
-	stx ROM_BANK
-
-	cli
-	rts
-
-; filenum in .A
-close_file_kernal:
-	ldy ROM_BANK
-	phy
-	
-	sei
-	tax
-	stz file_table, X
-	
-	stz ROM_BANK
-	jsr CLOSE
-	cli
-	
-	ply
-	sty ROM_BANK
-	rts
-
-; pointer to buffer in .AX, filenum in .Y, number of bytes on top stack
-read_file_kernal:
-	sei 
-	
-	sta KZP1
-	stx KZP1 + 1
-	
-	lda ROM_BANK
-	sta prog_bank
-	
-	lda file_table, Y
-	beq @exit
-	
-	tsx 
-	lda $103, X ; load number of bytes to load	
-	sta KZP2
-	
-	lda $102, X
-	sta $103, X
-	
-	pla ; increment stack pointer
-	sta $102, X
-	
-	lda KZP2
-	beq @exit
-	
-	phy
-	plx
-	stz ROM_BANK
-	jsr CHKIN ; check in correct file
-	
-	lda KZP2 ; number of bytes to load in .A
-	ldx #<$9000
-	ldy #>$9000
-	clc
-	jsr MACPTR
-	
-	stx KZP2
-	ldy KZP2
-	
-	lda prog_bank
-	sta ROM_BANK
-	:
-	lda $9000, Y
-	sta (KZP1), Y
-	
-	dey 
-	bne :-
-	lda $9000
-	sta (KZP1)
-	
-	stz ROM_BANK
-	jsr CLRCHN
-	
-	lda KZP2 ; return value is number of bytes read
-@exit:	
-	ldy prog_bank
-	sty ROM_BANK
-	cli
-	rts 
-
-print_string_kernal:
-	sei
-	
+print_string_kernal:	
 	sta KZP1
 	stx KZP1 + 1
 	
 	ldy #0
 	ldx ROM_BANK
 	:
-	stx ROM_BANK
 	lda (KZP1), Y
 	beq @end
-	stz ROM_BANK
 	jsr CHROUT
 	
 	iny
@@ -551,13 +289,12 @@ print_string_kernal:
 	inc KZP1 + 1
 	bne :-
 @end:
-	stx ROM_BANK
 	rts
 
 ; kill a process with PID in .A	
 kill_process_kernal:
 	tax
-	cmp ROM_BANK
+	cmp RAM_BANK
 	bne :+
 	
 	sta prog_bank
@@ -578,7 +315,6 @@ kill_process_kernal:
 
 ; parse a byte number from a string in .AX with radix in .Y
 parse_num_from_string_kernal:
-	sei
 	sta KZP1
 	stx KZP1 + 1
 
@@ -623,7 +359,6 @@ parse_decimal:
 	lda KZP3
 	ldx KZP3 + 1
 
-	cli
 	rts
 @mult_pow_10:
 	phy
@@ -720,6 +455,38 @@ parse_hex:
 	sbc #$30
 	rts
 
+print_hex_num_kernal:
+	phx
+	phy
+	
+	pha
+	lsr
+	lsr 
+	lsr 
+	lsr
+	jsr @get_hex_char
+	jsr CHROUT
+	
+	pla
+	and #$0F
+	jsr @get_hex_char
+	jsr CHROUT
+
+	ply
+	plx
+	rts
+@get_hex_char:
+	cmp #10
+	bcs @greater10
+	ora #$30
+	rts
+@greater10:
+	sec
+	sbc #10
+	clc
+	adc #$41
+	rts
+
 ;
 ; system call table ; starts at $9d00
 ;
@@ -732,15 +499,9 @@ to_copy_call_table:
 	jmp process_name_kernal ; $9D0C
 	jmp kill_process_kernal ; $9D0F
 	
-	jmp alloc_bank_kernal ; $9D12
-	jmp free_bank_kernal ; $9D15
-	
-	jmp open_file_kernal ; $9D18
-	jmp close_file_kernal ; $9D1B
-	jmp read_file_kernal ; $9D1E
-	
-	jmp print_string_kernal ; $9D21
-	jmp parse_num_from_string_kernal ; $9D24	
+	jmp print_string_kernal ; $9D12
+	jmp parse_num_from_string_kernal ; $9D15
+	jmp print_hex_num_kernal ; $9D18
 	
 to_copy_call_table_end:	
 

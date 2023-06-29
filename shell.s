@@ -4,13 +4,7 @@ CHROUT = $9D03
 EXEC = $9D06
 PROCESS_STATUS = $9D09
 
-ALLOC_BANK = $9D12
-
-OPEN_FILE = $9D18
-CLOSE_FILE = $9D1B
-READ_FILE = $9D1E
-
-PRINT_STR = $9D21
+PRINT_STR = $9D12
 
 UNDERSCORE = $5F
 LEFT_CURSOR = $9D
@@ -35,6 +29,8 @@ take_input:
     phx
     jsr CHRIN
     plx
+	cmp #0
+	beq @input_loop
 	cmp #$d
     beq @newline
 	tay
@@ -142,11 +138,8 @@ run_child:
 	lda wait_for_child
 	beq end_run_command ; if not waiting for child, jump to key clear check
 @wait_loop:
+	;stp
 	wai
-	lda #0
-	pha
-	ldx #0
-	ldy #0
 	lda child_pid
     jsr PROCESS_STATUS
     cmp #0
