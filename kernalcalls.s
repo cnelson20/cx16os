@@ -125,31 +125,7 @@ exec_kernal:
 	jmp @open_kernal_error
 	:
 	
-	stz STORE_REG_A
-	stz STORE_REG_X
-	stz STORE_REG_Y ; set registers to 0
-	
-	stz STORE_REG_STATUS
-	
-	lda #<$A200
-	sta STORE_PROG_ADDR
-	lda #>$A200
-	sta STORE_PROG_ADDR + 1
-	
-	
-	lda #$FD
-	sta STORE_PROG_SP ; set prog sp to $FA
-	
-	lda #< ( program_exit - 1)
-	sta STORE_PROG_STACK + $FE 
-	lda #> ( program_exit - 1)
-	sta STORE_PROG_STACK + $FF
-	
-	ldx prog_addr
-	lda #1
-	sta process_table, X
-	lda #10
-	sta process_priority, X
+	jsr setup_prog_vars
 	
 	lda #<$A080
 	sta KZP4
@@ -209,11 +185,67 @@ exec_kernal:
 @new_prog_bank:
 	.byte 0
 
+; sets up the program structure for preexisting code in bank .A
+; code must start @ $A200 as normal
+run_bank_code_kernal:
+	sei
+	sta RAM_BANK
+	jsr setup_prog_vars
+
+	; 1 argument, bank name as hex
+	lda #1
+	sta STORE_PROG_ARGC
+	lda RAM_BANK
+	lsr 
+	lsr 
+	lsr 
+	lsr
+	jsr hex_to_char
+	sta STORE_PROG_ARGS
+	lda RAM_BANK
+	and #$0F
+	jsr hex_to_char
+	sta STORE_PROG_ARGS + 1
+	stz STORE_PROG_ARGS + 2
+
+	lda current_program_id
+	sta RAM_BANK
+	cli
+	rts
+
+setup_prog_vars:
+	stz STORE_REG_A
+	stz STORE_REG_X
+	stz STORE_REG_Y ; set registers to 0
+	
+	stz STORE_REG_STATUS
+	
+	lda #<$A200
+	sta STORE_PROG_ADDR
+	lda #>$A200
+	sta STORE_PROG_ADDR + 1
+	
+	lda #$FD
+	sta STORE_PROG_SP ; set prog sp to $FA
+	
+	lda #< ( program_exit - 1)
+	sta STORE_PROG_STACK + $FE 
+	lda #> ( program_exit - 1)
+	sta STORE_PROG_STACK + $FF
+	
+	ldx RAM_BANK
+	lda #1
+	sta process_table, X
+	lda #10
+	sta process_priority, X
+
+	rts
+
 .import schedule_timer
 
 ; if a program returns, return value in .A
 program_exit:
-	ldx ROM_BANK
+	ldx RAM_BANK
 	stx prog_bank
 	
 	jmp handle_prog_exit
@@ -226,7 +258,6 @@ process_status_kernal:
 	rts
 
 ; pointer to buffer of .Y bytes in .AX, stack = pid
-; not tested 
 process_name_kernal:
 	sei
 	sta KZP1
@@ -273,12 +304,12 @@ process_name_kernal:
 	cli
 	rts
 
-print_string_kernal:	
+print_string_kernal:
+	sei
 	sta KZP1
 	stx KZP1 + 1
 	
 	ldy #0
-	ldx ROM_BANK
 	:
 	lda (KZP1), Y
 	beq @end
@@ -289,10 +320,12 @@ print_string_kernal:
 	inc KZP1 + 1
 	bne :-
 @end:
+	cli
 	rts
 
 ; kill a process with PID in .A	
 kill_process_kernal:
+	sei
 	tax
 	cmp RAM_BANK
 	bne :+
@@ -311,14 +344,16 @@ kill_process_kernal:
 	lda #RETURN_KILL
 	jsr clear_process_info
 	lda #0
+	cli
 	rts 
 
-; parse a byte number from a string in .AX with radix in .Y
+; Parse a byte number from a string in .AX with radix in .Y
+; Allowed options: .Y = 10, .Y = 16
 parse_num_from_string_kernal:
 	sta KZP1
 	stx KZP1 + 1
 
-	cpy #16
+	cpy #16 ; hexadecimal
 	beq parse_hex
 parse_decimal:
 	ldy #0
@@ -455,7 +490,10 @@ parse_hex:
 	sbc #$30
 	rts
 
+; prints base-10 representation of byte in .A
+; preserves .X and .Y
 print_hex_num_kernal:
+	sei
 	phx
 	phy
 	
@@ -464,18 +502,19 @@ print_hex_num_kernal:
 	lsr 
 	lsr 
 	lsr
-	jsr @get_hex_char
+	jsr hex_to_char
 	jsr CHROUT
 	
 	pla
 	and #$0F
-	jsr @get_hex_char
+	jsr hex_to_char
 	jsr CHROUT
 
 	ply
 	plx
+	cli
 	rts
-@get_hex_char:
+hex_to_char:
 	cmp #10
 	bcs @greater10
 	ora #$30
@@ -502,6 +541,8 @@ to_copy_call_table:
 	jmp print_string_kernal ; $9D12
 	jmp parse_num_from_string_kernal ; $9D15
 	jmp print_hex_num_kernal ; $9D18
+
+	jmp run_bank_code_kernal ; $9D1B
 	
 to_copy_call_table_end:	
 
