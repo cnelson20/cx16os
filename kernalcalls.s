@@ -31,6 +31,8 @@ ROM_BANK := $01
 .import process_table
 .import process_priority
 .import return_table
+.import active_process_stack
+.import active_process_sp
 .import mem_table
 .import file_table
 
@@ -239,6 +241,13 @@ setup_prog_vars:
 	lda #10
 	sta process_priority, X
 
+	; increase active process stack stuff
+	lda RAM_BANK
+	ldx active_process_sp ; stack holds current highest position
+	inx
+	stx active_process_sp
+	sta active_process_stack, X
+
 	rts
 
 .import schedule_timer
@@ -327,7 +336,7 @@ print_string_kernal:
 kill_process_kernal:
 	sei
 	tax
-	cmp RAM_BANK
+	cmp current_program_id
 	bne :+
 	
 	sta prog_bank
@@ -525,6 +534,17 @@ hex_to_char:
 	clc
 	adc #$41
 	rts
+
+;
+; file handling operations
+;
+; open
+; read
+; write
+; close
+;
+
+
 
 ;
 ; system call table ; starts at $9d00

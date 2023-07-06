@@ -1,34 +1,42 @@
 KILL = $9D0F
-PARSE_NUM = $9D24
+PARSE_NUM = $9D15
 
-ARGC = $C07F
-ARGS = $C080
+ARGC = $A07F
+ARGS = $A080
 
 ZPBASE = $20
 
 main:
-	ldy #0
-loop:
-	lda ARGS, Y
-	beq end_loop
-	iny 
-	bne loop
-end_loop:
-	iny 
-	
-	tya
-	clc
-	adc #<ARGS
-	sta ZPBASE
-	lda #>ARGS
-	adc #0
-	tax 
-	lda ZPBASE
-	ldy #10
-	stp
-	jsr PARSE_NUM
+	ldy #1
+@loop:
+    lda ARGS, Y
+    beq arg_found
+
+    iny
+    bne @loop
+arg_found:
+    iny
+    ldx #10 ; base 10 by default
+    lda ARGS, Y
+    cmp #$24 ; '$'
+    bne @not_base_16
+    iny
+    ldx #16
+@not_base_16:
+    stx base
+    
+    tya
+    clc
+    adc #<ARGS
+    ldx #>ARGS
+
+    ldy base
+    jsr PARSE_NUM
 	
 	jsr KILL
 	
 	rts
+
+base:
+	.byte 0
 	

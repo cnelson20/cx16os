@@ -3,6 +3,8 @@
 RAM_BANK := $00
 ROM_BANK := $01
 
+MEMTOP = $FF99
+
 memory_copy := $FEE7
 
 .include "prog.inc"
@@ -60,6 +62,11 @@ setup_irq_handler:
 	lda #>irq_handler
 	sta $0315
 
+	lda #<nmi_handler
+	sta $0318
+	lda #>nmi_handler
+	sta $0319
+
 	rts
 
 default_irq_handler:
@@ -114,12 +121,63 @@ irq_re_caller:
 	; an actual irq ;
 	lda vera_status
 	and #$01
-	bne next_prog ; if vsync, handle time management
-	
+	beq :+ ; if not vsync, skip
+	jmp next_prog ; if vsync, handle time management
+	:
+
 	; else, return control to program
 	jmp irq_return_to_user
 	
 @jump_to_return_to_user:
+	jmp return_to_user
+
+;
+; nmi_handler: kills current process
+;
+nmi_handler: 
+	pla ; need to pull this off stack (rom bank)
+	pla ; again (now .A)
+	
+	sta prog_reg_a
+	stx prog_reg_x
+	sty prog_reg_y
+	
+	tsx	
+
+	lda $101, X
+	sta prog_proc_status
+	and #%11101111
+	ora #%00000100 ; irq will be disabled on rti
+	sta $101, X
+
+	lda $102, X
+	sta prog_addr
+	lda #<nmi_handler_return
+	sta $102, X ; low byte of return address
+
+	lda $103, X
+	sta prog_addr + 1
+	lda #>nmi_handler_return
+	sta $103, X ; high byte of return address
+
+	lda current_program_id
+	sta RAM_BANK
+
+	rti
+
+nmi_handler_return:
+	ldx active_process_sp
+	lda active_process_stack, X
+	cmp current_program_id
+	bne :+
+	lda #RETURN_NMI
+	jmp handle_prog_exit ; if current program is active, treat more like a normal exit
+
+	:
+	; active process is not current, just kill that process
+	tax
+	lda #RETURN_NMI
+	jsr clear_process_info
 	jmp return_to_user
 
 ; returning out of a task ;
@@ -141,9 +199,37 @@ program_error:
 clear_process_info:
 	stz process_table, X ; declare id as now unused
 	sta return_table, X ; store return value
-	
-	rts
 
+	stx @temp
+
+	ldx active_process_sp
+	lda active_process_stack, X
+	cmp @temp
+	bne @not_active_process
+
+	; zero out prog bank at former place in stack
+	stz active_process_stack, X
+	:
+	dex
+	lda active_process_stack, X
+	beq :-
+	stx active_process_sp
+
+	rts
+@not_active_process:
+	; zero out prog bank at former place in stack
+	ldx #0
+	:
+	lda active_process_stack, X
+	inx
+	cmp @temp
+	bne :-
+	
+	dex ; x is one more than correct
+	stz active_process_stack, X
+	rts
+@temp:
+	.byte 0
 
 ; no code right now, just return to current task ;
 next_prog:
@@ -322,6 +408,10 @@ schedule_timer:
 vera_status:
 	.byte 0
 
+.export num_ram_banks
+num_ram_banks:
+	.byte 0
+
 ; holds whether each process is active
 .export process_table
 process_table:
@@ -332,6 +422,14 @@ process_table:
 process_priority:
 	.res 256, 0
 	
+; holds the order of active processes
+.export active_process_stack
+active_process_stack:
+	.res 256, 0
+.export active_process_sp
+active_process_sp:
+	.byte 0
+
 ; holds return values for all programs
 .export return_table
 return_table:
@@ -343,12 +441,32 @@ file_table:
 
 
 setup_kernal:
+	sec
+	jsr MEMTOP
+	dec A
+	sta num_ram_banks
+
+	inc A
+	beq @2048k
+	tax
 	lda #1
-	sta process_table
+	:
+	sta process_table, X
+	inx
+	bne :-
+@2048k:
+
+	sta process_table ; ram bank 0 taken by kernal
 	
-	sta file_table
-	sta file_table + 1
-	sta file_table + 2
+	ldx #3
+	lda #1
+	:
+	sta file_table, X
+	dex
+	bpl :-
+
+	lda #$ff
+	sta active_process_sp
 	
 	rts
 	

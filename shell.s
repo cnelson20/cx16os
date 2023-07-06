@@ -37,8 +37,12 @@ take_input:
 	and #$7F
 	cmp #$20
 	bcs @type_key
-	cmp #$19
-	bne @input_loop
+	cmp #$19 ; a delete
+	beq @backspace
+	cmp #$14 ; backspace
+	beq @backspace
+	jmp @input_loop
+@backspace:
 	cpx #0
 	beq @left_side_line
 	dex
