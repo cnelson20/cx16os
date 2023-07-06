@@ -38,6 +38,7 @@ ROM_BANK := $01
 
 .SEGMENT "CODE"
 
+.export getchar_kernal
 getchar_kernal:
 	php
 	sei
@@ -45,6 +46,7 @@ getchar_kernal:
 	plp
 	rts
 	
+.export putchar_kernal
 putchar_kernal:
 	php
 	sei
@@ -57,6 +59,7 @@ filename_buffer:
 	.res 32
 
 ; filename in .AX, num args in .Y	
+.export exec_kernal
 exec_kernal:
 	sei
 	sta KZP1
@@ -189,6 +192,7 @@ exec_kernal:
 
 ; sets up the program structure for preexisting code in bank .A
 ; code must start @ $A200 as normal
+.export run_bank_code_kernal
 run_bank_code_kernal:
 	sei
 	sta RAM_BANK
@@ -260,6 +264,7 @@ program_exit:
 	jmp handle_prog_exit
 
 ; get info about a process in .A, returns if active in .A and priority in .X
+.export process_status_kernal
 process_status_kernal:
 	tay
 	ldx process_priority, Y
@@ -267,6 +272,7 @@ process_status_kernal:
 	rts
 
 ; pointer to buffer of .Y bytes in .AX, stack = pid
+.export process_name_kernal
 process_name_kernal:
 	sei
 	sta KZP1
@@ -313,6 +319,7 @@ process_name_kernal:
 	cli
 	rts
 
+.export print_string_kernal
 print_string_kernal:
 	sei
 	sta KZP1
@@ -333,6 +340,7 @@ print_string_kernal:
 	rts
 
 ; kill a process with PID in .A	
+.export kill_process_kernal
 kill_process_kernal:
 	sei
 	tax
@@ -358,6 +366,7 @@ kill_process_kernal:
 
 ; Parse a byte number from a string in .AX with radix in .Y
 ; Allowed options: .Y = 10, .Y = 16
+.export parse_num_from_string_kernal
 parse_num_from_string_kernal:
 	sta KZP1
 	stx KZP1 + 1
@@ -501,6 +510,7 @@ parse_hex:
 
 ; prints base-10 representation of byte in .A
 ; preserves .X and .Y
+.export print_hex_num_kernal
 print_hex_num_kernal:
 	sei
 	phx

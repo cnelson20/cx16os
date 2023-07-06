@@ -11,6 +11,8 @@ memory_copy := $FEE7
 
 .import setup_call_table
 
+.import print_string_kernal
+
 .SEGMENT "INIT"
 .SEGMENT "ONCE"
 .SEGMENT "STARTUP"
@@ -166,6 +168,10 @@ nmi_handler:
 	rti
 
 nmi_handler_return:
+	lda #<nmi_exit_string
+	ldx #>nmi_exit_string
+	jsr print_string_kernal
+
 	ldx active_process_sp
 	lda active_process_stack, X
 	cmp current_program_id
@@ -179,6 +185,10 @@ nmi_handler_return:
 	lda #RETURN_NMI
 	jsr clear_process_info
 	jmp return_to_user
+
+nmi_exit_string:
+	.literal "<nmi>"
+	.byte $d, $0
 
 ; returning out of a task ;
 .export handle_prog_exit
