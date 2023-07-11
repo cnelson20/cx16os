@@ -554,7 +554,143 @@ hex_to_char:
 ; close
 ;
 
+;
+; open_file_kernal
+;
+; opens the file with name in .AX
+; returns 0 on error, otherwise return file num
+;
+open_file_kernal:
+	php
+	sei
+	stp 
 
+	sta KZP1
+	stx KZP1 + 1
+
+	lda RAM_BANK
+	sta prog_bank
+
+	ldy #0
+@filename_length_loop:
+	lda (KZP1), Y
+	sta filename_buffer, Y
+	beq @filename_length_loop_exit
+	iny
+	bne @filename_length_loop
+@filename_length_loop_exit:
+	tya
+
+	ldx #<filename_buffer
+	ldy #>filename_buffer
+	jsr SETNAM
+
+	ldy #4
+@get_filenum:
+	lda file_table, Y
+	beq @found_filenum
+	iny
+	cpy #15
+	bcc @get_filenum
+
+	plp ; pull back status byte
+	lda #0
+	rts ; no file
+@found_filenum:
+	tya
+	tax
+	lda current_program_id
+	sta file_table, X
+	tya
+	; file num & SA in .A and .Y
+	pha ; push file num to stack
+	ldx #8
+	jsr SETLFS
+
+	jsr OPEN
+	
+	pla ; restore new file num to .A
+	plp ; restore processor status
+	rts
+
+;
+; close_file_kernal
+;
+; closes file with number in .A
+;
+close_file_kernal:
+	php ; push status byte
+	sei
+
+	tax
+	lda current_program_id
+	cmp file_table, X
+	bne @exit ; if program didnt open file, cannot close it
+
+	stz file_table, X
+	txa
+	jsr CLOSE
+
+@exit:
+	plp ; restore status byte
+	rts
+
+;
+; read_file_kernal
+;
+; reads .Y bytes into buffer at .AX from filenum at top of stack
+;
+; internal vars:
+; kzp1 - buffer
+; kzp2 - filenum
+; kzp3 - # bytes
+read_file_kernal:
+	sei
+
+	stp ; debugging
+	sta KZP1
+	stx KZP1 + 1
+	
+	sty KZP3 ; number of bytes
+	
+	tsx 
+	lda $103, X ; pid on stack
+	sta KZP2 ; filenum
+	
+	lda $102, X
+	sta $103, X
+	
+	pla ; increment stack pointer
+	sta $102, X
+	
+	lda current_program_id
+	ldx KZP2 ; filenum
+	cmp file_table, X
+	beq :+
+	; .X != 0 --> error
+	ldx #$FF
+	lda #0
+	rts
+	:
+	
+	ldx KZP2
+	jsr CHKIN
+
+	clc
+	lda KZP3 ; # bytes to read
+	ldx KZP1
+	ldy KZP1 + 1 ; .XY holds buffer for MACPTR
+	jsr MACPTR
+
+	phx
+	jsr CLRCHN
+	pla
+	ldx #0
+	; .X = 0 --> no error
+	; bytes read in .A
+	cli
+	stp
+	rts
 
 ;
 ; system call table ; starts at $9d00
@@ -573,6 +709,10 @@ to_copy_call_table:
 	jmp print_hex_num_kernal ; $9D18
 
 	jmp run_bank_code_kernal ; $9D1B
+
+	jmp open_file_kernal ; $9D1E
+	jmp close_file_kernal ; $9D21
+	jmp read_file_kernal ; $9D24
 	
 to_copy_call_table_end:	
 

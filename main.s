@@ -468,7 +468,7 @@ setup_kernal:
 
 	sta process_table ; ram bank 0 taken by kernal
 	
-	ldx #3
+	ldx #10 ; files 0-3 occupied by default
 	lda #1
 	:
 	sta file_table, X

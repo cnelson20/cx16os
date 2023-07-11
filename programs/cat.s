@@ -1,15 +1,15 @@
-OPEN_FILE = $9D18
-CLOSE_FILE = $9D1B
-READ_FILE = $9D1E
+OPEN_FILE = $9D1E
+CLOSE_FILE = $9D21
+READ_FILE = $9D24
 
-PRINT_STR = $9D18
+PRINT_STR = $9D12
 
 CHROUT = $9D03
 
 ZPBASE = $20
 
-ARGC = $C07F 
-ARGS = $C080
+ARGC = $A07F 
+ARGS = $A080
 
 
 main:
@@ -39,9 +39,9 @@ loop:
 	sta filenum
 	
 @print_loop:	
-	ldy filenum
-	lda #255
-	pha ; number of bytes on stack
+	lda filenum
+	pha ; filenum on stack
+	ldy #255
 	lda #<read_buffer
 	ldx #>read_buffer
 	jsr READ_FILE
