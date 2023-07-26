@@ -563,7 +563,6 @@ hex_to_char:
 open_file_kernal:
 	php
 	sei
-	stp 
 
 	sta KZP1
 	stx KZP1 + 1
@@ -647,7 +646,6 @@ close_file_kernal:
 read_file_kernal:
 	sei
 
-	stp ; debugging
 	sta KZP1
 	stx KZP1 + 1
 	
@@ -689,7 +687,6 @@ read_file_kernal:
 	; .X = 0 --> no error
 	; bytes read in .A
 	cli
-	stp
 	rts
 
 ;
