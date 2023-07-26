@@ -11,6 +11,8 @@ ZPBASE = $20
 ARGC = $A07F 
 ARGS = $A080
 
+R = 0
+W = 1
 
 main:
 	lda #<ARGS
@@ -35,6 +37,7 @@ loop:
 @print_file:
 	lda $20
 	ldx $21
+	ldy #R
 	jsr OPEN_FILE
 	sta filenum
 	
