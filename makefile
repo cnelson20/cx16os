@@ -4,7 +4,7 @@ CASM = ../xasm16/xasm
 
 PROGRAM = OS.PRG
 
-SOURCES = main.s kernalcalls.s
+SOURCES = main.s kernalcalls.s helpers.s
 FLAGS = -t cx16 -m os.map
 
 all: build
@@ -20,7 +20,7 @@ programs: FORCE
 
 FORCE: ;
 
-build: os.prg shell programs
+build: os.prg shell
 	cp os.prg mnt/OS.PRG
 	cp shell mnt/
 
