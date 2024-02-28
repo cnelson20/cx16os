@@ -405,6 +405,9 @@ load_new_process:
 	dex
 	bpl :-
 	
+	lda #%00000000
+	sta STORE_REG_STATUS
+	
 	lda #$FD
 	sta STORE_PROG_SP
 	
@@ -493,7 +496,11 @@ run_first_prog:
 	
 	ldx STORE_PROG_SP
 	txs
-	cld
+	
+	lda STORE_REG_STATUS
+	pha
+	plp	
+	
 	stz irq_already_triggered
 	jmp (STORE_PROG_ADDR)
 

@@ -11,6 +11,7 @@
 .import process_priority_table
 .import active_process_stack
 .import active_process_sp
+.import current_program_id
 
 .export call_table
 call_table:
