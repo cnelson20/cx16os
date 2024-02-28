@@ -5,7 +5,7 @@ CASM = ../xasm16/xasm
 PROGRAM = os.prg
 
 SOURCES = main.s kernalcalls.s
-FLAGS = -t cx16 -m os.map
+FLAGS = -t cx16 -m os.map -Ln os.lbl
 
 all: build
 
@@ -20,13 +20,13 @@ programs: FORCE
 
 FORCE: ;
 
-copy: os.img
+copy: cx16os.img
 	
 os.img: FORCE
-	cp blank_sd.img os.img
+	cp blank_sd.img cx16os.img
 
 build: os.prg SHELL programs copy
-	./scripts/mount_sd.sh os.img
+	./scripts/mount_sd.sh cx16os.img
 	sudo cp os.prg mnt/OS.PRG
 	sudo cp SHELL mnt/
 	
