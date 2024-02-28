@@ -138,7 +138,6 @@ irq_re_caller:
 
 program_return_handler:
 	tax ; process return value in .A
-	nop
 	lda #1
 	sta irq_already_triggered ; no sheningans during this
 	
@@ -148,6 +147,7 @@ program_return_handler:
 
 kill_program:
 	; process bank already in .A
+	stp
 	ldx #RETURN_KILL
 	jsr program_exit
 
@@ -157,7 +157,6 @@ kill_program:
 ; may not return if current process = one being exited
 ;
 program_exit:
-	stp
 	sta KZP0 ; process to kill
 	stx KZP1 ; return val
 	
@@ -198,25 +197,31 @@ manage_process_time:
 switch_next_program:	
 	lda current_program_id
 	jsr find_next_process
+	
+	tax
+	lda process_priority_table, X
+	sta schedule_timer
+	txa
+	
 	cmp current_program_id
 	bne :+
 	jmp return_control_program
 	:
+	;
 	; new process != old process
-	stp
-	pha ; save new program id
-	
-	lda current_program_id
+	; need to shuffle mem around 
+	;
+	sta @new_program_id ; save new program id
 	jsr save_current_process
+
+	lda @new_program_id
+	sta current_program_id	
 	
-	pla
-	sta current_program_id
-	tax
-	lda process_priority_table, X
-	sta schedule_timer
+	; crash is currently below this line ;
 	
 	jmp restore_new_process
-
+@new_program_id:
+	.byte 0
 ;
 ; save info about current process
 ;
@@ -232,7 +237,7 @@ save_current_process:
 	cpx #$20
 	bcc :-
 	
-	lda #$30
+	ldx #$30
 	:
 	lda $00, X
 	sta STORE_RAM_ZP_SET2, X
@@ -244,6 +249,7 @@ save_current_process:
 	:
 	lda $0100, X
 	sta STORE_PROG_STACK, X
+	inx
 	bne :-
 
 	rts
@@ -275,8 +281,9 @@ restore_new_process:
 	:
 	lda STORE_PROG_STACK, X
 	sta $0100, X
+	inx
 	bne :-
-	
+
 	jmp return_control_program
 	
 ;
@@ -438,12 +445,14 @@ load_new_process:
 ;
 ; switch control to program in bank .A
 ; 
-; not currently functional
 ;
 return_control_program:
 	lda current_program_id
 switch_control_bank:
 	sta RAM_BANK
+	
+	ldx STORE_PROG_SP
+	txs
 	
 	lda STORE_PROG_ADDR + 1
 	pha 

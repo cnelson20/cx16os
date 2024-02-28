@@ -72,9 +72,9 @@ process_info:
 	sta r0
 	jmp @done_active_inactive
 @not_active_process:
-	stz 0
+	stz r0
 @done_active_inactive:
-	stz r0 + 1
+	stz r0 + 1 ; zero high byte of r0
 	
 	tax
 	lda process_priority_table, X

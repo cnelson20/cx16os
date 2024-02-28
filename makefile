@@ -26,7 +26,7 @@ copy: cx16os.img
 clean:
 	rm programs/[A-Z]*[A-Z]
 
-build: os.prg shell
+build: os.prg shell programs
 	cp os.prg mnt/OS.PRG
 	cp shell mnt/
 

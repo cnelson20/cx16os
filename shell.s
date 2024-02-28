@@ -47,6 +47,10 @@ wait_for_input:
 	cmp #$19 ; delete
 	beq backspace
 	
+	tay
+	and #$80 ; if >= $80, invalid char
+	bne wait_for_input
+	tya
 char_entered:
 	sta input, X
 	inx
@@ -132,14 +136,17 @@ end_loop:
 	jsr exec
 	cmp #0
 	beq exec_error
+	
 wait_child:	
-	stp
 	sta child_id
 wait_child_loop:
 	lda child_id
 	jsr process_info
 	cmp #0
 	bne wait_child_loop
+	
+	stx last_return_val
+	jmp new_line
 	
 exec_error:
 	lda #<exec_error_p1_message
@@ -157,6 +164,8 @@ exec_error:
 exec_error_done:	
 	jmp new_line
 	
+last_return_val:
+	.byte 0
 num_args:
 	.byte 0
 child_id:

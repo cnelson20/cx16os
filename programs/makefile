@@ -1,7 +1,7 @@
 XASM =../../xasm16/xasm
 FLAGS =-addr 0xa200
 
-all: cat echo kill ps runcode
+all: printtest
 
 cat: cat.s
 	$(XASM) $(FLAGS) -o $@ cat.s
@@ -21,4 +21,8 @@ ps: ps.s
 
 runcode: runcode.s
 	$(XASM) $(FLAGS) -o $@ runcode.s
+	cp $@ ../mnt/
+
+printtest: printtest.s
+	$(XASM) $(FLAGS) -o $@ printtest.s
 	cp $@ ../mnt/
