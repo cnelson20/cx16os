@@ -1,364 +1,585 @@
-.setcpu "65c02"
-
-RAM_BANK := $00
-ROM_BANK := $01
-
-memory_copy := $FEE7
-
+.include "cx16.inc"
 .include "prog.inc"
 
-.import setup_call_table
+.import strlen
 
+.SEGMENT "STARTUP"
 .SEGMENT "INIT"
 .SEGMENT "ONCE"
-.SEGMENT "STARTUP"
 	jmp init
 	
 .SEGMENT "CODE"
-	
+
 init:
+	stz ROM_BANK
 	lda #$0f
-	jsr $FFD2
+	jsr CHROUT ; turn on ascii mode
 	
 	jsr setup_kernal
-	
 	jsr setup_call_table
-	jsr load_shell
-	rts
-
-load_shell:
-	lda #<shell_name
+	jsr setup_interrupts
+	
+	stp
+	lda #<shell_name ; load shell as first program
 	ldx #>shell_name
 	ldy #1
-	jsr $9D06
-	jsr run_first_prog
+	sty r0
+	jsr load_new_process
 	
-	rts
-	
+	jmp run_first_prog
+	; shouldn't get here ;
+
 shell_name:
-	.asciiz "shell"
+	.literal "shell", 0
 
-irq_in_use:
-	.byte 0
-.export kernal_use
-kernal_use:
-	.byte 0
-
-.export irq_handler
-irq_handler:
-	sta prog_reg_a
-	stx prog_reg_x
-	sty prog_reg_y
+setup_interrupts:
+	sei
+	lda $0314
+	sta default_irq_handler
+	lda $0315
+	sta default_irq_handler + 1
 	
-	lda ROM_BANK
-	sta prog_bank
+	lda #<custom_irq_handler
+	sta $0314
+	lda #>custom_irq_handler
+	sta $0315
+	
+	lda #1
+	sta irq_already_triggered
+	
+	cli
+	rts
+
+.export default_irq_handler
+default_irq_handler:
+	.word 0
+.export irq_already_triggered
+irq_already_triggered:
+	.byte 0
+
+.export custom_irq_handler
+custom_irq_handler:
+	;
+	; if program is going through irq process, don't restart the irq
+	; if not, rewrite stack to run system code
+	;
+	lda irq_already_triggered
+	beq :+
+	jmp (default_irq_handler)
+	:
+	lda #1
+	sta irq_already_triggered
 	
 	lda RAM_BANK
-	sta prog_curr_ram_bank
+	
+	ldx current_program_id
+	stx RAM_BANK
+	
+	sta STORE_PROG_RAMBANK
+	sta @curr_ram_bank_in_use
+	
+	tsx
+	txa
+	clc 
+	adc #6
+	sta STORE_PROG_SP
 	
 	tsx 
-	lda $102, X
-	sta prog_addr
-	lda #<irq_re_caller
-	sta $102, X
-	
-	lda $103, X 
-	sta prog_addr + 1
+	lda $106, X 
+	sta STORE_PROG_ADDR + 1
 	lda #>irq_re_caller
-	sta $103, X
+	sta $106, X
 	
+	lda $105, X
+	sta STORE_PROG_ADDR
+	lda #<irq_re_caller
+	sta $105, X
+	
+	lda $104, X
+	sta STORE_REG_STATUS
+	
+	lda $103, X
+	sta STORE_REG_A
+	lda $102, X
+	sta STORE_REG_X
 	lda $101, X
-	sta prog_proc_status
-	and #%11101111
-	ora #%00000100 ; irq will be disabled on rti
-	sta $101, X
-	
+	sta STORE_REG_Y
+		
 	lda $9F27 
 	sta vera_status
 	
-	stz ROM_BANK
-	jmp ($FFFE)
-
-irq_re_caller:
-	sei
-	lda irq_in_use
-	bne @jump_to_return_to_user
-	lda kernal_use
-	bne @jump_to_return_to_user
-	
-	lda #1
-	sta irq_in_use
-	
-	; if rom bank is wrong, an error occured
-	lda prog_bank
-	cmp current_program_id
-	bne program_error
-	
-	; an actual irq ;
-	lda vera_status
-	and #$01
-	bne next_prog ; if vsync, handle time management
-	
-	; else, return control to program
-	jmp irq_return_to_user
-	
-@jump_to_return_to_user:
-	jmp return_to_user
-
-; returning out of a task ;
-.export handle_prog_exit
-handle_prog_exit:
-	ldx current_program_id ; bank = process id
-	jsr clear_process_info
-	
-	jmp switch_prog
-
-program_error:
-	ldx current_program_id
-	lda #RETURN_PAGE_BREAK
-	jsr clear_process_info
-	
-	jmp switch_prog
-
-.export clear_process_info
-clear_process_info:
-	;stp
-	stz process_table, X ; declare id as now unused
-	sta return_table, X ; store return value
-	
-	txa ; pid in A 
-	ldx #0
-	:
-	cmp mem_table, X
-	bne :+
-	stz mem_table, X
-	:
-	inx 
-	bne :--
-	rts
-
-
-; no code right now, just return to current task ;
-next_prog:	
-	ldx current_program_id
-	lda schedule_timer
-	inc A
-	cmp process_priority, X
-	bcs switch_prog
-	; current task still has more time ;
-	sta schedule_timer
-	jmp irq_return_to_user
-
-.export switch_prog
-switch_prog:
-	stz schedule_timer
-	
-	ldx current_program_id ; since we don't want to run the same program unless there's only one running, we can ignore this
-	inx
-	bne :+
-	ldx #32
-	:
-	lda process_table, X
-	bne :+
-	inx 
-	bne :-
-	ldx #32
-	bra :-
-	:
-	cpx current_program_id
-	bne @not_same_prog
-	jmp same_prog
-@not_same_prog:
-	phx
-	ldx current_program_id
-	stx ROM_BANK
-	
-	lda prog_reg_a
-	sta STORE_REG_A
-	ldx prog_reg_x
-	stx STORE_REG_X
-	ldy prog_reg_y
-	sty STORE_REG_Y
-	
-	lda prog_curr_ram_bank
-	sta STORE_RAM_BANK
-	
-	; copy zp from $20-$2F to $C020-$C02F
-	ldx #$0F
-	:
-	lda $20, X
-	sta STORE_RAM_ZP + $10, X
-	dex
-	bpl :-
-	; copy zp from $02-$0F to $C010-$C01D 
-	ldx #( $F - $2 )
-	:
-	lda $02, X
-	sta STORE_RAM_ZP, X
-	dex
-	bpl :-
-	
-	lda prog_proc_status
-	sta STORE_REG_STATUS
-	
-	lda prog_addr
-	sta STORE_PROG_ADDR
-	lda prog_addr + 1
-	sta STORE_PROG_ADDR + 1
-	
-	tsx 
-	inx
-	stx STORE_PROG_SP
-	ldx #128
-	:
-	lda $100, X
-	sta STORE_PROG_STACK, X
-	inx 
-	bne :- ; copy 128 bytes of stack
-	
-	plx
-	jmp run_next_prog
-run_first_prog:	
-	ldx #32
-run_next_prog:
-	stx	ROM_BANK
-	stx current_program_id
-	
-	lda STORE_REG_A
-	sta prog_reg_a
-	ldx STORE_REG_X
-	stx prog_reg_x
-	ldy STORE_REG_Y
-	sty prog_reg_y
-	
-	lda STORE_REG_STATUS
-	sta prog_proc_status
-	
-	lda STORE_RAM_BANK
-	sta prog_curr_ram_bank
-	
-	; copy zp from $C020-$C02F to $20-$2F
-	ldx #$0F
-	:
-	lda STORE_RAM_ZP + $10, X
-	sta $20, X
-	dex
-	bpl :-
-	; copy zp from $C010-$C01D to $02-$0F
-	ldx #( $F - $2 )
-	:
-	lda STORE_RAM_ZP, X
-	sta $02, X
-	dex
-	bpl :-
-	
-	
-	lda STORE_PROG_ADDR
-	sta prog_addr
-	lda STORE_PROG_ADDR + 1
-	sta prog_addr + 1
-	
-	ldx #128
-	:
-	lda STORE_PROG_STACK, X
-	sta $100, X
-	inx 
-	bne :-
-	ldx STORE_PROG_SP
-	txs	
-	
-same_prog:	
-	; run actual irq handler ;
-	jmp irq_return_to_user
-
-irq_return_to_user:
-	stz irq_in_use
-
-return_to_user:	
-	
-	lda current_program_id
-	sta ROM_BANK
-	lda prog_curr_ram_bank
+	lda @curr_ram_bank_in_use
 	sta RAM_BANK
 	
-	lda prog_addr + 1
+	jmp (default_irq_handler)
+@curr_ram_bank_in_use:
+	.byte 0
+
+irq_re_caller:
+	lda RAM_BANK
+	beq :+
+	cmp current_program_id
+	beq :+
+	lda current_program_id
+	ldx #RETURN_PAGE_BREAK
+	jmp program_exit
+	:
+
+	; check if vera frame refresh (60 times a sec)
+	lda vera_status
+	and #$01
+	beq :+
+	jmp manage_process_time
+	:
+	
+	lda current_program_id
+	jmp return_control_program
+
+
+program_return_handler:
+	tax ; process return value in .A
+	nop
+	lda #1
+	sta irq_already_triggered ; no sheningans during this
+	
+	lda current_program_id
+	jmp program_exit
+	
+
+kill_program:
+	; process bank already in .A
+	ldx #RETURN_KILL
+	jsr program_exit
+
+;
+; exits the process in bank .A with return code .X
+;
+; may not return if current process = one being exited
+;
+program_exit:
+	stp
+	sta KZP0 ; process to kill
+	stx KZP1 ; return val
+	
+	; check that process being killed is not active
+	; if is, increment sp and move thru stack
+	ldx active_process_sp
+	cmp active_process_stack, X
+	bne @exit_stack_loop
+@stack_loop:
+	inx
+	stx active_process_sp
+	cpx #$FF
+	beq @exit_stack_loop ; increment sp, if $ff, exit loop 
+	
+	lda active_process_stack, X
+	tay
+	lda process_table, Y ; see if prog is still alive
+	beq @stack_loop ; if not alive, keep going
+@exit_stack_loop:
+	
+	ldx KZP0
+	stz process_table, X
+	lda KZP1
+	sta return_table, X
+	cpx current_program_id
+	bne :+
+	jmp switch_next_program
+	:
+	rts
+	
+manage_process_time:
+	dec schedule_timer
+	beq :+
+	jmp return_control_program
+	:	
+	; program's time is up ;
+	; switch control to next program ;
+switch_next_program:	
+	lda current_program_id
+	jsr find_next_process
+	cmp current_program_id
+	bne :+
+	jmp return_control_program
+	:
+	; new process != old process
+	stp
+	pha ; save new program id
+	
+	lda current_program_id
+	jsr save_current_process
+	
+	pla
+	sta current_program_id
+	tax
+	lda process_priority_table, X
+	sta schedule_timer
+	
+	jmp restore_new_process
+
+;
+; save info about current process
+;
+save_current_process:
+	lda current_program_id
+	sta RAM_BANK
+	
+	ldx #$02
+	:
+	lda $00, X
+	sta STORE_RAM_ZP_SET1, X
+	inx
+	cpx #$20
+	bcc :-
+	
+	lda #$30
+	:
+	lda $00, X
+	sta STORE_RAM_ZP_SET2, X
+	inx 
+	cpx #$40
+	bcc :-
+	
+	ldx #$80
+	:
+	lda $0100, X
+	sta STORE_PROG_STACK, X
+	bne :-
+
+	rts
+
+;
+; restore data about prog in .A to general memory
+;	
+restore_new_process:
+	lda current_program_id
+	sta RAM_BANK
+	
+	ldx #$02
+	:
+	lda STORE_RAM_ZP_SET1, X
+	sta $00, X
+	inx
+	cpx #$20
+	bcc :-
+	
+	lda #$30
+	:
+	lda STORE_RAM_ZP_SET2, X
+	sta $00, X
+	inx 
+	cpx #$40
+	bcc :-
+	
+	ldx #$80
+	:
+	lda STORE_PROG_STACK, X
+	sta $0100, X
+	bne :-
+	
+	jmp return_control_program
+	
+;
+; find next alive process in table
+;
+; .A = process
+; returns next process in .A (if only one program, return same program)
+;
+find_next_process:
+	tax
+	inx
+	: 
+	lda process_table, X
+	bne @exit_loop
+	inx
+	bne :-
+	ldx #$10 ; if roll over, reset to process $10
+	bra :-
+@exit_loop:
+	txa
+	rts
+
+;
+; find next open process in table
+;
+; preserves .Y
+; returns in .A
+;
+find_new_process_bank:
+	ldx #$10
+	:
+	lda process_table, X
+	beq @found_open
+	inx
+	bne :-
+	lda #0
+	rts 
+@found_open:
+	txa
+	rts
+
+;
+; indicate that bank passed in .A is now in use by a process
+;
+set_process_bank_used:
+	tax
+	lda #1
+	sta process_table, X
+	lda #20
+	sta process_priority_table, X
+	rts
+
+;
+; load new process into memory
+;
+; .AX holds pointer to process name & args
+; .Y holds # of args
+; r0.L = make new program active (0 = no, !0 = yes, only applicable if current process is active)	
+;
+; return value: 0 on failure, otherwise return bank of new process
+;
+.export load_new_process
+load_new_process:
+	sty @arg_count
+		
+	sta KZP0
+	stx KZP0 + 1
+	
+	ldy #127
+	:
+	lda (KZP0), Y
+	sta @prog_name, Y
+	dey
+	bpl :-
+	
+	lda KZP0
+	ldx KZP0 + 1
+	jsr strlen
+	
+	ldx #<@prog_name
+	ldy #>@prog_name
+	
+	jsr SETNAM
+	
+	lda #15
+	ldx #8
+	ldy #2
+	jsr SETLFS
+	
+	jsr find_new_process_bank
+	sta @new_bank
+	sta RAM_BANK
+	
+	lda #0
+	ldx #<$A200
+	ldy #>$A200
+	
+	stx STORE_PROG_ADDR
+	sty STORE_PROG_ADDR + 1
+	
+	jsr LOAD
+	
+	bcc @load_success
+	lda #0
+	rts
+@load_success:
+	lda @new_bank
+	sta RAM_BANK
+	sta STORE_PROG_RAMBANK
+	
+	jsr set_process_bank_used
+	
+	lda @arg_count
+	sta STORE_PROG_ARGC
+	
+	ldx #127
+	:
+	lda @prog_name, X
+	sta STORE_PROG_ARGS, X
+	dex
+	bpl :-
+	
+	lda #$FD
+	sta STORE_PROG_SP
+	
+	lda #< ( program_return_handler - 1)
+	sta STORE_PROG_STACK + $FE 
+	lda #> ( program_return_handler - 1)
+	sta STORE_PROG_STACK + $FF
+
+	; check if calling current process is active
+	; if is, add calling process to stack
+	ldx active_process_sp
+	cpx #$FF
+	beq @new_active_process ; the first process is always the first active process
+	lda current_program_id
+	ldx active_process_sp
+	cmp active_process_stack, X
+	bne @end_function
+	lda r0
+	beq @end_function
+@new_active_process:
+	dex
+	stx active_process_sp
+	lda @new_bank
+	sta active_process_stack, X
+	
+@end_function:	
+	lda @new_bank
+	rts
+	
+@prog_name:
+	.res 128, 0
+@arg_count:
+	.byte 0
+@new_bank:
+	.byte 0
+
+;
+; switch control to program in bank .A
+; 
+; not currently functional
+;
+return_control_program:
+	lda current_program_id
+switch_control_bank:
+	sta RAM_BANK
+	
+	lda STORE_PROG_ADDR + 1
 	pha 
-	lda prog_addr
+	
+	lda STORE_PROG_ADDR
 	pha
-	lda prog_proc_status
-	pha ; push status to stack 	
 	
-	lda prog_reg_a
-	ldx prog_reg_x
-	ldy prog_reg_y
+	lda STORE_REG_STATUS
+	pha
 	
-	stz irq_in_use
+	lda STORE_REG_A
+	pha
+	ldx STORE_REG_X
+	ldy STORE_REG_Y
 	
+	lda STORE_PROG_RAMBANK
+	sta RAM_BANK
+	
+	pla
+	stz irq_already_triggered
 	rti
 
-.export prog_addr
-prog_addr:
-	.word 0
-.export prog_bank
-prog_bank:
-	.byte 0
-.export prog_curr_ram_bank
-prog_curr_ram_bank:
-	.byte 0
-.export prog_proc_status
-prog_proc_status:
-	.byte 0
+;
+; transfer control to first program in process table (when starting up)
+;
+run_first_prog:
+	lda #$10
+	sta RAM_BANK
+	sta current_program_id
 	
-.export prog_reg_a 
-prog_reg_a:
-	.byte 0
-.export prog_reg_x
-prog_reg_x:
-	.byte 0
-.export prog_reg_y
-prog_reg_y:
-	.byte 0
+	tax 
+	lda process_priority_table, X
+	sta schedule_timer
 	
+	lda STORE_PROG_STACK + $FE
+	sta $0100 + $FE
+	lda STORE_PROG_STACK + $FF
+	sta $0100 + $FF
+	
+	ldx STORE_PROG_SP
+	txs
+	cld
+	stz irq_already_triggered
+	jmp (STORE_PROG_ADDR)
+
+;
+; some register stuff
+;
+
+; info about current process ;
 .export current_program_id
 current_program_id:
 	.byte 0
+	
+.export schedule_timer
 schedule_timer:
 	.byte 0
+
+.export vera_status
 vera_status:
 	.byte 0
+   
+   
+;
+; various variables / tables for os use ;
+;
 
-; holds whether each process is active
+; holds which ram banks have processes ;
 .export process_table
 process_table:
-	.res 256,0 
-
-; holds priority level for each task (higher means more cpu time)	
-.export process_priority
-process_priority:
 	.res 256, 0
 	
-; holds return values for all programs
+; holds priority for processes - higher means more time to run ;
+.export process_priority_table
+process_priority_table:
+	.res 256, 0
+	
+; holds order of active processes
+.export active_process_stack
+active_process_stack:
+	.res 256, 0
+
+; pointer to top of above stack ;
+.export active_process_sp
+active_process_sp:
+	.byte 0
+	
+; holds return values for programs ;
 .export return_table
 return_table:
 	.res 256, 0
-
-; table that holds the pid of each ram bank ;
-.export mem_table
-mem_table:
-	.res $100, 0
-
+	
+; holds open files for processes ;
+; to implement after main stuff is done ;
 .export file_table
 file_table:
 	.res 16, 0
 
-
 setup_kernal:
 	lda #1
-	sta mem_table
+	ldx #$0f
+	:
+	sta process_table, X ; first 16 ram banks not for programs
+	dex
+	bpl :-
 	
-	sta file_table
-	sta file_table + 1
-	sta file_table + 2
+	ldx #2
+	:
+	sta file_table, X
+	dex
+	bpl :- ; mark first 3 files as in use; 0 & 1 are for CMDR kernal, 2 for OS
 	
+	lda #$FF
+	sta active_process_sp
+	
+	rts
+
+.import call_table
+.import call_table_end
+
+setup_call_table:
+	lda #<call_table
+	sta r0
+	lda #>call_table
+	sta r0 + 1
+	
+	lda #<call_table_mem_start
+	sta r1
+	lda #>call_table_mem_start
+	sta r1 + 1
+	
+	lda #<(call_table_end - call_table)
+	sta r2
+	lda #>(call_table_end - call_table)
+	sta r2 + 1
+	
+	jsr memory_copy
 	rts
 	

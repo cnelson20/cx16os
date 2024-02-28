@@ -1,6 +1,7 @@
 CHROUT = $9D03
 
 main:
+	stp
 	ldx #0
 loop:
 	lda string, X

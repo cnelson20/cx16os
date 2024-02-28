@@ -1,196 +1,176 @@
 CHRIN = $9D00
 CHROUT = $9D03
+exec = $9D06
+print_str = $9D09
+process_info = $9D0C
 
-EXEC = $9D06
-PROCESS_STATUS = $9D09
-
-ALLOC_BANK = $9D12
-
-OPEN_FILE = $9D18
-CLOSE_FILE = $9D1B
-READ_FILE = $9D1E
-
-PRINT_STR = $9D21
+r0 = $02
 
 UNDERSCORE = $5F
 LEFT_CURSOR = $9D
 
-main:
-    lda #<welcome_message
-	ldx #>welcome_message
-	jsr PRINT_STR
-
-take_input:
-	lda #$24 ; $
-	jsr CHROUT
-	lda #$20
-	jsr CHROUT
-	lda #UNDERSCORE
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-	
-    ldx #0
-@input_loop:
-    phx
-    jsr CHRIN
-    plx
-	cmp #$d
-    beq @newline
-	tay
-	and #$7F
-	cmp #$20
-	bcs @type_key
-	cmp #$19
-	bne @input_loop
-	cpx #0
-	beq @left_side_line
-	dex
-	lda #$20
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-	lda #UNDERSCORE
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-@left_side_line:
-	jmp @input_loop
-	
-@type_key:
-    jsr CHROUT
-	tya
-	cmp #$A0
-	bne @dont_fix_reverse_space
-	lda #$20
-@dont_fix_reverse_space:	
-	sta buffer, X
-	lda #UNDERSCORE
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-    inx
-    bne @input_loop
-@newline:
-	
-	lda #$20
-	jsr CHROUT
-    lda #$d
-    jsr CHROUT ; print return
-
-	cpx #0
-	bne @not_empty_line
-	jmp end_run_command
-@not_empty_line:
-	stz buffer, X
-	stx buffer_strlength
-
-parse_input:
+init:
 	ldx #0
-	ldy #1
-@space_loop:
-	lda buffer, X
-	beq @end_space_loop
-	cmp #$20
-	bne @not_space
-	stz buffer, X
-	
+intro_loop:
+	lda welcome_string, X
+	beq intro_end_loop
+	jsr CHROUT
 	inx
-	lda was_space_last
-	stx was_space_last
-	bne @space_loop
-	iny	
-	jmp @space_loop
-@not_space:
-	stz was_space_last
-	inx 
-	bne @space_loop
-@end_space_loop:
-	
-; check for & as last arg	
-	ldx buffer_strlength
-	dex
-	lda buffer, X
-	cmp #$26 ; ampersand
-	bne @will_wait_child
-	dex 
-	lda buffer, X
-	cmp #0
-	bne @will_wait_child
-	
-	stz wait_for_child
-	dey ; decrement number of args by one, removing & from args list
-	jmp run_child
-	
-@will_wait_child:
-	lda #1
-	sta wait_for_child
-run_child:
-	
-	phy
+	bne intro_loop
+intro_end_loop:
 
-    lda #<buffer
-    ldx #>buffer
-	ply ; num args
-    jsr EXEC
-	cmp #0
-	beq @exec_error ; if pid = 0 that means error
-    sta child_pid
+new_line:
+	lda #$24 ; '$'
+	jsr CHROUT
+	lda #$20 ; space
+	jsr CHROUT
 	
-	lda wait_for_child
-	beq end_run_command ; if not waiting for child, jump to key clear check
-@wait_loop:
-	wai
-	lda #0
-	pha
+	lda #UNDERSCORE
+	jsr CHROUT
+
+	stz input
 	ldx #0
-	ldy #0
-	lda child_pid
-    jsr PROCESS_STATUS
-    cmp #0
-    bne @wait_loop
-	jmp end_run_command
-	
-@exec_error:
-	lda #<exec_error_message_p1
-	ldx #>exec_error_message_p1
-	jsr PRINT_STR
-	
-	lda #<buffer
-	ldx #>buffer
-	jsr PRINT_STR
-	
-	lda #<exec_error_message_p2
-	ldx #>exec_error_message_p2
-	jsr PRINT_STR
-	
-	jmp end_run_command
+wait_for_input:
+	phx
+	jsr CHRIN
+	plx
+	cmp #0
+	beq wait_for_input
 
-end_run_command:	
-    jmp take_input
+	cmp #$0D ; return
+	beq command_entered
+	cmp #$8D ; shifted return
+	beq command_entered
+	
+	cmp #$14 ; backspace
+	beq backspace
+	cmp #$19 ; delete
+	beq backspace
+	
+char_entered:
+	sta input, X
+	inx
+	
+	tay
+	lda #LEFT_CURSOR
+	jsr CHROUT
+	tya
+	jsr CHROUT
+	lda #UNDERSCORE
+	jsr CHROUT
+	
+	jmp wait_for_input
+	
+backspace:
+	cpx #0
+	bne backspace_not_empty
+	jmp wait_for_input
+backspace_not_empty:
+	dex
+	lda #LEFT_CURSOR
+	jsr CHROUT
+	jsr CHROUT
+	
+	lda #UNDERSCORE
+	jsr CHROUT
+	lda #$20
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+	
+	jmp wait_for_input
 
-was_space_last:
+command_entered:
+	lda #LEFT_CURSOR
+	jsr CHROUT
+	lda #$20
+	jsr CHROUT
+	lda #$0d
+	jsr CHROUT
+	
+	stz input, X	
+
+	cpx #0
+	bne not_empty_line
+	jmp new_line
+not_empty_line:
+	lda #1
+	sta num_args
+	ldy #0 ; index in input
+	ldx #0 ; index in output
+go_until_next_nspace:
+	lda input, Y
+	beq end_loop
+	cmp #$20
+	bcs seperate_words_loop
+	iny
+	jmp go_until_next_nspace
+seperate_words_loop:
+	lda input, Y
+	beq end_loop
+	cmp #$21
+	bcc whitespace_found
+	sta output, X
+	iny
+	inx
+	jmp seperate_words_loop
+whitespace_found:
+	iny
+	stz output, X
+	inx
+	inc num_args
+	jmp go_until_next_nspace
+	
+end_loop:
+	stz output, X
+	lda #1
+	sta r0
+	
+	ldy num_args
+	lda #<output
+	ldx #>output
+	jsr exec
+	cmp #0
+	beq exec_error
+wait_child:	
+	stp
+	sta child_id
+wait_child_loop:
+	lda child_id
+	jsr process_info
+	cmp #0
+	bne wait_child_loop
+	
+exec_error:
+	lda #<exec_error_p1_message
+	ldx #>exec_error_p1_message
+	jsr print_str
+	
+	lda #<output
+	ldx #>output
+	jsr print_str
+	
+	lda #<exec_error_p2_message
+	ldx #>exec_error_p2_message
+	jsr print_str
+	
+exec_error_done:	
+	jmp new_line
+	
+num_args:
 	.byte 0
+child_id:
+	.byte 0
+input:
+	.res 128, 0
+output:
+	.res 128, 0
 
-exec_error_message_p1:
-	.asciiz "ERROR IN EXEC '"
-exec_error_message_p2:
+welcome_string:
+	.ascii "Commander X16 OS Shell"
+	.byte $0d, $00
+exec_error_p1_message:
+	.asciiz "Error in exec '"
+exec_error_p2_message:
 	.ascii "'"
 	.byte $0d, $00
-
-welcome_message:
-    .ascii "CX16 OS SHELL"
-    .byte $0d, $00
-
-
-child_pid:
-    .byte 0
-wait_for_child:
-	.byte 0
-	
-buffer:
-    .res 80
-buffer_strlength:
-	.byte 0
