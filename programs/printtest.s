@@ -12,9 +12,6 @@ end:
 	nop
 	rts
 
-
-
-
 string:
 	.ascii "Hello World!"
 	.byte $0D, $00
