@@ -19,6 +19,7 @@ call_table:
 	jmp exec ; $9D06
 	jmp print_str ; $9D09
 	jmp process_info ; $9D0C
+	jmp get_args ; $9D0F
 .export call_table_end
 call_table_end:
 
@@ -69,7 +70,7 @@ process_info:
 	bne @not_active_process
 	; active ;
 	ldy #1
-	sta r0
+	sty r0
 	jmp @done_active_inactive
 @not_active_process:
 	stz r0
@@ -83,5 +84,14 @@ process_info:
 	pha
 	lda process_table, X
 	plx
+	rts
+
+;
+; Return pointer to args in .AX and argc in .Y
+;
+get_args:
+	lda #<STORE_PROG_ARGS
+	ldx #>STORE_PROG_ARGS
+	ldy STORE_PROG_ARGC
 	rts
 	

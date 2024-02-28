@@ -19,7 +19,6 @@ init:
 	jsr setup_call_table
 	jsr setup_interrupts
 	
-	stp
 	lda #<shell_name ; load shell as first program
 	ldx #>shell_name
 	ldy #1

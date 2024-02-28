@@ -5,6 +5,8 @@ print_str = $9D09
 process_info = $9D0C
 
 r0 = $02
+r1 = $04
+r2 = $06
 
 UNDERSCORE = $5F
 LEFT_CURSOR = $9D
@@ -60,6 +62,15 @@ char_entered:
 	jsr CHROUT
 	tya
 	jsr CHROUT
+	
+	cmp #$22
+	bne not_quote_entered
+	lda #$22
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+not_quote_entered:
+	
 	lda #UNDERSCORE
 	jsr CHROUT
 	
@@ -92,28 +103,48 @@ command_entered:
 	lda #$0d
 	jsr CHROUT
 	
+	stz in_quotes
 	stz input, X	
-
 	cpx #0
 	bne not_empty_line
 	jmp new_line
 not_empty_line:
-	lda #1
-	sta num_args
+	stz num_args
 	ldy #0 ; index in input
 	ldx #0 ; index in output
 go_until_next_nspace:
 	lda input, Y
 	beq end_loop
-	cmp #$20
-	bcs seperate_words_loop
+	cmp #$21
+	bcs nspace_found
 	iny
 	jmp go_until_next_nspace
+nspace_found:
+	inc num_args
 seperate_words_loop:
 	lda input, Y
 	beq end_loop
+	cmp #$22 ; quotes
+	bne char_not_quote
+	; if in quotes, toggle quoted mode and dont include in command 
+	lda in_quotes
+	eor #$FF
+	sta in_quotes
+	iny
+	jmp seperate_words_loop
+char_not_quote:
+	stx r1
+	stz r2
+	ldx in_quotes
+	beq not_in_quotes
+	sta r2
+not_in_quotes:
+	ldx r1
+	cmp r2
+	beq dont_check_whitespace
 	cmp #$21
 	bcc whitespace_found
+dont_check_whitespace:
 	sta output, X
 	iny
 	inx
@@ -122,28 +153,52 @@ whitespace_found:
 	iny
 	stz output, X
 	inx
-	inc num_args
 	jmp go_until_next_nspace
-	
 end_loop:
 	stz output, X
-	lda #1
-	sta r0
+	stx command_length
 	
+	lda num_args
+	bne narg_not_0
+	jmp new_line
+narg_not_0:
+	
+	lda #1
+	sta do_wait_child
+	sta r0 ; by default, new process is active 
+	
+	dex
+	lda output, X
+	cmp #$26
+	bne no_ampersand
+	dex 
+	lda output, X
+	bne no_ampersand
+	; last argument is just an ampersand
+	dec num_args
+	stz do_wait_child
+	stz r0
+no_ampersand:	
 	ldy num_args
+	bne narg_not_0_amp
+	jmp new_line
+narg_not_0_amp:
+	
 	lda #<output
 	ldx #>output
 	jsr exec
 	cmp #0
 	beq exec_error
-	
-wait_child:	
 	sta child_id
-wait_child_loop:
+	
+	lda do_wait_child
+	bne wait_child
+	jmp new_line
+wait_child:	
 	lda child_id
 	jsr process_info
 	cmp #0
-	bne wait_child_loop
+	bne wait_child
 	
 	stx last_return_val
 	jmp new_line
@@ -163,7 +218,13 @@ exec_error:
 	
 exec_error_done:	
 	jmp new_line
-	
+
+in_quotes:
+	.byte 0
+do_wait_child:
+	.byte 0
+command_length:
+	.byte 0
 last_return_val:
 	.byte 0
 num_args:

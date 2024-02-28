@@ -1,7 +1,7 @@
 XASM =../../xasm16/xasm
 FLAGS =-addr 0xa200
 
-all: printtest
+all: printtest echo
 
 cat: cat.s
 	$(XASM) $(FLAGS) -o $@ cat.s
