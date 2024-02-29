@@ -1,8 +1,11 @@
 # sd image
 os.img
 
-# Prerequisites
-*.d
+# mnt folder
+mnt/
+
+# shell
+shell
 
 # Object files
 *.o
@@ -13,6 +16,7 @@ os.img
 # Linker output
 *.ilk
 *.map
+*.lbl
 *.exp
 
 # Precompiled Headers
@@ -25,34 +29,5 @@ os.img
 *.la
 *.lo
 
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-
 # x16 program files
 *.prg
-
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
-
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
