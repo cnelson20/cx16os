@@ -29,6 +29,8 @@ new_line:
 	
 	lda #UNDERSCORE
 	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
 
 	stz input
 	ldx #0
@@ -57,10 +59,6 @@ char_entered:
 	sta input, X
 	inx
 	
-	tay
-	lda #LEFT_CURSOR
-	jsr CHROUT
-	tya
 	jsr CHROUT
 	
 	cmp #$22
@@ -73,6 +71,8 @@ not_quote_entered:
 	
 	lda #UNDERSCORE
 	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
 	
 	jmp wait_for_input
 	
@@ -84,7 +84,6 @@ backspace_not_empty:
 	dex
 	lda #LEFT_CURSOR
 	jsr CHROUT
-	jsr CHROUT
 	
 	lda #UNDERSCORE
 	jsr CHROUT
@@ -92,12 +91,11 @@ backspace_not_empty:
 	jsr CHROUT
 	lda #LEFT_CURSOR
 	jsr CHROUT
+	jsr CHROUT
 	
 	jmp wait_for_input
 
 command_entered:
-	lda #LEFT_CURSOR
-	jsr CHROUT
 	lda #$20
 	jsr CHROUT
 	lda #$0d
