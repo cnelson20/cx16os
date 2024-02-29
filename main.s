@@ -354,7 +354,7 @@ load_new_process:
 	ldy #127
 	:
 	lda (KZP0), Y
-	sta @prog_name, Y
+	sta @new_prog_name, Y
 	dey
 	bpl :-
 	
@@ -362,8 +362,8 @@ load_new_process:
 	ldx KZP0 + 1
 	jsr strlen
 	
-	ldx #<@prog_name
-	ldy #>@prog_name
+	ldx #<@new_prog_name
+	ldy #>@new_prog_name
 	
 	jsr SETNAM
 	
@@ -385,24 +385,52 @@ load_new_process:
 	
 	jsr LOAD
 	
-	bcc @load_success
+	bcc :+ ; if carry clear, load was a success
 	lda #0
 	rts
-@load_success:
-	lda @new_bank
-	sta RAM_BANK
-	sta STORE_PROG_RAMBANK
+	:
+	lda @arg_count
+	sta r1
+	ldy @new_bank
+	lda #<@new_prog_name
+	ldx #>@new_prog_name
+	jsr setup_process_info
+	rts
+@new_prog_name:
+	.res 128, 0
+@arg_count:
+	.byte 0
+@new_bank:
+	.byte 0
+
+;
+; setup process info in its bank
+;
+; .AX = args, .Y = program bank, r0.L = active?, r1.L = argc
+;
+setup_process_info:
+	sty RAM_BANK ; .Y holds new bank
+	sty STORE_PROG_RAMBANK
 	
+	pha
+	phx
+	
+	tya
 	jsr set_process_bank_used
 	
-	lda @arg_count
+	plx
+	stx KZP0 + 1
+	pla
+	sta KZP0
+	
+	lda r1 ; r1 holds argc
 	sta STORE_PROG_ARGC
 	
-	ldx #127
+	ldy #127
 	:
-	lda @prog_name, X
-	sta STORE_PROG_ARGS, X
-	dex
+	lda (KZP0), Y
+	sta STORE_PROG_ARGS, Y
+	dey
 	bpl :-
 	
 	lda #$FD
@@ -422,24 +450,17 @@ load_new_process:
 	ldx active_process_sp
 	cmp active_process_stack, X
 	bne @end_function
-	lda r0
+	lda r0 ; if not set to be active, ignore
 	beq @end_function
 @new_active_process:
 	dex
 	stx active_process_sp
-	lda @new_bank
+	lda RAM_BANK ; new process' bank
 	sta active_process_stack, X
 	
 @end_function:	
-	lda @new_bank
+	lda RAM_BANK
 	rts
-	
-@prog_name:
-	.res 128, 0
-@arg_count:
-	.byte 0
-@new_bank:
-	.byte 0
 
 ;
 ; switch control to program in bank .A
