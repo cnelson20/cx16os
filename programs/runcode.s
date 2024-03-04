@@ -2,8 +2,9 @@ GET_ARGS = $9D0F
 
 PRINT_STR = $9D09
 PARSE_NUM = $9D15
+PROCESS_INFO = $9D0C
 
-RUN_BANK_CODE = $9D1B
+RUN_BANK_CODE = $9D1E
 
 main:
 	jsr GET_ARGS 
@@ -48,7 +49,18 @@ arg_found:
 	jmp display_usage
 @call_run_code:	
 	; new bank in .A
+	sta bank
 	ldx #0 ; use default name, r0 doesn't matter
 	ldy #1
     jsr RUN_BANK_CODE
+	
+@check_child:
+	lda bank
+	jsr PROCESS_INFO
+	cmp #0
+	bne @check_child
+	
     rts
+
+bank:
+	.byte 0

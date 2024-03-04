@@ -165,6 +165,9 @@ custom_nmi_handler:
 	stx STORE_REG_X
 	sty STORE_REG_Y
 	
+	pla ; rom bank ?
+	pla ; idk as well
+	
 	lda RAM_BANK
 	sta STORE_PROG_RAMBANK
 	
@@ -232,7 +235,6 @@ program_return_handler:
 .export kill_process_kernal
 kill_process_kernal:
 	; process bank already in .A
-	;stp
 	ldx #RETURN_KILL
 	jmp program_exit
 
@@ -525,7 +527,7 @@ run_code_in_bank_kernal:
 	sta loading_new_prog_name
 	lda #'c'
 	sta loading_new_prog_name + 1
-	lda current_program_id
+	lda @new_bank
 	jsr hex_num_to_string_kernal
 	sta loading_new_prog_name + 2
 	stx loading_new_prog_name + 3
@@ -536,6 +538,7 @@ run_code_in_bank_kernal:
 	ldy #0
 	:
 	lda (r0), Y
+	beq :+
 	sta loading_new_prog_name, Y
 	iny 
 	cpy #$7F
@@ -558,6 +561,7 @@ run_code_in_bank_kernal:
 	:
 	lda #1 ; one arg
 	sta r1
+	stz r1 + 1
 	
 	lda RAM_BANK
 	pha
