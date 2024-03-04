@@ -44,7 +44,6 @@ setup_interrupts:
 	lda #>custom_irq_handler
 	sta $0315
 	
-	stp
 	lda $0318
 	sta default_nmi_handler
 	lda $0319
@@ -210,7 +209,6 @@ custom_nmi_handler:
 	rti
 	
 nmi_re_caller:
-	stp
 	ldx active_process_sp
 	cpx #$FF - 1
 	bne :+
