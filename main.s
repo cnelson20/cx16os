@@ -446,6 +446,7 @@ set_process_bank_used:
 ;
 .export load_new_process
 load_new_process:
+	stp
 	sty @arg_count
 		
 	sta KZP0
@@ -462,14 +463,16 @@ load_new_process:
 	ldx KZP0 + 1
 	jsr strlen
 	
+	stp
+	
 	ldx #<loading_new_prog_name
 	ldy #>loading_new_prog_name
 	
 	jsr SETNAM
 	
-	lda #15
-	ldx #8
-	ldy #2
+	lda #$FF ; logical number / doesn't matter
+	ldx #8 ; device 8 (sd card / floppy)
+	ldy #2 ; load without two-byte header
 	jsr SETLFS
 	
 	jsr find_new_process_bank
