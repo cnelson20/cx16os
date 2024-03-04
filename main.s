@@ -2,6 +2,7 @@
 .include "prog.inc"
 
 .import strlen
+.import hex_num_to_string_kernal
 
 .SEGMENT "STARTUP"
 .SEGMENT "INIT"
@@ -43,8 +44,19 @@ setup_interrupts:
 	lda #>custom_irq_handler
 	sta $0315
 	
+	lda $0318
+	sta default_nmi_handler
+	lda $0319
+	sta default_nmi_handler
+	
+	lda #<custom_nmi_handler
+	sta $0318
+	lda #>custom_nmi_handler
+	sta $0319
+	
 	lda #1
 	sta irq_already_triggered
+	stz nmi_queued
 	
 	cli
 	rts
@@ -54,6 +66,9 @@ default_irq_handler:
 	.word 0
 .export irq_already_triggered
 irq_already_triggered:
+	.byte 0
+.export nmi_queued
+nmi_queued:
 	.byte 0
 
 .export custom_irq_handler
@@ -115,6 +130,12 @@ custom_irq_handler:
 	.byte 0
 
 irq_re_caller:
+	lda nmi_queued
+	beq :+
+	stz nmi_queued
+	jmp nmi_re_caller
+	:
+
 	lda RAM_BANK
 	beq :+
 	cmp current_program_id
@@ -134,6 +155,71 @@ irq_re_caller:
 	lda current_program_id
 	jmp return_control_program
 
+.export default_nmi_handler
+default_nmi_handler:
+	.word 0
+
+.export custom_nmi_handler
+custom_nmi_handler:
+	sta STORE_REG_A
+	stx STORE_REG_X
+	sty STORE_REG_Y
+	
+	lda RAM_BANK
+	sta STORE_PROG_RAMBANK
+	
+	lda irq_already_triggered
+	beq :+
+	; if not servicing system routine, continue ;
+	lda #1
+	sta nmi_queued ; set toggle for next interrupt to trigger nmi
+	
+	lda STORE_REG_A
+	ldx STORE_REG_X 
+	ldy STORE_REG_Y
+	rti
+	:
+	
+	tsx
+	txa
+	clc
+	adc #3
+	sta STORE_PROG_SP
+	tsx
+
+	lda $101, X
+	sta STORE_REG_STATUS
+
+	lda $102, X
+	sta STORE_PROG_ADDR
+	lda #<nmi_re_caller
+	sta $102, X ; low byte of return address
+
+	lda $103, X
+	sta STORE_PROG_ADDR + 1
+	lda #>nmi_re_caller
+	sta $103, X ; high byte of return address
+
+	lda STORE_PROG_RAMBANK
+	sta RAM_BANK
+	
+	lda #1
+	sta irq_already_triggered
+	
+	rti
+	
+nmi_re_caller:
+	ldx active_process_sp
+	cpx #$FF - 1
+	bne :+
+	; if last program, exit to basic using normal nmi handler ;
+	jmp (default_nmi_handler)
+	
+	:
+	lda active_process_stack, X
+	ldx #RETURN_NMI
+	jsr program_exit
+	jmp return_control_program
 
 program_return_handler:
 	tax ; process return value in .A
@@ -143,26 +229,36 @@ program_return_handler:
 	lda current_program_id
 	jmp program_exit
 	
-
-kill_program:
+.export kill_process_kernal
+kill_process_kernal:
 	; process bank already in .A
-	stp
+	;stp
 	ldx #RETURN_KILL
-	jsr program_exit
+	jmp program_exit
 
 ;
 ; exits the process in bank .A with return code .X
-;
 ; may not return if current process = one being exited
+;
+; return val: .AX = 0 -> no process to kill, .X = 1 -> process .A killed
 ;
 program_exit:
 	sta KZP0 ; process to kill
 	stx KZP1 ; return val
 	
+	tax
+	lda process_table, X
+	bne :+
+	; if process doesn't exist, load regs with fail states and return
+	lda #$00
+	ldx #0
+	rts
+	:
 	; check that process being killed is not active
 	; if is, increment sp and move thru stack
 	ldx active_process_sp
-	cmp active_process_stack, X
+	lda active_process_stack, X
+	cmp KZP0
 	bne @exit_stack_loop
 @stack_loop:
 	inx
@@ -175,7 +271,6 @@ program_exit:
 	lda process_table, Y ; see if prog is still alive
 	beq @stack_loop ; if not alive, keep going
 @exit_stack_loop:
-	
 	ldx KZP0
 	stz process_table, X
 	lda KZP1
@@ -184,6 +279,9 @@ program_exit:
 	bne :+
 	jmp switch_next_program
 	:
+	
+	lda KZP0
+	ldx #1
 	rts
 	
 manage_process_time:
@@ -268,7 +366,7 @@ restore_new_process:
 	cpx #$20
 	bcc :-
 	
-	lda #$30
+	ldx #$30
 	:
 	lda STORE_RAM_ZP_SET2, X
 	sta $00, X
@@ -331,7 +429,7 @@ set_process_bank_used:
 	tax
 	lda #1
 	sta process_table, X
-	lda #20
+	lda #10
 	sta process_priority_table, X
 	rts
 
@@ -354,7 +452,7 @@ load_new_process:
 	ldy #127
 	:
 	lda (KZP0), Y
-	sta @new_prog_name, Y
+	sta loading_new_prog_name, Y
 	dey
 	bpl :-
 	
@@ -362,8 +460,8 @@ load_new_process:
 	ldx KZP0 + 1
 	jsr strlen
 	
-	ldx #<@new_prog_name
-	ldy #>@new_prog_name
+	ldx #<loading_new_prog_name
+	ldy #>loading_new_prog_name
 	
 	jsr SETNAM
 	
@@ -380,9 +478,6 @@ load_new_process:
 	ldx #<$A200
 	ldy #>$A200
 	
-	stx STORE_PROG_ADDR
-	sty STORE_PROG_ADDR + 1
-	
 	jsr LOAD
 	
 	bcc :+ ; if carry clear, load was a success
@@ -392,17 +487,95 @@ load_new_process:
 	lda @arg_count
 	sta r1
 	ldy @new_bank
-	lda #<@new_prog_name
-	ldx #>@new_prog_name
+	lda #<loading_new_prog_name
+	ldx #>loading_new_prog_name
 	jsr setup_process_info
 	rts
-@new_prog_name:
-	.res 128, 0
 @arg_count:
 	.byte 0
 @new_bank:
 	.byte 0
+loading_new_prog_name:
+	.res 128, 0
 
+;
+; if bank .A not in use, setup a program assuming code is already in said bank
+; if .X != 0, a name for the program is in r0
+; if active process & .Y != 0, new process will be active
+; return val: .A = 0 -> failure, .A != 0 -> new process in .A
+;
+.export run_code_in_bank_kernal
+run_code_in_bank_kernal:
+	sta @new_bank
+	sty @try_active
+	tay
+	lda process_table, Y
+	
+	cmp #0
+	beq :+
+	; program already exists in this bank
+	lda #0
+	rts
+	:
+	
+	cpx #0
+	bne @custom_name
+@use_default_name:
+	lda #'r'
+	sta loading_new_prog_name
+	lda #'c'
+	sta loading_new_prog_name + 1
+	lda current_program_id
+	jsr hex_num_to_string_kernal
+	sta loading_new_prog_name + 2
+	stx loading_new_prog_name + 3
+	stz loading_new_prog_name + 4
+	
+	jmp @setup
+@custom_name:
+	ldy #0
+	:
+	lda (r0), Y
+	sta loading_new_prog_name, Y
+	iny 
+	cpy #$7F
+	bcc :-
+	:
+	lda #0
+	sta loading_new_prog_name, Y
+	
+@setup:
+	; check to see if new process should be active
+	stz r0
+	lda @try_active
+	beq :+
+	ldx active_process_sp
+	lda active_process_stack, X
+	cmp current_program_id
+	bne :+
+	lda #1
+	sta r0 ; new process is active
+	:
+	lda #1 ; one arg
+	sta r1
+	
+	lda RAM_BANK
+	pha
+	
+	lda #<loading_new_prog_name
+	ldx #>loading_new_prog_name
+	ldy @new_bank
+	jsr setup_process_info
+	
+	pla
+	sta RAM_BANK
+	rts
+
+@new_bank:
+	.byte 0
+@try_active:
+	.byte 0
+	
 ;
 ; setup process info in its bank
 ;
@@ -432,6 +605,11 @@ setup_process_info:
 	sta STORE_PROG_ARGS, Y
 	dey
 	bpl :-
+	
+	lda #<$A200
+	sta STORE_PROG_ADDR
+	lda #>$A200
+	sta STORE_PROG_ADDR + 1
 	
 	lda #%00000000
 	sta STORE_REG_STATUS
