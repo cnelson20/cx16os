@@ -446,7 +446,6 @@ set_process_bank_used:
 ;
 .export load_new_process
 load_new_process:
-	stp
 	sty @arg_count
 		
 	sta KZP0
@@ -462,8 +461,6 @@ load_new_process:
 	lda KZP0
 	ldx KZP0 + 1
 	jsr strlen
-	
-	stp
 	
 	ldx #<loading_new_prog_name
 	ldy #>loading_new_prog_name
