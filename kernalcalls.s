@@ -3,13 +3,18 @@
 
 .SEGMENT "CODE"
 
-.import load_new_process
 .import parse_num_kernal
-.import kill_process_kernal
 .import hex_num_to_string_kernal
+
+.import load_new_process
 .import run_code_in_bank_kernal
+.import kill_process_kernal
+.import is_valid_process
+
+.import open_file_kernal, close_file_kernal
 
 .import irq_already_triggered
+.import atomic_action_st
 .import process_table
 .import return_table
 .import process_priority_table
@@ -75,6 +80,14 @@ print_str:
 ; .Y = priority value, r0.L = active process or not
 ;
 get_process_info:
+	tax
+	jsr is_valid_process
+	bne :+
+	rts
+
+	:
+	txa
+	
 	ldx active_process_sp
 	cmp active_process_stack, X
 	bne @not_active_process
@@ -91,9 +104,8 @@ get_process_info:
 	lda process_priority_table, X
 	tay
 	lda return_table, X
-	pha
-	lda process_table, X
-	plx
+	tax
+	lda #1 ; already know process is valid
 	rts
 
 ;
@@ -112,45 +124,17 @@ get_args:
 ; no return value
 ;
 get_process_name:
-	sta r2 
-	stx r2 + 1
-	
-	lda #1
-	sta irq_already_triggered
-	
-	sty r1
-	ldy current_program_id
-	sty r1 + 1
-	
-	ldy #0 ; index
-	inc r0
-@loop:
-	dec r0
-	beq @loop_end
-	
-	ldx r1
-	stx RAM_BANK
-	lda STORE_PROG_ARGS, Y
-	ldx r1 + 1
-	stx RAM_BANK
-	
-	cmp #0
-	beq @loop_end
-	sta (r2), Y
-	
-	iny
-	bra @loop
-@loop_end:
-	lda #0
-	sta (r2), Y
 
-	lda current_program_id
-	sta RAM_BANK
+.import get_process_name_kernal
+	pha 
+	lda #1
+	sta atomic_action_st
+	pla
 	
-	stz irq_already_triggered
+	jsr get_process_name_kernal
+	
+	stz atomic_action_st
 	rts
-@process_bank:
-	.byte 0
 
 ;
 ; Parse a number in the string pointed to by .AX
@@ -183,3 +167,14 @@ kill_process:
 ;
 run_code_in_bank:
 	jmp run_code_in_bank_kernal
+	
+
+open_file:
+	jsr open_file_kernal
+	rts
+	
+
+close_file:
+	jsr close_file_kernal
+	rts
+	

@@ -56,6 +56,7 @@ setup_interrupts:
 	
 	lda #1
 	sta irq_already_triggered
+	stz atomic_action_st
 	stz nmi_queued
 	
 	cli
@@ -67,6 +68,10 @@ default_irq_handler:
 .export irq_already_triggered
 irq_already_triggered:
 	.byte 0
+.export atomic_action_st
+atomic_action_st:
+	.byte 0
+	
 .export nmi_queued
 nmi_queued:
 	.byte 0
@@ -138,8 +143,13 @@ irq_re_caller:
 
 	lda RAM_BANK
 	beq :+
+	and #%11111110
 	cmp current_program_id
 	beq :+
+	lda STORE_PROG_ADDR + 1
+	cmp #$A0 ; process running in code space 
+	bcc :+
+	; process trampled into another bank, need to kill
 	lda current_program_id
 	ldx #RETURN_PAGE_BREAK
 	jmp program_exit
@@ -248,8 +258,8 @@ program_exit:
 	sta KZP0 ; process to kill
 	stx KZP1 ; return val
 	
-	tax
-	lda process_table, X
+	; process in .A
+	jsr is_valid_process
 	bne :+
 	; if process doesn't exist, load regs with fail states and return
 	lda #$00
@@ -288,9 +298,17 @@ program_exit:
 	
 manage_process_time:
 	dec schedule_timer
-	beq :+
+	beq @process_time_up
+@process_has_time:
 	jmp return_control_program
-	:	
+@process_time_up:
+	lda atomic_action_st
+	beq :+
+	lda #1
+	sta schedule_timer
+	bra @process_has_time
+	:
+	
 	; program's time is up ;
 	; switch control to next program ;
 switch_next_program:	
@@ -384,7 +402,31 @@ restore_new_process:
 	bne :-
 
 	jmp return_control_program
+
+
+;
+;	check if process exists and is valid
+;
+; .A = process
+; preserves .X , .Y
+;
+.export is_valid_process
+is_valid_process:
+	phx
+	tax
+	lda process_table, X 
+	plx
+
+	cmp #0
+	beq @fail
+	cmp #$FF
+	beq @fail
 	
+	lda #1
+	rts
+@fail:
+	lda #0
+	rts
 ;
 ; find next alive process in table
 ;
@@ -393,35 +435,42 @@ restore_new_process:
 ;
 find_next_process:
 	tax
-	inx
-	: 
-	lda process_table, X
+	bra @not_valid_process
+	
+@loop: 
+	txa
+	jsr is_valid_process
 	bne @exit_loop
+@not_valid_process:	
 	inx
-	bne :-
-	ldx #$10 ; if roll over, reset to process $10
-	bra :-
+	bra @loop
 @exit_loop:
 	txa
 	rts
 
 ;
-; find next open process in table
+; find next open process id in table
 ;
 ; preserves .Y
 ; returns in .A
 ;
 find_new_process_bank:
-	ldx #$10
-	:
+	lda #$10
+	tax
+@loop:
 	lda process_table, X
-	beq @found_open
-	inx
-	bne :-
-	lda #0
-	rts 
-@found_open:
+	cmp #0
+	bne @id_taken
+
+@found:
 	txa
+	rts
+	
+@id_taken:
+	inx
+	bne @loop
+@not_found:
+	lda #0
 	rts
 
 ;
@@ -761,12 +810,19 @@ file_table:
 	.res 16, 0
 
 setup_kernal:
-	lda #1
-	ldx #$0f
+	lda #$FF ; not valid process id
+	ldx #$00
 	:
-	sta process_table, X ; first 16 ram banks not for programs
+	sta process_table, X 
 	dex
-	bpl :-
+	bne :-
+	
+	ldx #$10 ; first 16 ram banks not for programs
+	:
+	stz process_table, X
+	inx 
+	inx
+	bne :-
 	
 	ldx #2
 	:
