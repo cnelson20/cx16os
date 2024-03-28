@@ -4,7 +4,6 @@
 .SEGMENT "CODE"
 
 .import atomic_action_st
-.import file_table
 
 ;
 ; returns length of string pointed to by .AX in .A
@@ -317,6 +316,12 @@ hex_num_to_string_kernal:
 	adc #$41
 	rts
 
+;
+; Read first r0.L bytes of the name of the process at .Y
+; and store into .AX
+;
+; no return value
+;
 .export get_process_name_kernal
 get_process_name_kernal:
 @proc_bank := r1
@@ -353,77 +358,3 @@ get_process_name_kernal:
 	lda @store_bank
 	sta RAM_BANK
 	rts
-
-.export open_file_kernal
-open_file_kernal:
-	ldx #15
-	lda #1
-	sta atomic_action_st
-@find_global_file_entry_loop:
-	lda file_table, X
-	beq @found_global_file_entry
-	dex
-	bpl @find_global_file_entry_loop
-	
-	lda #$FF
-	rts ; no files left
-	
-@found_global_file_entry:
-	stz atomic_action_st
-	lda #1
-	sta file_table, X
-	stx r1 ; we will use this file later
-	
-	; check individual process file table
-	inc RAM_BANK
-	
-	ldx #PV_OPEN_TABLE_SIZE - 1
-@find_process_file_entry_loop:
-	lda PV_OPEN_TABLE, X
-	beq @found_process_file_entry
-	dex 
-	bpl @find_process_file_entry_loop
-	
-	; no files left in process file table
-	dec RAM_BANK
-	lda #$FF
-	rts
-@found_process_file_entry:
-	lda r1	
-	sta PV_OPEN_TABLE, X
-	stx r1 + 1
-	
-	dec RAM_BANK
-	
-	; save var to stack
-	
-	lda r0
-	ldx r0 + 1
-	jsr strlen
-	ldx r0
-	ldy r0 + 1
-	jsr SETNAM
-	
-	lda KZPS4
-	tay
-	ldx #8
-	jsr SETLFS
-	
-	jsr OPEN
-	
-	
-	
-	
-	
-	
-	jsr CLRCHN
-	
-	ply
-	sty KZPS4
-	
-	rts
-
-.export close_file_kernal
-close_file_kernal:
-	rts
-	
