@@ -1,79 +1,79 @@
 .include "prog.inc"
 .include "cx16.inc"
+.include "macs.inc"
 
 .SEGMENT "CODE"
 
 .import atomic_action_st
+.import is_valid_process
 
 ;
 ; returns length of string pointed to by .AX in .A
 ;
-.export strlen
-strlen:
-	ldy KZPS4
-	phy 
-	ldy KZPS4 + 1
-	phy
-
-	sta KZPS4
-	stx KZPS4 + 1
+.export strlen_ext
+strlen_ext:
+	sta KZE0
+	stx KZE0 + 1
 	ldy #0
 	:
-	lda (KZPS4), Y
+	lda (KZE0), Y
 	beq :+
 	iny
 	bne :-
 	:	
-	tya
-	
-	ply 
-	sty KZPS4 + 1
-	ply 
-	sty KZPS4
+	tya	
+	rts
+
+;
+; copies up to n characters from KZE1 to KZE0
+;
+.export strncpy_ext
+strncpy_ext:
+	tax ; max num of chars to copy
+	ldy #0
+	cpx #0
+	bne :+
+	rts
+	:
+@loop:
+	dex
+	bmi @loop_exit
+	lda (KZE1), Y
+	beq @loop_exit
+	sta (KZE0), Y
+	iny
+	bra @loop 
+@loop_exit:
+	lda #0
+	sta (KZE0), Y
 	
 	rts
+	
+
 
 ;
 ; Parse a byte number from a string in .AX with radix in .Y
 ; Allowed options: .Y = 10, .Y = 16
 ;
-.export parse_num_radix_kernal
-parse_num_radix_kernal:	
-	sty parse_num_store_radix
-
-	ldy KZPS4 ; preserve KZSP4-6
-	phy 
-	ldy KZPS4 + 1 
-	phy 
+.export parse_num_radix_kernal_ext
+parse_num_radix_kernal_ext:	
+	sta KZE0
+	stx KZE0 + 1
 	
-	ldy KZPS5
-	phy 
-	ldy KZPS5 + 1 
-	phy
-	ldy KZPS6
-	phy 
-	ldy KZPS6 + 1 
-	phy
-	
-		
-	sta KZPS4
-	stx KZPS4 + 1
-	
-	ldy parse_num_store_radix
 	cpy #16 ; hexadecimal
 	beq parse_hex
 parse_decimal:
 	; .AX already contains string
-	jsr strlen
+	jsr strlen_ext
 	tay
 	dey
 	; y + kzps4 = last byte of string
 	
-	stz KZPS6 
-	stz KZPS6 + 1
+	stz KZE2 
+	stz KZE2 + 1
 	ldx #0
 @parse_decimal_loop:
-	lda (KZPS4), Y
+	lda (KZE0), Y
 	sec 
 	sbc #$30
 	bcs :+
@@ -84,28 +84,28 @@ parse_decimal:
 	bcc :+	; if character >= $4a, not a digit
 	jmp fail_not_digit
 	:
-	sta KZPS5
-	stz KZPS5 + 1
+	sta KZE1
+	stz KZE1 + 1
 	
 	jsr @mult_pow_10
 	
 	clc
-	lda KZPS5
-	adc KZPS6
-	sta KZPS6
-	lda KZPS5 + 1
-	adc KZPS6 + 1
-	sta KZPS6 + 1
+	lda KZE1
+	adc KZE2
+	sta KZE2
+	lda KZE1 + 1
+	adc KZE2 + 1
+	sta KZE2 + 1
 @end_of_loop:
 	inx
 	dey
 	bmi @end_parse_decimal
 	jmp @parse_decimal_loop	
 @end_parse_decimal:
-	lda KZPS6
-	ldx KZPS6 + 1
+	lda KZE2
+	ldx KZE2 + 1
 	ldy #0
-	jmp parse_num_restore_vars
+	rts
 	
 @mult_pow_10:
 	phy
@@ -121,68 +121,68 @@ parse_decimal:
 	ply	
 	rts 
 @mult_10:
-	lda KZPS5
-	ldy KZPS5 + 1
+	lda KZE1
+	ldy KZE1 + 1
 	
-	asl KZPS5
-	rol KZPS5 + 1
-	asl KZPS5
-	rol KZPS5 + 1
+	asl KZE1
+	rol KZE1 + 1
+	asl KZE1
+	rol KZE1 + 1
 	
 	clc
-	adc KZPS5
+	adc KZE1
 	pha
 	tya
-	adc KZPS5 + 1
-	sta KZPS5 + 1
+	adc KZE1 + 1
+	sta KZE1 + 1
 	
 	pla
 	asl A
-	sta KZPS5
-	rol KZPS5 + 1
+	sta KZE1
+	rol KZE1 + 1
 	
 	rts 
 	
 parse_hex:
 	ldy #0
 	:
-	lda (KZPS4), Y
+	lda (KZE0), Y
 	beq :+
 	iny 
 	bra :-
 	:
 	dey
 	
-	stz KZPS5
-	stz KZPS5 + 1
+	stz KZE1
+	stz KZE1 + 1
 	
-	lda (KZPS4), Y
+	lda (KZE0), Y
 	jsr @get_hex_digit
-	sta KZPS5
+	sta KZE1
 	dey
 	bmi @end
-	lda (KZPS4), Y
+	lda (KZE0), Y
 	jsr @mult_16
-	ora KZPS5
-	sta KZPS5
+	ora KZE1
+	sta KZE1
 	dey
 	bmi @end
 	
-	lda (KZPS4), Y
+	lda (KZE0), Y
 	jsr @get_hex_digit
-	sta KZPS5 + 1
+	sta KZE1 + 1
 	dey
 	bmi @end
-	lda (KZPS4), Y
+	lda (KZE0), Y
 	jsr @mult_16
-	ora KZPS5 + 1
-	sta KZPS5 + 1
+	ora KZE1 + 1
+	sta KZE1 + 1
 @end:
-	lda KZPS5
-	ldx KZPS5 + 1
+	lda KZE1
+	ldx KZE1 + 1
 	ldy #0
+	rts
 	
-	jmp parse_num_restore_vars
 @mult_16:
 	asl A
 	asl A
@@ -212,42 +212,19 @@ fail_not_digit:
 	lda #$FF
 	tax
 	tay
-	jmp parse_num_restore_vars
-
-parse_num_restore_vars:
-	sty parse_num_store_radix
-	
-	ply ; restore KZSP4-6
-	sty KZPS6 + 1
-	ply 
-	sty KZPS6
-	ply
-	sty KZPS5 + 1
-	ply 
-	sty KZPS5
-	
-	ply
-	sty KZPS4 + 1
-	ply 
-	sty KZPS4
-	
-	ldy parse_num_store_radix
 	rts
-
-parse_num_store_radix:
-	.byte 0
 
 ;
 ; Parse a number in the string pointed to by .AX
 ; if leading $ or 0x, treat as hex number 
 ;
-.export parse_num_kernal
-parse_num_kernal:
-	sta KZP0
-	stx KZP0 + 1
+.export parse_num_kernal_ext
+parse_num_kernal_ext:
+	sta KZE0
+	stx KZE0 + 1
 	
 	ldy #0
-	lda (KZP0), Y
+	lda (KZE0), Y
     cmp #$24 ; '$'
     beq @base_16
     
@@ -255,7 +232,7 @@ parse_num_kernal:
 	cmp #$30 ; '0' 
     bne @base_10	
 	iny
-	lda (KZP0), Y
+	lda (KZE0), Y
 	cmp #$58
 	beq @base_16
 	cmp #$78
@@ -272,14 +249,14 @@ parse_num_kernal:
 	phx
 	clc
 	tya
-	adc KZP0
-	sta KZP0
-	lda KZP0 + 1
+	adc KZE0
+	sta KZE0
+	lda KZE0 + 1
 	adc #0
 	tax
-	lda KZP0
+	lda KZE0
 	ply
-	jmp parse_num_radix_kernal
+	jmp parse_num_radix_kernal_ext
 
 ;
 ; returns base-16 representation of byte in .A in .X & .A
@@ -317,26 +294,34 @@ hex_num_to_string_kernal:
 	rts
 
 ;
-; Read first r0.L bytes of the name of the process at .Y
+; Read at most first r0.L bytes of the name of the process at .Y
 ; and store into .AX
 ;
-; no return value
+; returns strlen(name) in .A (0 -> failure)
 ;
-.export get_process_name_kernal
-get_process_name_kernal:
-@proc_bank := r1
-@store_bank := r1 + 1
-	sta r2 
-	stx r2 + 1
+.export get_process_name_kernal_ext
+get_process_name_kernal_ext:
+@proc_bank := KZE1
+@store_bank := KZE1 + 1
+	sta KZE2 
+	stx KZE2 + 1
+	
+	tya
+	jsr is_valid_process
+	cmp #0
+	bne :+
+	lda #0 ; no such process
+	rts
+	:
 	
 	sty @proc_bank
 	ldy RAM_BANK
 	sty @store_bank
 	
 	ldy #0 ; index
-	inc r0
+	inc KZE0
 @loop:
-	dec r0
+	dec KZE0
 	beq @loop_end
 	
 	ldx @proc_bank
@@ -347,14 +332,19 @@ get_process_name_kernal:
 	
 	cmp #0
 	beq @loop_end
-	sta (r2), Y
+	sta (KZE2), Y
 	
 	iny
 	bra @loop
 @loop_end:
 	lda #0
-	sta (r2), Y
+	sta (KZE2), Y
 
 	lda @store_bank
 	sta RAM_BANK
+	
+	lda KZE2
+	ldx KZE2 + 1
+	jsr strlen_ext ; return length of name
+	
 	rts

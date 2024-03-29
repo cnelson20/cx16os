@@ -1,7 +1,8 @@
 .include "cx16.inc"
 .include "prog.inc"
+.include "macs.inc"
 
-.import strlen
+.import strlen_int
 .import hex_num_to_string_kernal
 
 .SEGMENT "STARTUP"
@@ -17,7 +18,6 @@ init:
 	jsr CHROUT ; turn on ascii mode
 	
 	jsr setup_kernal
-	jsr setup_call_table
 	jsr setup_interrupts
 	
 	lda #<shell_name ; load shell as first program
@@ -351,7 +351,7 @@ save_current_process:
 	lda $00, X
 	sta STORE_RAM_ZP_SET1, X
 	inx
-	cpx #$20
+	cpx #$00 + ZP_SET1_SIZE
 	bcc :-
 	
 	ldx #$30
@@ -359,7 +359,7 @@ save_current_process:
 	lda $00, X
 	sta STORE_RAM_ZP_SET2, X
 	inx 
-	cpx #$40
+	cpx #$30 + ZP_SET2_SIZE
 	bcc :-
 	
 	ldx #$80
@@ -383,7 +383,7 @@ restore_new_process:
 	lda STORE_RAM_ZP_SET1, X
 	sta $00, X
 	inx
-	cpx #$20
+	cpx #$00 + ZP_SET1_SIZE
 	bcc :-
 	
 	ldx #$30
@@ -391,7 +391,7 @@ restore_new_process:
 	lda STORE_RAM_ZP_SET2, X
 	sta $00, X
 	inx 
-	cpx #$40
+	cpx #$30 + ZP_SET2_SIZE
 	bcc :-
 	
 	ldx #$80
@@ -509,7 +509,7 @@ load_new_process:
 	
 	lda KZP0
 	ldx KZP0 + 1
-	jsr strlen
+	jsr strlen_int
 	
 	ldx #<loading_new_prog_name
 	ldy #>loading_new_prog_name
@@ -773,49 +773,21 @@ schedule_timer:
 vera_status:
 	.byte 0
    
-   
-;
-; various variables / tables for os use ;
-;
-
-; holds which ram banks have processes ;
-.export process_table
-process_table:
-	.res 256, 0
-	
-; holds priority for processes - higher means more time to run ;
-.export process_priority_table
-process_priority_table:
-	.res 256, 0
-	
-; holds order of active processes
-.export active_process_stack
-active_process_stack:
-	.res 256, 0
-
-; pointer to top of above stack ;
-.export active_process_sp
-active_process_sp:
-	.byte 0
-	
-; holds return values for programs ;
-.export return_table
-return_table:
-	.res 256, 0
-	
-; holds open files for processes ;
-; to implement after main stuff is done ;
-.export file_table
-file_table:
-	.res 16, 0
+.import setup_file_table
+.import call_table
+.import call_table_end
 
 setup_kernal:
-	lda #$FF ; not valid process id
-	ldx #$00
-	:
-	sta process_table, X 
-	dex
-	bne :-
+	cnsta_word process_table, r0
+	cnsta_word (END_PROCESS_TABLES - other_process_tables), r1
+	
+	lda #0
+	jsr memory_fill
+	
+	cnsta_word process_table, r0
+	cnsta_word PROCESS_TABLE_SIZE, r1
+	lda #$FF
+	jsr memory_fill
 	
 	ldx #$10 ; first 16 ram banks not for programs
 	:
@@ -824,19 +796,11 @@ setup_kernal:
 	inx
 	bne :-
 	
-	ldx #2
-	:
-	sta file_table, X
-	dex
-	bpl :- ; mark first 3 files as in use; 0 & 1 are for CMDR kernal, 2 for OS
-	
 	lda #$FF
 	sta active_process_sp
 	
-	rts
-
-.import call_table
-.import call_table_end
+	jsr setup_file_table
+	jmp setup_call_table
 
 setup_call_table:
 	lda #<call_table
@@ -856,4 +820,37 @@ setup_call_table:
 	
 	jsr memory_copy
 	rts
+
+;
+; various variables / tables for os use ;
+;
+
+; holds which ram banks have processes ;
+.export process_table
+process_table := $9000
+PROCESS_TABLE_SIZE = $100
+
+other_process_tables := process_table + PROCESS_TABLE_SIZE
+
+; holds priority for processes - higher means more time to run ;
+.export process_priority_table
+process_priority_table := other_process_tables
+PROCESS_PRIORITY_SIZE = PROCESS_TABLE_SIZE	
 	
+; holds order of active processes
+.export active_process_stack
+active_process_stack := process_priority_table + PROCESS_PRIORITY_SIZE
+ACTIVE_PROCESS_STACK_SIZE = PROCESS_TABLE_SIZE
+
+; holds return values for programs ;
+.export return_table
+return_table = active_process_stack + ACTIVE_PROCESS_STACK_SIZE
+RETURN_TABLE_SIZE = PROCESS_TABLE_SIZE
+
+; for fill operations
+END_PROCESS_TABLES = return_table + RETURN_TABLE_SIZE
+
+; pointer to top of above stack ;
+.export active_process_sp
+active_process_sp:
+	.byte 0

@@ -4,12 +4,13 @@ CASM = ../xasm16/xasm
 
 PROGRAM = OS.PRG
 
-SOURCES = main.s kernalcalls.s helpers.s
+SOURCES = main.s kernalcalls.s helpers.s helpers_int.s fileops.s
+INCS = prog.inc cx16.inc macs.inc
 FLAGS = -t cx16 -m os.map -Ln os.lbl
 
 all: build
 
-os.prg: $(SOURCES)
+os.prg: $(SOURCES) $(INCS)
 	$(CC) $(FLAGS) $(SOURCES) -o $(PROGRAM)
 
 shell: shell.s

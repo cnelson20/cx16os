@@ -3,9 +3,10 @@
 
 .SEGMENT "CODE"
 
-.import parse_num_kernal
+.import parse_num_kernal_ext
 .import hex_num_to_string_kernal
 
+.import get_process_name_kernal_ext
 .import load_new_process
 .import run_code_in_bank_kernal
 .import kill_process_kernal
@@ -124,14 +125,12 @@ get_args:
 ; no return value
 ;
 get_process_name:
-
-.import get_process_name_kernal
 	pha 
 	lda #1
 	sta atomic_action_st
 	pla
 	
-	jsr get_process_name_kernal
+	jsr get_process_name_kernal_ext
 	
 	stz atomic_action_st
 	rts
@@ -141,7 +140,7 @@ get_process_name:
 ; if leading $ or 0x, treat as hex number 
 ;
 parse_num:
-	jmp parse_num_kernal
+	jmp parse_num_kernal_ext
 	
 ;
 ; returns base-16 representation of byte in .A in .X & .A
@@ -170,8 +169,7 @@ run_code_in_bank:
 	
 
 open_file:
-	jsr open_file_kernal
-	rts
+	jmp open_file_kernal
 	
 
 close_file:

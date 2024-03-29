@@ -21,6 +21,7 @@ ROM_BANK := $01
 
 MEMTOP = $FF99
 
+memory_fill := $FEE4
 memory_copy := $FEE7
 
 r0 := $02
