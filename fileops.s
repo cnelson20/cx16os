@@ -6,7 +6,8 @@
 
 .import atomic_action_st
 .import file_table
-.import strlen
+.import strlen_int
+.import strncpy_int
 .import current_program_id
 
 file_table_count := $A000
@@ -57,9 +58,10 @@ setup_process_file_table:
 	ldy RAM_BANK
 	phy
 	
-	cnsta pwd, KZP1
-	cnsta PV_PWD, KZP0
+	cnsta_word pwd, KZP1
+	cnsta_word PV_PWD, KZP0
 	lda #PV_PWD_SIZE
+	jsr strncpy_int
 	
 	ply
 	sty RAM_BANK

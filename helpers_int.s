@@ -23,7 +23,6 @@ strncpy_int:
 @loop_exit:
 	lda #0
 	sta (KZP0), Y
-	
 	rts
 
 .export strlen_int

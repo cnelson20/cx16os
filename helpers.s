@@ -45,12 +45,9 @@ strncpy_ext:
 	bra @loop 
 @loop_exit:
 	lda #0
-	sta (KZE0), Y
-	
+	sta (KZE0), Y	
 	rts
 	
-
-
 ;
 ; Parse a byte number from a string in .AX with radix in .Y
 ; Allowed options: .Y = 10, .Y = 16
