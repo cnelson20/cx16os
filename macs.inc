@@ -13,6 +13,11 @@
 	ldx #>addr
 .endmacro
 
+.macro stax_addr addr
+	sta addr
+	stx addr + 1
+.endmacro
+
 .macro pha_word addr
 	lda addr
 	pha
@@ -25,4 +30,45 @@
 	sta addr + 1
 	pla 
 	sta addr
+.endmacro
+
+.macro pha_byte addr
+	lda addr
+	pha
+.endmacro
+
+.macro pla_byte addr
+	pla
+	sta addr
+.endmacro
+
+.macro phy_word addr
+	ldy addr
+	phy
+	ldy addr + 1
+	phy
+.endmacro
+
+.macro ply_word addr
+	ply
+	sty addr + 1
+	ply 
+	sty addr
+.endmacro
+
+.macro phy_byte addr
+	ldy addr
+	phy
+.endmacro
+
+.macro ply_byte addr
+	ply
+	sty addr
+.endmacro
+
+.macro ldsta_word src, dest
+	lda src
+	sta dest
+	lda src + 1
+	sta dest + 1
 .endmacro

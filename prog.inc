@@ -23,10 +23,10 @@ STORE_PROG_STACK := $A100
 STORE_PROG_STACK_SIZE = $100
 
 PV_OPEN_TABLE := $A000
-PV_OPEN_TABLE_SIZE = $0F ; 15
+PV_OPEN_TABLE_SIZE = $10 ; 15
 
-PV_PWD := $A00F ; holds process PWD
-PV_PWD_SIZE := $41 ; 65 (64 + \0 if using all 64 chars)
+PV_PWD := $A010 ; holds process PWD
+PV_PWD_SIZE := $80 ; 128 chars
 
 
 

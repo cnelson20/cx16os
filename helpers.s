@@ -25,7 +25,7 @@ strlen_ext:
 	rts
 
 ;
-; copies up to n characters from KZE1 to KZE0
+; copies up to n characters in .A from KZE1 to KZE0
 ;
 .export strncpy_ext
 strncpy_ext:

@@ -29,5 +29,5 @@ clean:
 
 build: os.prg shell programs
 	cp os.prg mnt/OS.PRG
-	cp shell mnt/
+	cp shell mnt/bin
 

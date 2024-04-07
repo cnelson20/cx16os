@@ -35,7 +35,6 @@ call_table:
 	jmp parse_num ; $9D15
 	jmp hex_num_to_string ; $9D18
 	jmp kill_process ; $9D1B
-	jmp run_code_in_bank ; $9D1E
 .export call_table_end
 call_table_end:
 
@@ -157,16 +156,6 @@ hex_num_to_string:
 ;	
 kill_process:
 	jmp kill_process_kernal
-
-;
-; if bank .A not in use, setup a program assuming code is already in said bank
-; if .X != 0, a name for the program is in r0
-; if active process & .Y != 0, new process will be active
-; return val: .A = 0 -> failure, .A != 0 -> new process in .A
-;
-run_code_in_bank:
-	jmp run_code_in_bank_kernal
-	
 
 open_file:
 	jmp open_file_kernal

@@ -1,32 +1,33 @@
 XASM =../../xasm16/xasm
 FLAGS =-addr 0xa200
 
-all: echo ps kill runcode printtest looptest
+all: bindir echo ps kill printtest looptest
+
+bindir: ../mnt/bin
+	
+../mnt/bin:	
+	-mkdir ../mnt/bin
 
 cat: cat.s
 	$(XASM) $(FLAGS) -o $@ cat.s
-	cp $@ ../mnt/
+	cp $@ ../mnt/bin
 
 echo: echo.s
 	$(XASM) $(FLAGS) -o $@ echo.s
-	cp $@ ../mnt/
+	cp $@ ../mnt/bin
 
 kill: kill.s
 	$(XASM) $(FLAGS) -o $@ kill.s
-	cp $@ ../mnt/
+	cp $@ ../mnt/bin
 
 ps: ps.s
 	$(XASM) $(FLAGS) -o $@ ps.s
-	cp $@ ../mnt/
-
-runcode: runcode.s
-	$(XASM) $(FLAGS) -o $@ runcode.s
-	cp $@ ../mnt/
+	cp $@ ../mnt/bin
 
 printtest: printtest.s
 	$(XASM) $(FLAGS) -o $@ printtest.s
-	cp $@ ../mnt/
+	cp $@ ../mnt/bin
 	
 looptest: looptest.s
 	$(XASM) $(FLAGS) -o $@ looptest.s
-	cp $@ ../mnt/
+	cp $@ ../mnt/bin

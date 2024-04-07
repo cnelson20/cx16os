@@ -2,7 +2,9 @@
 .include "prog.inc"
 .include "macs.inc"
 
-.import strlen_int
+.import strlen_int, strncpy_int
+.import setup_kernal_file_table, setup_process_file_table_int
+.import get_dir_filename
 .import hex_num_to_string_kernal
 
 .SEGMENT "STARTUP"
@@ -14,6 +16,7 @@
 
 init:
 	stz ROM_BANK
+	stz current_program_id
 	lda #$0f
 	jsr CHROUT ; turn on ascii mode
 	
@@ -30,7 +33,7 @@ init:
 	; shouldn't get here ;
 
 shell_name:
-	.literal "shell", 0
+	.literal "bin/shell", 0
 
 setup_interrupts:
 	sei
@@ -496,24 +499,36 @@ set_process_bank_used:
 .export load_new_process
 load_new_process:
 	sty @arg_count
-		
-	sta KZP0
-	stx KZP0 + 1
+	ldy RAM_BANK
+	sty @old_bank
 	
-	ldy #127
+	sta KZP0
+	sta user_prog_args_addr
+	stx KZP0 + 1
+	stx user_prog_args_addr + 1
+	
+	; fill new_prog_args with name of prg
+	ldy #0
 	:
 	lda (KZP0), Y
-	sta loading_new_prog_name, Y
-	dey
+	sta new_prog_args, Y
+	beq :+
+	iny
 	bpl :-
+	:
 	
-	lda KZP0
-	ldx KZP0 + 1
-	jsr strlen_int
+	lda #<new_prog_args
+	ldx #>new_prog_args
+	ldy #1
+	jsr get_dir_filename
 	
-	ldx #<loading_new_prog_name
-	ldy #>loading_new_prog_name
+	lda #<new_prog_args
+	ldx #>new_prog_args
+	jsr strlen_int ; holds strlen of prog
 	
+	; .A holds strlen
+	ldx #<new_prog_args
+	ldy #>new_prog_args
 	jsr SETNAM
 	
 	lda #$FF ; logical number / doesn't matter
@@ -535,100 +550,41 @@ load_new_process:
 	lda #0
 	rts
 	:
+	
+	; rewrite prog_args with args, not just name
+	lda @old_bank
+	sta RAM_BANK
+	lda user_prog_args_addr
+	sta KZP0 
+	lda user_prog_args_addr + 1
+	sta KZP0 + 1
+	
+	ldy #127
+	:
+	lda (KZP0), Y
+	sta new_prog_args, Y
+	dey
+	bpl :-
+	
+	
 	lda @arg_count
 	sta r1
 	ldy @new_bank
-	lda #<loading_new_prog_name
-	ldx #>loading_new_prog_name
+	lda #<new_prog_args
+	ldx #>new_prog_args
 	jsr setup_process_info
 	rts
 @arg_count:
 	.byte 0
+@old_bank:
+	.byte 0
 @new_bank:
 	.byte 0
-loading_new_prog_name:
+user_prog_args_addr:
+	.word 0
+new_prog_args:
 	.res 128, 0
 
-;
-; if bank .A not in use, setup a program assuming code is already in said bank
-; if .X != 0, a name for the program is in r0
-; if active process & .Y != 0, new process will be active
-; return val: .A = 0 -> failure, .A != 0 -> new process in .A
-;
-.export run_code_in_bank_kernal
-run_code_in_bank_kernal:
-	sta @new_bank
-	sty @try_active
-	tay
-	lda process_table, Y
-	
-	cmp #0
-	beq :+
-	; program already exists in this bank
-	lda #0
-	rts
-	:
-	
-	cpx #0
-	bne @custom_name
-@use_default_name:
-	lda #'r'
-	sta loading_new_prog_name
-	lda #'c'
-	sta loading_new_prog_name + 1
-	lda @new_bank
-	jsr hex_num_to_string_kernal
-	sta loading_new_prog_name + 2
-	stx loading_new_prog_name + 3
-	stz loading_new_prog_name + 4
-	
-	jmp @setup
-@custom_name:
-	ldy #0
-	:
-	lda (r0), Y
-	beq :+
-	sta loading_new_prog_name, Y
-	iny 
-	cpy #$7F
-	bcc :-
-	:
-	lda #0
-	sta loading_new_prog_name, Y
-	
-@setup:
-	; check to see if new process should be active
-	stz r0
-	lda @try_active
-	beq :+
-	ldx active_process_sp
-	lda active_process_stack, X
-	cmp current_program_id
-	bne :+
-	lda #1
-	sta r0 ; new process is active
-	:
-	lda #1 ; one arg
-	sta r1
-	stz r1 + 1
-	
-	lda RAM_BANK
-	pha
-	
-	lda #<loading_new_prog_name
-	ldx #>loading_new_prog_name
-	ldy @new_bank
-	jsr setup_process_info
-	
-	pla
-	sta RAM_BANK
-	rts
-
-@new_bank:
-	.byte 0
-@try_active:
-	.byte 0
-	
 ;
 ; setup process info in its bank
 ;
@@ -638,23 +594,49 @@ setup_process_info:
 	sty RAM_BANK ; .Y holds new bank
 	sty STORE_PROG_RAMBANK
 	
-	pha
-	phx
+	pha ; KZP0
+	phx ; KZP0 + 1
 	
-	tya
+	jsr strlen_int
+	pha
+	
+	lda RAM_BANK
 	jsr set_process_bank_used
 	
+	ply ; strlen in .Y
 	plx
 	stx KZP0 + 1
 	pla
 	sta KZP0
+
+	; find last / in program name, ignore
+	;
+	; strlen in .Y to work backwards through the string
+	cpy #0
+	beq @end_get_p_name_loop	
+@get_p_name_loop:
+	dey
+	beq @end_get_p_name_loop
+	lda (KZP0), Y
+	cmp #$2F ; '/'
+	bne @get_p_name_loop
+	
+	iny
+@end_get_p_name_loop:
+	clc
+	tya
+	adc KZP0
+	sta KZP1
+	lda KZP0 + 1
+	adc #0
+	sta KZP1 + 1	
 	
 	lda r1 ; r1 holds argc
 	sta STORE_PROG_ARGC
 	
 	ldy #127
 	:
-	lda (KZP0), Y
+	lda (KZP1), Y
 	sta STORE_PROG_ARGS, Y
 	dey
 	bpl :-
@@ -683,16 +665,20 @@ setup_process_info:
 	lda current_program_id
 	ldx active_process_sp
 	cmp active_process_stack, X
-	bne @end_function
+	bne @end_active_process_check
 	lda r0 ; if not set to be active, ignore
-	beq @end_function
+	beq @end_active_process_check
 @new_active_process:
 	dex
 	stx active_process_sp
 	lda RAM_BANK ; new process' bank
 	sta active_process_stack, X
 	
-@end_function:	
+@end_active_process_check:	
+	
+	jsr setup_process_file_table_int
+
+@end_func:
 	lda RAM_BANK
 	rts
 
@@ -777,30 +763,53 @@ vera_status:
 .import call_table
 .import call_table_end
 
+;
+; setup_kernal
+;
+; initializes several system tables & vars
+; calls multiple subprocesses
+;
 setup_kernal:
-	cnsta_word process_table, r0
-	cnsta_word (END_PROCESS_TABLES - other_process_tables), r1
-	
+	jsr setup_kernal_processes
+	jsr setup_kernal_file_table
+	jmp setup_call_table
+
+;
+; setup_kernal_processes
+;
+; initialize process_table & related tables
+;
+setup_kernal_processes:
+	; zero out tables except process_table itself
+	cnsta_word (process_table + PROCESS_TABLE_SIZE), r0
+	cnsta_word (END_PROCESS_TABLES - PROCESS_TABLE_SIZE - other_process_tables), r1	
 	lda #0
 	jsr memory_fill
 	
+	; fill process_table with $FF
 	cnsta_word process_table, r0
 	cnsta_word PROCESS_TABLE_SIZE, r1
 	lda #$FF
 	jsr memory_fill
 	
+	jsr MEMTOP
+	and #$FE ; $FF - 1
+	sta r0
+	
+	; mark evens banks as open
+	; odd banks are for extra process data
 	ldx #$10 ; first 16 ram banks not for programs
 	:
 	stz process_table, X
 	inx 
 	inx
+	cpx r0
 	bne :-
 	
 	lda #$FF
 	sta active_process_sp
 	
-	jsr setup_file_table
-	jmp setup_call_table
+	rts
 
 setup_call_table:
 	lda #<call_table
