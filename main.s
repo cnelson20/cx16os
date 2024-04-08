@@ -27,6 +27,7 @@ init:
 	ldx #>shell_name
 	ldy #1
 	sty r0
+	sty r1
 	jsr load_new_process
 	
 	jmp run_first_prog
@@ -351,18 +352,18 @@ save_current_process:
 	
 	ldx #$02
 	:
-	lda $00, X
+	lda ZP_SET1_START, X
 	sta STORE_RAM_ZP_SET1, X
 	inx
-	cpx #$00 + ZP_SET1_SIZE
+	cpx #ZP_SET1_SIZE
 	bcc :-
 	
-	ldx #$30
+	ldx #0
 	:
-	lda $00, X
+	lda ZP_SET2_START, X
 	sta STORE_RAM_ZP_SET2, X
 	inx 
-	cpx #$30 + ZP_SET2_SIZE
+	cpx #ZP_SET2_SIZE
 	bcc :-
 	
 	ldx #$80
@@ -384,17 +385,17 @@ restore_new_process:
 	ldx #$02
 	:
 	lda STORE_RAM_ZP_SET1, X
-	sta $00, X
+	sta ZP_SET1_START, X
 	inx
-	cpx #$00 + ZP_SET1_SIZE
+	cpx #ZP_SET1_SIZE
 	bcc :-
 	
-	ldx #$30
+	ldx #0
 	:
 	lda STORE_RAM_ZP_SET2, X
-	sta $00, X
+	sta ZP_SET2_START, X
 	inx 
-	cpx #$30 + ZP_SET2_SIZE
+	cpx #ZP_SET2_SIZE
 	bcc :-
 	
 	ldx #$80
