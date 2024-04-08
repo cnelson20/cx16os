@@ -1,7 +1,7 @@
 CHROUT = $9D03
 PRINT_STR = $9D09
 PROCESS_NAME = $9D12
-PRINT_HEX_NUM = $9D18
+GET_HEX_NUM = $9D18
 PROCESS_STATUS = $9D0C
 
 r0L = $02
@@ -25,7 +25,7 @@ main_loop:
 	jsr CHROUT
 	
 	lda loop_pid
-	jsr PRINT_HEX_NUM
+	jsr GET_HEX_NUM
 	jsr CHROUT
 	txa
 	jsr CHROUT
