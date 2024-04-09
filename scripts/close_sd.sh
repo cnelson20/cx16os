@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-sudo umount mnt/
+sudo umount $1
 sudo losetup -d /dev/loop21

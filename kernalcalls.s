@@ -28,7 +28,7 @@ call_table:
 	jmp CHRIN ; $9D00
 	jmp CHROUT ; $9D03
 	jmp exec ; $9D06
-	jmp print_str ; $9D09
+	jmp print_str_ext ; $9D09
 	jmp get_process_info ; $9D0C
 	jmp get_args ; $9D0F
 	jmp get_process_name ; $9D12
@@ -60,7 +60,8 @@ exec:
 ;
 ; prints a null terminated string pointed to by .AX
 ;
-print_str:
+.export print_str_ext
+print_str_ext:
 	sta r0
 	stx r0 + 1
 	ldy #0
@@ -143,7 +144,7 @@ parse_num:
 	
 ;
 ; returns base-16 representation of byte in .A in .X & .A
-; returns low byte in .X, high byte in .A, preserves .Y
+; returns low nibble in .X, high nibble in .A, preserves .Y
 ;
 hex_num_to_string:
 	jmp hex_num_to_string_kernal

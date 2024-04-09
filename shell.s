@@ -181,14 +181,13 @@ no_ampersand:
 	bne narg_not_0_amp
 	jmp new_line
 narg_not_0_amp:
-	
 	lda #<output
 	ldx #>output
 	jsr exec
 	cmp #0
 	beq exec_error
 	sta child_id
-	
+
 	lda do_wait_child
 	bne wait_child
 	jmp new_line

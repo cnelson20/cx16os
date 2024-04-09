@@ -1,7 +1,7 @@
 XASM =../../xasm16/xasm
 FLAGS =-addr 0xa200
 
-all: bindir echo ps kill printtest looptest
+all: bindir echo ps kill printtest looptest args
 
 bindir: ../mnt/bin
 	
@@ -30,4 +30,8 @@ printtest: printtest.s
 	
 looptest: looptest.s
 	$(XASM) $(FLAGS) -o $@ looptest.s
+	cp $@ ../mnt/bin
+	
+args: args.s
+	$(XASM) $(FLAGS) -o $@ args.s
 	cp $@ ../mnt/bin

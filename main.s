@@ -2,6 +2,7 @@
 .include "prog.inc"
 .include "macs.inc"
 
+.import print_str_ext
 .import strlen_int, strncpy_int
 .import setup_kernal_file_table, setup_process_file_table_int
 .import get_dir_filename
@@ -29,10 +30,22 @@ init:
 	sty r0
 	sty r1
 	jsr load_new_process
+	cmp #0 ; 0 = failure
+	bne :+
+	lda #$8F
+	jsr CHROUT
+	ldax_addr load_error_msg
+	jsr print_str_ext
+	clc 
+	jmp enter_basic
 	
+	:
 	jmp run_first_prog
+	rts
 	; shouldn't get here ;
 
+load_error_msg:
+	.literal $d, "COULD NOT FIND BIN/SHELL TO START OS", 0
 shell_name:
 	.literal "bin/shell", 0
 
@@ -62,6 +75,21 @@ setup_interrupts:
 	sta irq_already_triggered
 	stz atomic_action_st
 	stz nmi_queued
+	
+	cli
+	rts
+
+reset_interrupts:
+	sei 
+	
+	lda default_irq_handler
+	sta $0314
+	lda default_irq_handler
+	sta $0315
+	lda default_nmi_handler
+	sta $0318
+	lda default_nmi_handler
+	sta $0319
 	
 	cli
 	rts
@@ -574,6 +602,8 @@ load_new_process:
 	lda #<new_prog_args
 	ldx #>new_prog_args
 	jsr setup_process_info
+	
+	lda @new_bank
 	rts
 @arg_count:
 	.byte 0

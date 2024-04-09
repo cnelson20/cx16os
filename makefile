@@ -31,3 +31,8 @@ build: os.prg shell programs
 	cp os.prg mnt/OS.PRG
 	cp shell mnt/bin
 
+sd: build copy
+	./scripts/mount_sd.sh cx16os.img mnt_dir/
+	-sudo mkdir mnt_dir/OS/
+	sudo cp mnt/* -r mnt_dir/OS/
+	./scripts/close_sd.sh mnt_dir/

@@ -6,7 +6,7 @@
 
 .import atomic_action_st
 .import file_table
-.import strlen_int, strncpy_int, strncat_int, memcpy_int, memcpy_banks_int
+.import strlen_int, strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str_int
 .import current_program_id
 
 file_table_count := $A000
@@ -85,11 +85,13 @@ setup_kernal_file_table:
 ; fetch current pwd from CMDR-DOS
 ; not implemented yet (no cd)
 ;
+; TODO: fix on hardware / SD card imgs 
+;
 .export update_internal_pwd
 update_internal_pwd:
+	lda #@sign_strlen
 	ldx #<@sign
 	ldy #>@sign
-	lda #.strlen("$") + 1
 	jsr SETNAM
 	
 	lda #KERNAL_FILENUM
@@ -101,6 +103,7 @@ update_internal_pwd:
 	ldx #KERNAL_FILENUM
 	jsr CHKIN
 	
+	; $01 $08 $01 $01
 	jsr CHRIN
 	jsr CHRIN
 	jsr CHRIN
@@ -110,28 +113,65 @@ update_internal_pwd:
 	jsr CHRIN
 	cmp #$22 ; " character
 	bne :-
-	; now have directory ;
-	ldx #0
-@get_dir_loop:
-	;phx 
+	; now have drive listing ;
+@get_drv_loop:
 	jsr CHRIN
-	;plx
 	cmp #$22 ; "
-	beq @end_get_dir_loop
-	cmp #$20 ; space
-	beq @end_get_dir_loop
+	bne @get_drv_loop
+@end_drv_loop:	
+
+	; now we can get dirs in reverse order ;
+	ldx #0
+@find_next_entry:
+	jsr CHRIN
+	tay
+	jsr READST
+	cmp #0
+	bne @end_loop
+	tya
+	cmp #$22 ; "
+	bne @find_next_entry
+	
+	lda #'/' ; prepend / to start of dir name
 	sta pwd, X
 	inx
-	bra @get_dir_loop
-@end_get_dir_loop:	
+	stx @last_x
+@parse_next_entry:
+	jsr CHRIN
+	cmp #$22
+	beq @parse_next_entry_end
+	sta pwd, X
+	inx
+	bra @parse_next_entry
+@parse_next_entry_end:	
 	lda pwd - 1, X
 	cmp #'/'
-	beq :+
-	lda #'/'
-	sta pwd, X
-	inx
-	:	
+	bne :+
+	dex
+	:
 	stz pwd, X
+	
+	phx
+	clc
+	lda #<pwd
+	adc @last_x
+	pha
+	lda #>pwd
+	adc #0
+	tax
+	pla
+	jsr rev_str_int
+	
+	plx
+	
+	jmp @find_next_entry
+	
+@end_loop:
+	stz pwd, X
+	
+	lda #<pwd
+	ldx #>pwd 
+	jsr rev_str_int
 	
 	lda #KERNAL_FILENUM
 	jsr CLOSE
@@ -139,9 +179,12 @@ update_internal_pwd:
 	
 	ldax_addr pwd
 	rts
-@sign:
-	.literal "$"
+@last_x:
 	.byte 0
+@sign:
+	.literal "$=C:*=D"
+	.byte 0
+@sign_strlen = .strlen("$=C:*=D")
 
 .export get_dir_filename
 get_dir_filename:
