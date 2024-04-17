@@ -12,7 +12,7 @@
 .import kill_process_kernal
 .import is_valid_process
 
-.import open_file_kernal, close_file_kernal
+.import open_file_kernal_ext, close_file_kernal, read_file_ext
 
 .import irq_already_triggered
 .import atomic_action_st
@@ -25,7 +25,7 @@
 
 .export call_table
 call_table:
-	jmp CHRIN ; $9D00
+	jmp GETIN ; $9D00
 	jmp CHROUT ; $9D03
 	jmp exec ; $9D06
 	jmp print_str_ext ; $9D09
@@ -35,6 +35,9 @@ call_table:
 	jmp parse_num ; $9D15
 	jmp hex_num_to_string ; $9D18
 	jmp kill_process ; $9D1B
+	jmp open_file ; $9D1E
+	jmp close_file ; $9D21
+	jmp read_file ; $9D24
 .export call_table_end
 call_table_end:
 
@@ -158,11 +161,28 @@ hex_num_to_string:
 kill_process:
 	jmp kill_process_kernal
 
+;
+; opens file with name in .AX
+; read_mode ('r', 'w', etc.) in .Y
+;
+; returns fd in .A on success, else 0
+; .X contains error if fail
+;
 open_file:
-	jmp open_file_kernal
-	
+	jmp open_file_kernal_ext
 
+;
+; closes file with fd .A
+;	
 close_file:
-	jsr close_file_kernal
-	rts
-	
+	jmp close_file_kernal
+
+;
+; reads r1 bytes from file .A into r0
+;
+; .A = fd 
+; r0 = buff
+; r1 = bytes to read
+;
+read_file:
+	jmp read_file_ext

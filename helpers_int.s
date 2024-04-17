@@ -124,56 +124,5 @@ memcpy_banks_int:
 
 	bra @loop
 
-;
-; rev_str_int
-;
-; reverses the string pointed to in .AX
-;
-.export rev_str_int
-rev_str_int:
-	phx
-	pha
-	
-	jsr strlen_int
-	pha 
-	lsr A
-	sta KZP2
-	pla
-	dec A
-	sta KZP2 + 1
-	
-	clc 
-	pla
-	sta KZP0
-	adc KZP2 + 1
-	sta KZP1
-	pla
-	sta KZP0 + 1
-	adc #0
-	sta KZP1 + 1
-	
-	ldx KZP2
-	inx
-	ldy #0
-@loop:
-	dex
-	beq @end_loop
-	
-	lda (KZP0), Y
-	pha 
-	lda (KZP1)
-	sta (KZP0), Y
-	pla
-	sta (KZP1)
-	
-	iny
-	
-	dec KZP1
-	bne :+
-	dec KZP1 + 1
-	:
-	
-	bra @loop
-@end_loop:	
-	rts
+
 	

@@ -30,6 +30,7 @@ clean:
 build: os.prg shell programs
 	cp os.prg mnt/OS.PRG
 	cp shell mnt/bin
+	cp words.txt mnt/
 
 sd: build copy
 	./scripts/mount_sd.sh cx16os.img mnt_dir/

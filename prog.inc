@@ -1,4 +1,6 @@
-; program memory locations
+;
+; Program memory locations
+;
 
 STORE_REG_A := $A000
 STORE_REG_X := $A001
@@ -29,10 +31,21 @@ PV_OPEN_TABLE := $A000
 PV_OPEN_TABLE_SIZE = $10 ; 15
 
 PV_PWD := $A010 ; holds process PWD
-PV_PWD_SIZE := $80 ; 128 chars
+
+PV_TMP_FILENAME := PV_PWD + sys_max_filelen
 
 
 
+;
+; Kernal variables
+;
+
+sys_max_filelen = 128
+MAX_FILELEN = sys_max_filelen
+
+STDIN_FILENO = 0
+STDOUT_FILENO = 1
+USER_FILENO_START = 2
 
 KZP0 := $20
 KZP1 := $22

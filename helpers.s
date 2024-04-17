@@ -6,6 +6,7 @@
 
 .import atomic_action_st
 .import is_valid_process
+.import tmp_filename
 
 ;
 ; returns length of string pointed to by .AX in .A
@@ -344,4 +345,135 @@ get_process_name_kernal_ext:
 	ldx KZE2 + 1
 	jsr strlen_ext ; return length of name
 	
+	rts
+
+;
+; memcpy_ext
+;
+; copies .A bytes from KZE1 to KZE0 
+; ignores banks
+;
+.export memcpy_ext
+memcpy_ext:
+	tay
+	cpy #0
+	bne @loop
+	rts
+@loop:
+	dey
+	lda (KZE1), Y
+	sta (KZE0), Y
+	
+	cpy #0
+	bne @loop
+	rts
+
+;
+; memcpy_banks_ext
+;
+; copies .A bytes from KZE1 to KZE0
+; KZE1 is in bank KZE3.L, KZE0 in KZE2.L
+;
+.export memcpy_banks_ext
+memcpy_banks_ext:
+	tay
+@loop:
+	cpy #0
+	bne @not_done
+	rts ; done
+@not_done:
+	dey
+	ldx KZE3
+	stx RAM_BANK
+	lda (KZE1), Y
+	ldx KZE2
+	stx RAM_BANK
+	sta (KZE0), Y
+
+	bra @loop
+
+;
+; rev_str
+;
+; reverses the string pointed to in .AX
+;
+.export rev_str
+rev_str:
+	phx
+	pha
+	
+	jsr strlen_ext
+	pha 
+	lsr A
+	sta KZE2
+	pla
+	dec A
+	sta KZE2 + 1
+	
+	clc 
+	pla
+	sta KZE0
+	adc KZE2 + 1
+	sta KZE1
+	pla
+	sta KZE0 + 1
+	adc #0
+	sta KZE1 + 1
+	
+	ldx KZE2
+	inx
+	ldy #0
+@loop:
+	dex
+	beq @end_loop
+	
+	lda (KZE0), Y
+	pha 
+	lda (KZE1)
+	sta (KZE0), Y
+	pla
+	sta (KZE1)
+	
+	iny
+	
+	dec KZE1
+	bne :+
+	dec KZE1 + 1
+	:
+	
+	bra @loop
+@end_loop:	
+	rts
+
+;
+; strcmp_banks_ext
+;
+; Compares the strings in KZE0 and KZE1
+; KZE0 is loc. in bank KZE2.L, KZE1 in KZE3.L
+; returns -?, 0, +? if KZE0 <, =, or > KZE1
+;
+; *preserves KZE0-KZE3
+;
+.export strcmp_banks_ext
+strcmp_banks_ext:
+	ldy #0
+@comp_loop:
+	ldx KZE2
+	stx RAM_BANK
+	lda (KZE0), Y
+	ldx KZE3
+	stx RAM_BANK
+	sec
+	sbc (KZE1), Y
+	beq @not_eq
+	
+	lda (KZE1), Y
+	beq @eq
+	
+	iny
+	bra @comp_loop
+@eq:
+	rts
+@not_eq:
+	; .A already holds different b/w chars
 	rts

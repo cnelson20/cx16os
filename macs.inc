@@ -72,3 +72,17 @@
 	lda src + 1
 	sta dest + 1
 .endmacro
+
+.macro ldstx_word src, dest
+	ldx src
+	stx dest
+	ldx src + 1
+	stx dest + 1
+.endmacro
+
+.macro ldsty_word src, dest
+	ldy src
+	sty dest
+	ldy src + 1
+	sty dest + 1
+.endmacro

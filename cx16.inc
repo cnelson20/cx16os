@@ -1,7 +1,7 @@
 .setcpu "65c02"
 
 GETIN := $FFE4
-CHRIN := $FFE4
+CHRIN := $FFCF
 CHROUT := $FFD2
 
 SETLFS := $FFBA

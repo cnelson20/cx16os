@@ -6,22 +6,18 @@
 
 .import atomic_action_st
 .import file_table
-.import strlen_int, strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str_int
+.import strlen_ext, memcpy_ext, memcpy_banks_ext, strcmp_banks_ext
+.import strlen_int, strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str
 .import current_program_id
 
+.export file_table_count
 file_table_count := $A000
+
 FILE_TABLE_COUNT_SIZE = 14
 FILE_TABLE_COUNT_OFFSET = 16
 file_table_count_end := file_table_count + FILE_TABLE_COUNT_OFFSET
 
-MAX_FILELEN = 128
-
-FILE_NAME_ENTRY_TABLE_SIZE = MAX_FILELEN
-file_full_name_table := file_table_count_end
-file_full_name_table_end := file_full_name_table + (FILE_NAME_ENTRY_TABLE_SIZE * FILE_TABLE_COUNT_SIZE)
-
 KERNAL_FILENUM = 2
-
 
 path_offset:
 	.literal "bin/"
@@ -83,9 +79,6 @@ setup_kernal_file_table:
 ; update_internal_pwd
 ;
 ; fetch current pwd from CMDR-DOS
-; not implemented yet (no cd)
-;
-; TODO: fix on hardware / SD card imgs 
 ;
 .export update_internal_pwd
 update_internal_pwd:
@@ -104,18 +97,18 @@ update_internal_pwd:
 	jsr CHKIN
 	
 	; $01 $08 $01 $01
-	jsr CHRIN
-	jsr CHRIN
-	jsr CHRIN
-	jsr CHRIN
+	jsr GETIN
+	jsr GETIN
+	jsr GETIN
+	jsr GETIN
 	
 	:
-	jsr CHRIN
+	jsr GETIN
 	cmp #$22 ; " character
 	bne :-
 	; now have drive listing ;
 @get_drv_loop:
-	jsr CHRIN
+	jsr GETIN
 	cmp #$22 ; "
 	bne @get_drv_loop
 @end_drv_loop:	
@@ -123,7 +116,7 @@ update_internal_pwd:
 	; now we can get dirs in reverse order ;
 	ldx #0
 @find_next_entry:
-	jsr CHRIN
+	jsr GETIN
 	tay
 	jsr READST
 	cmp #0
@@ -137,7 +130,7 @@ update_internal_pwd:
 	inx
 	stx @last_x
 @parse_next_entry:
-	jsr CHRIN
+	jsr GETIN
 	cmp #$22
 	beq @parse_next_entry_end
 	sta pwd, X
@@ -160,7 +153,7 @@ update_internal_pwd:
 	adc #0
 	tax
 	pla
-	jsr rev_str_int
+	jsr rev_str
 	
 	plx
 	
@@ -171,7 +164,7 @@ update_internal_pwd:
 	
 	lda #<pwd
 	ldx #>pwd 
-	jsr rev_str_int
+	jsr rev_str
 	
 	lda #KERNAL_FILENUM
 	jsr CLOSE
@@ -186,12 +179,30 @@ update_internal_pwd:
 	.byte 0
 @sign_strlen = .strlen("$=C:*=D")
 
-.export get_dir_filename
-get_dir_filename:
-	sta KZP0
-	stx KZP0 + 1
+.export get_dir_filename_int
+get_dir_filename_int:
+	sty KZP0
 	
-	lda (KZP0)
+	phy_word KZE0
+	phy_word KZE1
+	phy_word KZE2
+	phy_word KZE3
+	
+	ldy KZP0
+	jsr get_dir_filename_ext
+	
+	ply_word KZE3
+	ply_word KZE2
+	ply_word KZE1
+	ply_word KZE0
+	rts
+
+.export get_dir_filename_ext
+get_dir_filename_ext:
+	sta KZE0
+	stx KZE0 + 1
+	
+	lda (KZE0)
 	cmp #'/'
 	bne @not_abs_pathing
 	
@@ -208,16 +219,16 @@ get_dir_filename:
 	cpy #0
 	beq @relative_pathing
 	
-	lda KZP0
+	lda KZE0
 	pha
-	ldx KZP0 + 1
+	ldx KZE0 + 1
 	phx
-	jsr strlen_int
+	jsr strlen_ext
 	tay
-	pla_word KZP0
+	pla_word KZE0
 	
 @path_check_loop:
-	lda (KZP0), Y
+	lda (KZE0), Y
 	cmp #'/'
 	beq @relative_pathing
 	dey
@@ -241,64 +252,64 @@ get_dir_filename:
 	ldx #>path_dir
 
 @copy_paths:
-	phy_word KZPS4
-	phy_word KZPS5
-	phy_word KZPS6
+	phy_word KZES4
+	phy_word KZES5
+	phy_word KZES6
 	
-	ldy KZP0 ; argument path
-	sty KZPS4
-	ldy KZP0 + 1
-	sty KZPS4 + 1
+	ldy KZE0 ; argument path
+	sty KZES4
+	ldy KZE0 + 1
+	sty KZES4 + 1
 	
-	sta KZPS5 ; pwd / path_dir 
-	sta KZP0
-	stx KZPS5 + 1
-	stx KZP0 + 1
+	sta KZES5 ; pwd / path_dir 
+	sta KZE0
+	stx KZES5 + 1
+	stx KZE0 + 1
 	
-	jsr strlen_int
-	sta KZPS6
+	jsr strlen_ext
+	sta KZES6
 	
-	lda KZPS4
-	ldx KZPS4 + 1
-	jsr strlen_int
-	sta KZPS6 + 1
+	lda KZES4
+	ldx KZES4 + 1
+	jsr strlen_ext
+	sta KZES6 + 1
 	
 	clc
-	lda KZPS4
-	sta KZP1
-	adc KZPS6 ; add strlen
-	sta KZP0
+	lda KZES4
+	sta KZE1
+	adc KZES6 ; add strlen
+	sta KZE0
 	
-	lda KZPS4 + 1
-	sta KZP1 + 1
+	lda KZES4 + 1
+	sta KZE1 + 1
 	adc #0
-	sta KZP0 + 1
+	sta KZE0 + 1
 	
 	lda #MAX_FILELEN
 	clc ; - 1
-	sbc KZPS6 ; pwd.strlen
-	cmp KZPS6 + 1 ; file name
+	sbc KZES6 ; pwd.strlen
+	cmp KZES6 + 1 ; file name
 	bcc :+
-	lda KZPS6 + 1
+	lda KZES6 + 1
 	inc A
 	:
 	pha ; store n
-	jsr memcpy_int
+	jsr memcpy_ext
 	; make sure string is null term'd
 	pla ; pull n
 	dec A
-	adc KZPS6
+	adc KZES6
 	lda #0
-	sta (KZPS4), Y
+	sta (KZES4), Y
 	
-	ldsta_word KZPS5, KZP1
-	ldsta_word KZPS4, KZP0
-	lda KZPS6
-	jsr memcpy_int
+	ldsta_word KZES5, KZE1
+	ldsta_word KZES4, KZE0
+	lda KZES6
+	jsr memcpy_ext
 	
-	pla_word KZPS6
-	pla_word KZPS5
-	pla_word KZPS4
+	pla_word KZES6
+	pla_word KZES5
+	pla_word KZES4
 	pla
 	sta RAM_BANK
 	rts
@@ -348,7 +359,7 @@ setup_process_file_table_int:
 	lda RAM_BANK
 	sta KZP2
 	cnsta_word PV_PWD, KZP0
-	lda #PV_PWD_SIZE
+	lda #MAX_FILELEN
 	jsr memcpy_banks_int
 	
 @end_func:	
@@ -357,17 +368,376 @@ setup_process_file_table_int:
 	rts
 
 ;
-; OPENs the file with name in r0
+; open_file_kernal_ext
 ; 
-; .A = 0 on failure, or a fd on success
+; .A = $FF on failure, or a fd on success
 ; .X = error code on failure, else 0
 ; $FF --> no open file descriptor (table full)
 ;
-.export open_file_kernal
-open_file_kernal:
-	rts
-
-.export close_file_kernal
-close_file_kernal:
+; filename in .AX, .Y = open_mode (r, w, etc.)
+;
+.export open_file_kernal_ext
+open_file_kernal_ext:
+	phy
+	stax_addr KZE1
+	
+	cnsta_word PV_TMP_FILENAME, KZE0
+	
+	lda current_program_id
+	sta KZE3
+	inc A
+	sta KZE2
+	lda #MAX_FILELEN
+	jsr memcpy_banks_ext
+	
+	ldax_addr PV_TMP_FILENAME
+	ldy #0 ; don't search path
+	jsr get_dir_filename_ext
+	; We have corrected path to this file ;
+	
+	ldax_addr PV_TMP_FILENAME
+	jsr strlen_ext
+	tax
+	lda #','
+	sta PV_TMP_FILENAME, X
+	inx
+	lda #'s'
+	sta PV_TMP_FILENAME, X
+	inx
+	lda #','
+	sta PV_TMP_FILENAME, X
+	inx
+	
+	ply ; open_mode
+	cpy #0
+	bne :+
+	ldy #'r'
+	:	
+	sty KZE3
+	tya
+	sta PV_TMP_FILENAME, X
+	inx 
+	stz PV_TMP_FILENAME, X
+	
+	lda #1
+	sta RAM_BANK
+	
+	ldy #FILE_TABLE_COUNT_SIZE
+	lda #1
+	sta atomic_action_st ; atomic operation here
+@check_sys_file_table:
+	lda file_table_count, Y
+	beq @found_open_slot
+	
+	dey
+	bpl @check_sys_file_table
+@no_files_left:
+	stz atomic_action_st
+	lda #$FF ; failure code
+	ldx #$FF ; no fds left
 	rts
 	
+@found_open_slot:
+	lda #1
+	sta file_table_count, Y
+	stz atomic_action_st ; atomic write finished
+	
+	tya
+	tax ; system filenum in .X
+	
+	lda current_program_id
+	ora #1
+	sta RAM_BANK	
+	ldy #USER_FILENO_START
+@find_process_fd:
+	lda PV_OPEN_TABLE, Y
+	cmp #$FF
+	beq @found_process_fd
+	
+	iny
+	cpy #PV_OPEN_TABLE_SIZE
+	bpl @find_process_fd
+	
+	lda #$FF
+	ldx #$FF ; still no fds
+	rts
+@found_process_fd:
+	txa
+	sta PV_OPEN_TABLE, Y
+	
+	phy ; push process file no
+	pha ; push sys file no
+	
+	ldax_addr PV_TMP_FILENAME
+	jsr strlen_ext
+	ldx #<PV_TMP_FILENAME
+	ldy #>PV_TMP_FILENAME
+	jsr SETNAM
+	
+	pla
+	sta KZE0
+	pha ; pull & push back sys file num
+	ldx #8
+	tay
+	jsr SETLFS
+	
+	jsr OPEN
+	bcs @open_failure_early
+	
+	stp
+	lda #1
+	sta atomic_action_st
+	
+	ldx KZE0
+	jsr CHKIN
+	
+	jsr GETIN
+	jsr READST ; check if reading causes error
+	stz atomic_action_st
+	
+	beq @success ; if doesn't, then was a success
+@open_failure:
+	sta KZE1
+
+	lda KZE0
+	jsr CLOSE
+	jsr CLRCHN
+	jmp @open_failure_merge
+	
+@open_failure_early:
+	jsr READST
+	sta KZE1
+
+@open_failure_merge:
+	; reopen system file table
+	lda #1
+	sta RAM_BANK
+	
+	plx
+	stz file_table_count, X
+	
+	lda current_program_id
+	ora #1
+	sta RAM_BANK
+	plx
+	lda #$FF
+	sta PV_OPEN_TABLE, X
+	
+	lda current_program_id
+	sta RAM_BANK
+	
+	ldx KZE1
+	lda #$FF ; FF = error
+	rts
+@success:
+	; rewind file to seek position 0
+	jsr CLRCHN
+	
+	lda #1
+	sta atomic_action_st
+	stp
+
+	lda KZE0
+	sta seek_string + 1	
+	stz seek_string + 2
+	stz seek_string + 3
+	stz seek_string + 4
+	stz seek_string + 5
+	
+	lda #6
+	ldx #<seek_string
+	ldy #>seek_string
+	jsr SETNAM
+	
+	lda #15
+	ldx #8
+	lda #15
+	jsr SETLFS
+	
+	;jsr OPEN ; send message to DOS
+	lda #15
+	jsr CLOSE
+	
+	stz atomic_action_st
+	
+	; restore ram bank and exit ;
+	lda current_program_id
+	sta RAM_BANK
+	
+	pla ; pull sys file no
+	pla ; pull process file no ( to return )
+	ldx #0
+	
+	rts
+	
+seek_string:
+	.byte "p"
+	.byte $FF
+	.res 4, 0
+	.byte 0 ; null terminate the cmd
+;
+; close_file_kernal
+;
+; closes process fd in .A
+;
+.export close_file_kernal
+close_file_kernal:
+	inc RAM_BANK
+	
+	tay
+	lda PV_OPEN_TABLE, Y
+	tax
+	cpx #$FF
+	beq :+
+	; file isn't open
+	jmp @close_file_exit
+	:
+	lda #$FF
+	sta PV_OPEN_TABLE, Y
+	cpx #$2
+	bcc @close_file_exit ; if stdin/stdout, don't actually need to CLOSE file
+	
+	lda #1
+	sta RAM_BANK
+	
+	phx
+	lda file_table_count, X
+	jsr CLOSE
+	plx
+	stz file_table_count, X
+
+@close_file_exit:
+	lda current_program_id
+	sta RAM_BANK
+	rts
+
+;
+; read_file_ext
+;
+; read bytes from file
+; .A = fd
+; r0 = buffer to write bytes
+; r1 = num of bytes to read
+;
+.export read_file_ext
+read_file_ext:
+	inc RAM_BANK
+	tay
+	lda PV_OPEN_TABLE, Y
+	dec RAM_BANK
+	
+	cmp #$FF
+	bne :+
+	; file isn't open, return
+	lda #0
+	ldx #0
+	rts 
+	
+	:
+	ldstx_word r0, KZE0
+	ldstx_word r1, KZE1
+	
+	cmp #STDIN_FILENO
+	bne :+
+	jmp read_stdin
+	:
+	
+	; this is a file we can read from disk ;
+	sta KZE3
+		
+	ldx KZE3
+	jsr CHKIN	
+@read_loop:	
+	lda KZE1 + 1 ; is bytes remaining > 255
+	beq :+
+	lda #255 ; load up to 255 bytes
+	bra :++
+	:
+	lda KZE1
+	:	
+	ldx KZE0
+	ldy KZE0 + 1
+	clc
+	jsr MACPTR
+	; bytes read in .XY
+	bcs @read_error
+	
+	lda current_program_id
+	sta RAM_BANK
+	
+	txa
+	sty KZE2
+	ora KZE2
+	beq @end_read_loop
+	
+	clc ; add bytes_read to ptr
+	txa
+	adc KZE0
+	sta KZE0
+	tya
+	adc KZE0 + 1
+	sta KZE0 + 1
+	
+	sec ; subtract bytes remaining from bytes left
+	lda KZE1
+	stx KZE1
+	sbc KZE1 ; .A = KZE1 - .X
+	sta KZE1
+	lda KZE1 + 1
+	sty KZE1 + 1
+	sbc KZE1 + 1 ; .A = (KZE1 + 1) - .X
+	sta KZE1 + 1
+	
+	lda KZE1
+	ora KZE1 + 1
+	bne @read_loop
+	
+@end_read_loop:	
+	jsr CLRCHN
+	
+	sec
+	lda KZE0
+	sbc r0
+	tay
+	lda KZE0 + 1
+	sbc r0 + 1
+	tax
+	tya
+	ldy #$00
+	
+	rts
+@read_error:
+	jsr READST
+	pha
+	jsr CLRCHN
+	ply
+	lda #0
+	tax
+	rts
+	
+	
+read_stdin:
+	inc KZE1
+	bne :+
+	inc KZE1 + 1
+	:
+	ldy #0
+@loop:
+	dec KZE1
+	bne :+
+	dec KZE1 + 1
+	bpl :+
+
+	;no more bytes to copy, return
+	rts
+	
+	:
+	phy
+	jsr CHRIN
+	ply
+	sta (KZE0), Y
+	
+	iny
+	bne @loop
+	inc KZE0 + 1
+	bra @loop

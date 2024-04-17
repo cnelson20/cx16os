@@ -1,7 +1,7 @@
 XASM =../../xasm16/xasm
 FLAGS =-addr 0xa200
 
-all: bindir echo ps kill printtest looptest args
+all: bindir echo ps kill printtest looptest args cat
 
 bindir: ../mnt/bin
 	

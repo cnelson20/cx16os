@@ -5,8 +5,10 @@
 .import print_str_ext
 .import strlen_int, strncpy_int
 .import setup_kernal_file_table, setup_process_file_table_int
-.import get_dir_filename
+.import get_dir_filename_int
 .import hex_num_to_string_kernal
+
+.import file_table_count
 
 .SEGMENT "STARTUP"
 .SEGMENT "INIT"
@@ -315,10 +317,47 @@ program_exit:
 	lda process_table, Y ; see if prog is still alive
 	beq @stack_loop ; if not alive, keep going
 @exit_stack_loop:
-	ldx KZP0
+
+@clear_prog_data:
+	ldx KZP0 ; pid
 	stz process_table, X
 	lda KZP1
 	sta return_table, X
+	
+	lda RAM_BANK
+	pha ; preserve RAM_BANK
+	
+	stx RAM_BANK ; ram bank = pid + 1
+	inc RAM_BANK ; holds process file table
+	
+	ldy #PV_OPEN_TABLE_SIZE - 1
+@close_process_files:	
+	lda PV_OPEN_TABLE, Y
+	cmp #$FF ; FF means entry is empty
+	beq :+
+	cmp #2 ; < 2 means stdin/out
+	bcc :+
+	
+	phx
+	tax
+	
+	lda #1 ; file_table_count is located in bank #1
+	sta RAM_BANK
+	stz file_table_count, X
+	
+	plx
+	stx RAM_BANK
+	inc RAM_BANK
+	
+	:
+	dey
+	bpl @close_process_files
+		
+	pla ; restore RAM_BANK
+	sta RAM_BANK
+	
+	
+@check_process_switch:	
 	cpx current_program_id
 	bne :+
 	jmp switch_next_program
@@ -549,7 +588,7 @@ load_new_process:
 	lda #<new_prog_args
 	ldx #>new_prog_args
 	ldy #1
-	jsr get_dir_filename
+	jsr get_dir_filename_int
 	
 	lda #<new_prog_args
 	ldx #>new_prog_args
@@ -614,7 +653,7 @@ load_new_process:
 user_prog_args_addr:
 	.word 0
 new_prog_args:
-	.res 128, 0
+	.res MAX_FILELEN, 0
 
 ;
 ; setup process info in its bank
