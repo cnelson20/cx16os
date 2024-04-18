@@ -22,6 +22,8 @@ intro_loop:
 intro_end_loop:
 
 new_line:
+	lda #5 ; white color
+	jsr CHROUT
 	lda #$24 ; '$'
 	jsr CHROUT
 	lda #$20 ; space

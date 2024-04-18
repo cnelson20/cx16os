@@ -94,7 +94,12 @@ file_error_read:
 	tya
 	tax
 file_error:
-	stx fd
+	stx err_num
+	
+	lda fd
+	beq dont_need_close
+	jsr close_file
+dont_need_close:
 	
 	lda #<error_msg_p1
 	ldx #>error_msg_p1
@@ -108,9 +113,10 @@ file_error:
 	ldx #>error_msg_p2
 	jsr PRINT_STR
 	
-	lda fd
+	lda err_num
 	jsr GET_HEX_NUM
 	jsr CHROUT
+	txa
 	jsr CHROUT
 	
 	lda #$d
@@ -119,6 +125,8 @@ file_error:
 	jmp main
 	
 fd:
+	.byte 0
+err_num:
 	.byte 0
 argc:
 	.byte 0

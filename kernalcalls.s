@@ -26,7 +26,7 @@
 .export call_table
 call_table:
 	jmp GETIN ; $9D00
-	jmp CHROUT ; $9D03
+	jmp putc ; $9D03
 	jmp exec ; $9D06
 	jmp print_str_ext ; $9D09
 	jmp get_process_info ; $9D0C
@@ -59,6 +59,50 @@ exec:
 	
 	stz irq_already_triggered
 	rts
+
+;
+;
+;
+putc:
+	phx
+	pha
+	and #$7F
+	cmp #$20
+	bcc @unusual_char
+@valid_char:
+	pla
+	plx
+	jmp CHROUT	
+	
+@unusual_char:
+	tax
+	pla
+	pha
+	cmp #$80
+	bcs :+
+	lda valid_c_table_0, X
+	bra :++
+	:
+	lda valid_c_table_1, X
+	:
+	bne @valid_char
+	
+	; needs to be appended ;
+	lda #$80
+	jsr CHROUT
+	jmp @valid_char
+	
+valid_c_table_0:
+	.byte 0, 0, 0, 0, 1, 1, 0, 1
+	.byte 1, 1, 1, 1, 1, 1, 0, 0
+	.byte 0, 0, 1, 1, 0, 0, 0, 0
+	.byte 1, 0, 1, 0, 0, 1, 0, 0
+valid_c_table_1:
+	.byte 0, 1, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 1, 0, 0
+	.byte 1, 1, 1, 1, 0, 1, 1, 1
+	.byte 1, 1, 1, 1, 1, 1, 1, 1
+	
 	
 ;
 ; prints a null terminated string pointed to by .AX
@@ -71,7 +115,7 @@ print_str_ext:
 	:
 	lda (r0), Y
 	beq :+
-	jsr CHROUT
+	jsr putc
 	iny
 	bne :-
 	:

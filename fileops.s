@@ -468,6 +468,9 @@ open_file_kernal_ext:
 	phy ; push process file no
 	pha ; push sys file no
 	
+	lda #1
+	sta atomic_action_st ; need to call SETLFS , SETNAM, OPEN all at once
+	
 	ldax_addr PV_TMP_FILENAME
 	jsr strlen_ext
 	ldx #<PV_TMP_FILENAME
@@ -484,24 +487,37 @@ open_file_kernal_ext:
 	jsr OPEN
 	bcs @open_failure_early
 	
-	stp
-	lda #1
-	sta atomic_action_st
+	; CHECK channel 15 to get status ;
+	lda #0
+	tax
+	tay ; .XY = 0
+	jsr SETNAM
 	
-	ldx KZE0
+	lda #15
+	ldx #8
+	tay 
+	jsr SETLFS
+	jsr OPEN ; commenting out OPEN fixes problem too
+	
+	ldx #15
 	jsr CHKIN
-	
 	jsr GETIN
-	jsr READST ; check if reading causes error
+	
+	pha
+	lda #15
+	jsr CLOSE
+	jsr CLRCHN ; if not commented, user file gets closed
+	pla
+	
 	stz atomic_action_st
 	
-	beq @success ; if doesn't, then was a success
+	cmp #$30
+	beq @success ; either '0' or '1' means success
+	cmp #$31
+	beq @success
 @open_failure:
 	sta KZE1
 
-	lda KZE0
-	jsr CLOSE
-	jsr CLRCHN
 	jmp @open_failure_merge
 	
 @open_failure_early:
@@ -513,7 +529,10 @@ open_file_kernal_ext:
 	lda #1
 	sta RAM_BANK
 	
-	plx
+	lda KZE0 ; sys file no
+	jsr CLOSE ; CLOSE file that didn't open
+	
+	plx ; same as KZE0
 	stz file_table_count, X
 	
 	lda current_program_id
@@ -530,36 +549,6 @@ open_file_kernal_ext:
 	lda #$FF ; FF = error
 	rts
 @success:
-	; rewind file to seek position 0
-	jsr CLRCHN
-	
-	lda #1
-	sta atomic_action_st
-	stp
-
-	lda KZE0
-	sta seek_string + 1	
-	stz seek_string + 2
-	stz seek_string + 3
-	stz seek_string + 4
-	stz seek_string + 5
-	
-	lda #6
-	ldx #<seek_string
-	ldy #>seek_string
-	jsr SETNAM
-	
-	lda #15
-	ldx #8
-	lda #15
-	jsr SETLFS
-	
-	;jsr OPEN ; send message to DOS
-	lda #15
-	jsr CLOSE
-	
-	stz atomic_action_st
-	
 	; restore ram bank and exit ;
 	lda current_program_id
 	sta RAM_BANK
@@ -569,12 +558,7 @@ open_file_kernal_ext:
 	ldx #0
 	
 	rts
-	
-seek_string:
-	.byte "p"
-	.byte $FF
-	.res 4, 0
-	.byte 0 ; null terminate the cmd
+
 ;
 ; close_file_kernal
 ;
@@ -588,7 +572,7 @@ close_file_kernal:
 	lda PV_OPEN_TABLE, Y
 	tax
 	cpx #$FF
-	beq :+
+	bne :+
 	; file isn't open
 	jmp @close_file_exit
 	:
@@ -599,12 +583,14 @@ close_file_kernal:
 	
 	lda #1
 	sta RAM_BANK
+	sta atomic_action_st
 	
-	phx
-	lda file_table_count, X
-	jsr CLOSE
-	plx
 	stz file_table_count, X
+	
+	txa
+	jsr CLOSE
+	stz atomic_action_st
+	
 
 @close_file_exit:
 	lda current_program_id
@@ -644,9 +630,13 @@ read_file_ext:
 	
 	; this is a file we can read from disk ;
 	sta KZE3
-		
+	
+	lda #1
+	sta atomic_action_st
+	
 	ldx KZE3
-	jsr CHKIN	
+	jsr CHKIN
+	bcs @error_chkin
 @read_loop:	
 	lda KZE1 + 1 ; is bytes remaining > 255
 	beq :+
@@ -694,6 +684,7 @@ read_file_ext:
 	
 @end_read_loop:	
 	jsr CLRCHN
+	stz atomic_action_st
 	
 	sec
 	lda KZE0
@@ -707,14 +698,20 @@ read_file_ext:
 	
 	rts
 @read_error:
-	jsr READST
-	pha
 	jsr CLRCHN
-	ply
+	stz atomic_action_st
+	
+	lda #0
+	tax
+	ldy #$FF
+	rts
+
+@error_chkin:
+	stz atomic_action_st
+	tay
 	lda #0
 	tax
 	rts
-	
 	
 read_stdin:
 	inc KZE1
