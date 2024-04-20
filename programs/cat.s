@@ -40,12 +40,12 @@ found_end_word:
 	ldx $31
 	ldy #0 ; read??
 	
-	jsr open_file
+	jsr open_file	
 	sta fd
 	cmp #$FF
 	beq file_error
 
-file_print_loop:	
+file_print_loop:
 	lda #<buff
 	sta r0L
 	lda #>buff
@@ -70,6 +70,8 @@ file_print_loop:
 	ldx #1
 	stx read_again
 @print_read_bytes:
+	lda bytes_read
+	beq file_out_bytes
 	ldx #0
 @print_read_bytes_loop:
 	lda buff, X

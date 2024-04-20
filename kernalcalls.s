@@ -12,7 +12,7 @@
 .import kill_process_kernal
 .import is_valid_process
 
-.import open_file_kernal_ext, close_file_kernal, read_file_ext
+.import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext
 
 .import irq_already_triggered
 .import atomic_action_st
@@ -38,9 +38,20 @@ call_table:
 	jmp open_file ; $9D1E
 	jmp close_file ; $9D21
 	jmp read_file ; $9D24
+	jmp write_file ; $9D27
 .export call_table_end
 call_table_end:
 
+;
+; exec - calls load_new_process
+;
+; .AX holds pointer to process name & args
+; .Y holds # of args
+; r0.L = make new program active (0 = no, !0 = yes, only applicable if current process is active)	
+; r2.L = redirect prog's stdin from file, r2.H redirect stdout
+;
+; return value: 0 on failure, otherwise return bank of new process
+;
 exec:
 	sta $02 + 1
 	
@@ -60,24 +71,94 @@ exec:
 	stz irq_already_triggered
 	rts
 
+
 ;
+; calls fputc with stdout (#1)
 ;
-;
+.export putc
 putc:
+	phy
 	phx
+	pha
+	
+	ldx #1
+	jsr fputc
+	
+	pla
+	plx
+	ply
+	rts
+
+;
+; CHKOUT's a certain file, then calls CHROUT
+;
+.export fputc
+fputc:
+	pha
+	inc RAM_BANK
+	lda PV_OPEN_TABLE, X
+	dec RAM_BANK
+	tax
+	pla
+	cpx #$FF
+	beq @exit_nsuch_file
+	
+	cpx #2 ; STDIN / STDOUT
+	bcs :+
+	jmp putc_v
+	:
+	
+	ldy #1
+	sty atomic_action_st
+	
+	pha
+	jsr CHKOUT
+	pla
+	bcs @chkout_error
+	
+	
+	jsr putc_v
+	pha
+	jsr CLRCHN
+	pla
+	stz atomic_action_st
+	ldy #0
+	rts
+	
+@exit_nsuch_file:
+	ldy #$FF
+	rts
+@chkout_error:
+	stz atomic_action_st
+	tay
+	rts
+	
+
+;
+; filters certain invalid chars, then calls CHROUT 
+;
+putc_v:
 	pha
 	and #$7F
 	cmp #$20
 	bcc @unusual_char
 @valid_char:
 	pla
-	plx
 	jmp CHROUT	
 	
 @unusual_char:
 	tax
 	pla
 	pha
+	
+	cmp #$d ; '\r'
+	bne :+
+	jsr CHROUT
+	pla
+	lda #$a ; '\n'
+	jmp CHROUT
+	:
+	
 	cmp #$80
 	bcs :+
 	lda valid_c_table_0, X
@@ -230,3 +311,14 @@ close_file:
 ;
 read_file:
 	jmp read_file_ext
+
+;
+; writes r1 bytes to file .A from r0
+;
+; .A = fd
+; r0 = buff
+; r1 = bytes to read
+;
+write_file:
+	jmp write_file_ext
+

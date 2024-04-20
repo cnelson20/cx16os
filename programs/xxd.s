@@ -14,6 +14,7 @@ r1L = $04
 r1H = $05
 
 init:
+	;stp
 	jsr GET_ARGS
 	stx $31
 	sta $30
@@ -48,7 +49,8 @@ found_end_word:
 	bne file_print_loop
 	jmp file_error ; if = $FF , jmp to file_error
 
-file_print_loop:	
+file_print_loop:
+	;stp
 	lda #<buff
 	sta r0L
 	lda #>buff
@@ -111,9 +113,10 @@ print_hex_loop:
 	ldx #0
 print_text_loop:
 	lda buff, X
-	and #$7F
 	cmp #$20
 	bcc @invalid_char
+	cmp #$80
+	bcs @invalid_char
 	lda buff, X
 	jmp @inc_loop
 @invalid_char:
@@ -134,8 +137,6 @@ print_text_loop:
 	jmp @finish_text_loop	
 	
 print_text_done:
-	
-	
 	lda #$d
 	jsr CHROUT
 	

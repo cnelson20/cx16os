@@ -32,9 +32,8 @@ PV_OPEN_TABLE_SIZE = $10 ; 15
 
 PV_PWD := $A010 ; holds process PWD
 
-PV_TMP_FILENAME := PV_PWD + sys_max_filelen
-
-
+PV_TMP_FILENAME_PREFIX := PV_PWD + sys_max_filelen
+PV_TMP_FILENAME := PV_TMP_FILENAME_PREFIX + 2
 
 ;
 ; Kernal variables

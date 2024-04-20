@@ -10,6 +10,8 @@
 .import strlen_int, strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str
 .import current_program_id
 
+.import putc
+
 .export file_table_count
 file_table_count := $A000
 
@@ -327,10 +329,13 @@ setup_process_file_table_int:
 	sty	RAM_BANK
 	
 	; set files 0 + 1 to stdin&out
-	lda #0
 	sta PV_OPEN_TABLE
-	inc A
-	sta PV_OPEN_TABLE + 1
+	stx PV_OPEN_TABLE + 1
+	
+	lda #'@'
+	sta PV_TMP_FILENAME_PREFIX
+	lda #':'
+	sta PV_TMP_FILENAME_PREFIX + 1
 	
 	; set files 2-15 as unused
 	ldx #2
@@ -471,10 +476,10 @@ open_file_kernal_ext:
 	lda #1
 	sta atomic_action_st ; need to call SETLFS , SETNAM, OPEN all at once
 	
-	ldax_addr PV_TMP_FILENAME
+	ldax_addr PV_TMP_FILENAME_PREFIX
 	jsr strlen_ext
-	ldx #<PV_TMP_FILENAME
-	ldy #>PV_TMP_FILENAME
+	ldx #<PV_TMP_FILENAME_PREFIX
+	ldy #>PV_TMP_FILENAME_PREFIX
 	jsr SETNAM
 	
 	pla
@@ -726,6 +731,9 @@ read_stdin:
 	bpl :+
 
 	;no more bytes to copy, return
+	lda r1
+	ldx r1 + 1
+	ldy #0
 	rts
 	
 	:
@@ -733,6 +741,141 @@ read_stdin:
 	jsr CHRIN
 	ply
 	sta (KZE0), Y
+	
+	iny
+	bne @loop
+	inc KZE0 + 1
+	bra @loop
+
+;
+; write_file_ext
+;
+; write bytes from file
+; .A = fd
+; r0 = buffer to read bytes from
+; r1 = num of bytes to write
+;
+.export write_file_ext
+write_file_ext:
+	lda RAM_BANK
+	sta KZE2 + 1
+	inc A
+	sta RAM_BANK
+	tay
+	lda PV_OPEN_TABLE, Y
+	dec RAM_BANK
+	
+	sta KZE2
+	
+	cmp #$FF
+	beq @file_doesnt_exist
+	
+	ldstx_word r0, KZE0
+	ldstx_word r1, KZE1
+	
+	cmp #1
+	beq write_stdout
+	
+	
+	
+@write_to_file:
+	lda #1
+	sta atomic_action_st ; needs to be uninterrupted
+
+	ldx KZE2
+	jsr CHKOUT
+	bcc @write_file_loop
+	tay
+	jmp @write_file_exit
+	
+@write_file_loop:
+	lda KZE2 + 1 ; restore RAM bank every loop
+	sta RAM_BANK
+	
+	lda KZE1 + 1
+	ora KZE1
+	bne :+ ; there are more bytes to read
+	; return ;
+	jsr CLRCHN
+	stz atomic_action_st
+	lda r1
+	ldx r1 + 1
+	ldy #0
+	rts
+	:
+	
+	lda KZE1 + 1 ; is bytes remaining > 255
+	beq :+
+	lda #255 ; load up to 255 bytes
+	bra :++
+	:
+	lda KZE1
+	:
+	
+	ldx KZE0
+	ldy KZE0 + 1	
+	clc
+	jsr MCIOUT
+	bcs @file_doesnt_exist
+	
+	txa
+	clc
+	adc KZE0
+	sta KZE0
+	tya
+	adc KZE0 + 1
+	sta KZE0 + 1
+	
+	sec
+	lda KZE1
+	stx KZE3
+	sbc KZE3
+	sta KZE1
+	lda KZE1 + 1
+	sty KZE3
+	sbc KZE3
+	sta KZE1 + 1
+	
+	jmp @write_file_loop
+	
+@file_doesnt_exist:
+	ldy #$FF
+	bra @write_file_exit
+
+@write_file_exit:
+	phy
+	jsr CLRCHN
+	ply
+	stz atomic_action_st
+	
+	lda KZE2
+	sta RAM_BANK
+	
+	lda #0
+	tax
+	rts
+	
+write_stdout:
+	inc KZE1
+	bne :+
+	inc KZE1 + 1
+	:
+	ldy #0
+@loop:
+	dec KZE1
+	bne :+
+	dec KZE1 + 1
+	bpl :+
+
+	;no more bytes to copy, return
+	lda r1
+	ldx r1 + 1
+	ldy #0
+	rts
+	
+	:
+	lda (KZE0), Y
+	jsr putc
 	
 	iny
 	bne @loop

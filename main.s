@@ -339,7 +339,11 @@ program_exit:
 	bcc :+
 	
 	phx
-	tax
+	pha ; preserve file num
+	phy ; preserve index in loop
+	jsr CLOSE
+	ply ; pull back off index
+	plx ; pull file num/SA from stack
 	
 	lda #1 ; file_table_count is located in bank #1
 	sta RAM_BANK
@@ -561,6 +565,7 @@ set_process_bank_used:
 ; .AX holds pointer to process name & args
 ; .Y holds # of args
 ; r0.L = make new program active (0 = no, !0 = yes, only applicable if current process is active)	
+; r2.L = redirect prog's stdin from file, r2.H redirect stdout
 ;
 ; return value: 0 on failure, otherwise return bank of new process
 ;
@@ -594,6 +599,9 @@ load_new_process:
 	ldx #>new_prog_args
 	jsr strlen_int ; holds strlen of prog
 	
+	ldx #1
+	sta atomic_action_st
+	
 	; .A holds strlen
 	ldx #<new_prog_args
 	ldy #>new_prog_args
@@ -613,6 +621,8 @@ load_new_process:
 	ldy #>$A200
 	
 	jsr LOAD
+	
+	stz atomic_action_st
 	
 	bcc :+ ; if carry clear, load was a success
 	lda #0
@@ -659,6 +669,7 @@ new_prog_args:
 ; setup process info in its bank
 ;
 ; .AX = args, .Y = program bank, r0.L = active?, r1.L = argc
+; r2.L = stdin_fileno (if != 0), r2.H = stdout_fileno
 ;
 setup_process_info:
 	sty RAM_BANK ; .Y holds new bank
@@ -745,7 +756,47 @@ setup_process_info:
 	sta active_process_stack, X
 	
 @end_active_process_check:	
+	; make sure r2L is a valid file no ;
+	lda RAM_BANK
+	pha
 	
+	lda current_program_id
+	cmp #$10
+	bcs :+
+	lda #0
+	ldx #1
+	jmp @call_process_file_setup
+	:
+	inc A
+	sta RAM_BANK
+	
+	; see if r2L is a valid file num ; 
+	ldx r2 + 1
+	lda PV_OPEN_TABLE, X
+	tax
+	cpx #2
+	bcc :+
+	cpx #$10
+	bcs :+
+	bra :++
+	:
+	ldx #1
+	:
+	; same for r2L ; 
+	ldy r2
+	lda PV_OPEN_TABLE, Y
+	cmp #2
+	bcc :+
+	cmp #$10
+	bcs :+
+	bra :++
+	:
+	lda #0
+	:
+
+@call_process_file_setup:
+	ply
+	sty RAM_BANK
 	jsr setup_process_file_table_int
 
 @end_func:

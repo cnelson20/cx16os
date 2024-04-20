@@ -3,13 +3,37 @@ CHROUT = $9D03
 exec = $9D06
 print_str = $9D09
 process_info = $9D0C
+GET_HEX_NUM = $9D18
+
+open_file = $9D1E
+close_file = $9D21
+read_file = $9D24
 
 r0 = $02
 r1 = $04
 r2 = $06
 
+r2L = $06
+r2H = $07
+
+ptr0 = $30
+ptr0_l = $30
+ptr0_h = $31
+
+CMD_MAX_SIZE = 128
+
 UNDERSCORE = $5F
 LEFT_CURSOR = $9D
+DOLLAR_SIGN = $24
+SPACE = $20
+COLOR_WHITE = 5
+
+MODE_R = $52
+MODE_W = $57
+
+AMPERSAND = $26
+GT = $3E
+LT = $3C
 
 init:
 	ldx #0
@@ -22,9 +46,9 @@ intro_loop:
 intro_end_loop:
 
 new_line:
-	lda #5 ; white color
+	lda #COLOR_WHITE ; white color
 	jsr CHROUT
-	lda #$24 ; '$'
+	lda #DOLLAR_SIGN ; '$'
 	jsr CHROUT
 	lda #$20 ; space
 	jsr CHROUT
@@ -120,6 +144,12 @@ go_until_next_nspace:
 	iny
 	jmp go_until_next_nspace
 nspace_found:
+	phy
+	ldy num_args
+	txa
+	sta args_offset_arr, Y
+	ply
+	
 	inc num_args
 seperate_words_loop:
 	lda input, Y
@@ -162,27 +192,164 @@ end_loop:
 	bne narg_not_0
 	jmp new_line
 narg_not_0:
-	
 	lda #1
 	sta do_wait_child
 	sta r0 ; by default, new process is active 
 	
-	dex
+	ldx num_args
+	stz args_offset_arr, X
+	stz curr_arg
+	; by default prog stdin and stdout are normal ;
+	stz stdin_filename
+	stz stdout_filename
+	; go through arguments to check for redirects / &
+@parse_args_loop:	
+	ldx curr_arg
+	cpx num_args
+	bcs @end_parse_args_loop
+	
+	lda args_offset_arr, X
+	tax
 	lda output, X
-	cmp #$26
-	bne no_ampersand
-	dex 
+	
+	cmp #AMPERSAND
+	bne @not_ampersand
+	
+	inx
 	lda output, X
-	bne no_ampersand
-	; last argument is just an ampersand
-	dec num_args
+	bne @parse_loop_end_cmp
+	; this args = "&" ;
 	stz do_wait_child
-	stz r0
-no_ampersand:	
+	ldx #1
+	jsr copy_back_args
+	jmp @parse_args_loop
+	
+@not_ampersand:
+	cmp #LT
+	bne @not_lt
+	inx
+	lda output, X
+	bne @parse_loop_end_cmp
+	; this is "<" ;
+	ldx curr_arg
+	inx
+	lda args_offset_arr, X
+	tax
+	ldy #0
+@stdin_copy_loop:
+	lda output, X
+	sta stdin_filename, Y
+	beq @end_stdin_copy_loop
+	inx
+	iny
+	jmp @stdin_copy_loop
+@end_stdin_copy_loop:	
+	ldx #2
+	jsr copy_back_args
+	jmp @parse_args_loop
+	
+@not_lt:
+	cmp #GT
+	bne @not_gt
+	inx
+	lda output, X
+	bne @parse_loop_end_cmp
+	
+	; this is ">" ;
+	ldx curr_arg
+	inx
+	lda args_offset_arr, X
+	tax
+	ldy #0
+@stdout_copy_loop:
+	lda output, X
+	sta stdout_filename, Y
+	beq @end_stdout_copy_loop
+	inx
+	iny
+	jmp @stdout_copy_loop
+@end_stdout_copy_loop:	
+	ldx #2
+	jsr copy_back_args
+	jmp @parse_args_loop
+	
+@not_gt:
+
+@parse_loop_end_cmp:	
+	inc curr_arg
+	jmp @parse_args_loop
+	
+@end_parse_args_loop:
 	ldy num_args
-	bne narg_not_0_amp
+	bne @nzero_args
 	jmp new_line
+@nzero_args:
+	ldx command_length
+@zero_out:
+	stz output, X
+	inx 
+	cpx #CMD_MAX_SIZE
+	bcc @zero_out
+	jmp narg_not_0_amp
+	
+	
+copy_back_args:
+	; X is num of args to skip ;
+	
+	; subtract X many args from num_args ;
+	lda num_args
+	stx ptr0
+	sec
+	sbc ptr0
+	sta num_args
+	
+	lda curr_arg
+	cmp num_args
+	bcc @not_over_args
+	; curr_arg is not even in output ;
+	tay
+	lda args_offset_arr, Y
+	dec A
+	sta command_length
+	lda #0
+	sta args_offset_arr, Y
+	rts
+	
+@not_over_args:
+	txa
+	clc
+	adc curr_arg
+	tay
+	lda args_offset_arr, Y
+	tax ; x holds offset for src
+	ldy curr_arg
+	lda args_offset_arr, Y
+	tay ; y holds offset for dst 
+	
+	; move data if necessary ;
+@copy_back_loop:
+	cpx command_length
+	bcs @end_copy_back_loop
+	
+	lda output, X
+	sta output, Y
+	
+	inx
+	iny
+	jmp @copy_back_loop
+@end_copy_back_loop:	
+	lda #0
+	sta output, Y
+	sty command_length
+	rts
 narg_not_0_amp:
+	;stp
+	jsr setup_prog_redirects
+	ldy num_args
+	lda new_stdin_fileno
+	sta r2L
+	lda new_stdout_fileno
+	sta r2H
 	lda #<output
 	ldx #>output
 	jsr exec
@@ -203,6 +370,15 @@ wait_child:
 	jmp new_line
 	
 exec_error:
+	lda new_stdin_fileno
+	beq @new_stdin_file_zero
+	jsr close_file
+@new_stdin_file_zero:
+	lda new_stdout_fileno
+	beq @new_stdout_file_zero
+	jsr close_file
+@new_stdout_file_zero:
+	
 	lda #<exec_error_p1_message
 	ldx #>exec_error_p1_message
 	jsr print_str
@@ -218,11 +394,77 @@ exec_error:
 exec_error_done:	
 	jmp new_line
 
+setup_prog_redirects:
+	stz new_stdin_fileno
+	stz new_stdout_fileno
+	
+	lda stdin_filename
+	beq @no_stdin
+	
+	lda #<stdin_filename
+	ldx #>stdin_filename
+	ldy #MODE_R
+	jsr open_file
+	cmp #0
+	bne @w_open_fail
+	sta new_stdin_fileno	
+@no_stdin:
+	lda stdout_filename
+	beq @no_stdout
+	
+	lda #<stdout_filename
+	ldx #>stdout_filename
+	ldy #MODE_W
+	jsr open_file
+	cmp #0
+	beq @w_open_fail
+	sta new_stdout_fileno	
+@no_stdout:
+	rts
+
+@r_open_fail:
+	stx new_stdin_fileno
+	lda #<open_error_p1
+	ldx #>open_error_p1
+	jsr print_str
+	lda #<stdin_filename
+	ldx #>stdin_filename
+	jsr print_str
+	lda #<open_error_p2
+	ldx #>open_error_p2
+	jsr print_str
+	lda new_stdin_fileno
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	lda #$d
+	jsr CHROUT
+	jmp new_line
+
+@w_open_fail:
+	stx new_stdout_fileno
+	lda #<open_error_p1
+	ldx #>open_error_p1
+	jsr print_str
+	lda #<stdout_filename
+	ldx #>stdout_filename
+	jsr print_str
+	lda #<open_error_p2
+	ldx #>open_error_p2
+	jsr print_str
+	lda new_stdout_fileno
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	lda #$d
+	jsr CHROUT
+	jmp new_line
+
 in_quotes:
 	.byte 0
 do_wait_child:
-	.byte 0
-command_length:
 	.byte 0
 last_return_val:
 	.byte 0
@@ -231,9 +473,17 @@ num_args:
 child_id:
 	.byte 0
 input:
-	.res 128, 0
+	.res CMD_MAX_SIZE, 0
 output:
-	.res 128, 0
+	.res CMD_MAX_SIZE, 0
+command_length:
+	.byte 0
+curr_arg:
+	.byte 0
+
+
+args_offset_arr:
+	.res 16, 0
 
 welcome_string:
 	.ascii "Commander X16 OS Shell"
@@ -243,3 +493,21 @@ exec_error_p1_message:
 exec_error_p2_message:
 	.ascii "'"
 	.byte $0d, $00
+
+open_error_p1:
+	.asciiz "Error opening file '"
+
+open_error_p2:
+	.asciiz "', code #:"
+	
+MAX_FILELEN = 128
+
+stdin_filename:
+	.res MAX_FILELEN, 0
+stdout_filename:
+	.res MAX_FILELEN, 0
+
+new_stdin_fileno:
+	.byte 0
+new_stdout_fileno:
+	.byte 0
