@@ -116,8 +116,8 @@ fputc:
 	pla
 	bcs @chkout_error
 	
-	
-	jsr putc_v
+	; can just print normally to a file ;
+	jsr CHROUT
 	pha
 	jsr CLRCHN
 	pla
