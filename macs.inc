@@ -86,3 +86,8 @@
 	ldy src + 1
 	sty dest + 1
 .endmacro
+
+.macro ldax_word addr
+	lda addr
+	ldx addr + 1
+.endmacro

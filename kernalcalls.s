@@ -25,7 +25,7 @@
 
 .export call_table
 call_table:
-	jmp GETIN ; $9D00
+	jmp getc ; $9D00
 	jmp putc ; $9D03
 	jmp exec ; $9D06
 	jmp print_str_ext ; $9D09
@@ -183,7 +183,65 @@ valid_c_table_1:
 	.byte 0, 0, 0, 0, 0, 1, 0, 0
 	.byte 1, 1, 1, 1, 0, 1, 1, 1
 	.byte 1, 1, 1, 1, 1, 1, 1, 1
+
+;
+; Returns char from stdin in .A
+; preserves .X
+;
+.export getc	
+getc:
+	phx
 	
+	ldx #0
+	jsr fgetc
+	phx
+	ply ; move possible error code from .X to .Y
+	; CHRIN doesn't preserve .Y so this is fine
+	
+	plx
+	rts
+
+;
+; Returns a byte in .A from fd .X
+;	
+.export fgetc
+fgetc:
+	pha
+	inc RAM_BANK
+	lda PV_OPEN_TABLE, X
+	tax
+	dec RAM_BANK
+	pla
+	
+	cpx #$FF
+	beq @exit_nsuch_file
+	cpx #2
+	bcs :+
+	; reading from stdin
+	jmp GETIN
+	:
+	
+	lda #1
+	sta atomic_action_st
+	
+	jsr CHKIN
+	bcs @chkout_error
+	
+	jsr GETIN
+	pha
+	jsr CLRCHN
+	pla
+	ldx #0
+	rts
+	
+@exit_nsuch_file:
+	lda #0
+	; .X = $FF already
+	rts
+@chkout_error:
+	stz atomic_action_st
+	tax
+	rts
 	
 ;
 ; prints a null terminated string pointed to by .AX

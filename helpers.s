@@ -26,28 +26,27 @@ strlen_ext:
 	rts
 
 ;
-; copies up to n characters in .A from KZE1 to KZE0
+; copies up to .A characters from KZE1 to KZE0
 ;
 .export strncpy_ext
 strncpy_ext:
-	tax ; max num of chars to copy
-	ldy #0
-	cpx #0
-	bne :+
-	rts
+	pha
+	phy_word KZE0
+	ldax_word KZE1
+	pha
+	phx
+	jsr strlen_ext
+	ply_word KZE1
+	ply_word KZE0
+	ply
+	
+	sty KZE2
+	cmp KZE2
+	bcc :+
+	lda KZE2
 	:
-@loop:
-	dex
-	bmi @loop_exit
-	lda (KZE1), Y
-	beq @loop_exit
-	sta (KZE0), Y
-	iny
-	bra @loop 
-@loop_exit:
-	lda #0
-	sta (KZE0), Y	
-	rts
+	
+	jmp memcpy_ext
 	
 ;
 ; Parse a byte number from a string in .AX with radix in .Y
@@ -452,7 +451,7 @@ rev_str:
 ; KZE0 is loc. in bank KZE2.L, KZE1 in KZE3.L
 ; returns -?, 0, +? if KZE0 <, =, or > KZE1
 ;
-; *preserves KZE0-KZE3
+; *preserves KZE0 - KZE3
 ;
 .export strcmp_banks_ext
 strcmp_banks_ext:

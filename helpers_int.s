@@ -9,24 +9,23 @@
 ;
 .export strncpy_int
 strncpy_int:
-	tax ; max num of chars to copy
-	ldy #0
-	cpx #0
-	bne :+
-	rts
+	pha
+	phy_word KZP0
+	ldax_word KZP1
+	pha
+	phx
+	jsr strlen_int
+	ply_word KZP1
+	ply_word KZP0
+	ply
+	
+	sty KZP2
+	cmp KZP2
+	bcc :+
+	lda KZP2
 	:
-@loop:
-	dex
-	bmi @loop_exit
-	lda (KZP1), Y
-	beq @loop_exit
-	sta (KZP0), Y
-	iny
-	bra @loop 
-@loop_exit:
-	lda #0
-	sta (KZP0), Y
-	rts
+	
+	jmp memcpy_int
 
 ;
 ; gets length of str in .AX

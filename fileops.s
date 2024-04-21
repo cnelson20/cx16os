@@ -461,8 +461,11 @@ open_file_kernal_ext:
 	
 	iny
 	cpy #PV_OPEN_TABLE_SIZE
-	bpl @find_process_fd
+	bcc @find_process_fd
 	
+	; restore RAM_BANK and exit failure
+	lda current_program_id
+	sta RAM_BANK
 	lda #$FF
 	ldx #$FF ; still no fds
 	rts

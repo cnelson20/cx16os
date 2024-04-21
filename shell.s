@@ -77,6 +77,9 @@ wait_for_input:
 	cmp #$19 ; delete
 	beq backspace
 	
+	; if char < $20 and not one of above chars, ignore
+	cmp #$20
+	bcc wait_for_input
 	tay
 	and #$80 ; if >= $80, invalid char
 	bne wait_for_input
@@ -291,7 +294,7 @@ narg_not_0:
 	cpx #CMD_MAX_SIZE
 	bcc @zero_out
 	jmp narg_not_0_amp
-	
+
 	
 copy_back_args:
 	; X is num of args to skip ;
@@ -343,7 +346,6 @@ copy_back_args:
 	sty command_length
 	rts
 narg_not_0_amp:
-	;stp
 	jsr setup_prog_redirects
 	ldy num_args
 	lda new_stdin_fileno
@@ -405,8 +407,8 @@ setup_prog_redirects:
 	ldx #>stdin_filename
 	ldy #MODE_R
 	jsr open_file
-	cmp #0
-	bne @w_open_fail
+	cmp #$FF
+	beq @r_open_fail
 	sta new_stdin_fileno	
 @no_stdin:
 	lda stdout_filename
@@ -416,7 +418,7 @@ setup_prog_redirects:
 	ldx #>stdout_filename
 	ldy #MODE_W
 	jsr open_file
-	cmp #0
+	cmp #$FF
 	beq @w_open_fail
 	sta new_stdout_fileno	
 @no_stdout:
