@@ -84,9 +84,6 @@ file_print_loop:
 	bne file_print_loop
 	
 file_out_bytes:
-	lda #$d
-	jsr CHROUT
-
 	lda fd
 	jsr close_file
 	
