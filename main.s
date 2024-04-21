@@ -778,6 +778,11 @@ setup_process_info:
 	bcc :+
 	cpx #$10
 	bcs :+
+	; is valid file!
+	; clear entry in host file table ;
+	ldy r2 + 1
+	lda #NO_FILE
+	sta PV_OPEN_TABLE, Y
 	bra :++
 	:
 	ldx #1
@@ -789,6 +794,12 @@ setup_process_info:
 	bcc :+
 	cmp #$10
 	bcs :+
+	; again, valid file ;
+	ldy r2
+	pha
+	lda #NO_FILE ; empty file table entry
+	sta PV_OPEN_TABLE, Y
+	pla
 	bra :++
 	:
 	lda #0
