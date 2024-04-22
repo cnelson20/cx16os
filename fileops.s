@@ -208,7 +208,6 @@ get_dir_filename_ext:
 	cmp #'/'
 	bne @not_abs_pathing
 	
-	sta RAM_BANK
 	; if absolute pathing, dont change anything
 	rts
 @not_abs_pathing:
