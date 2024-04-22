@@ -7,7 +7,7 @@ Multitasking OS for the Commander x16
 ### Function table:
 | Address | Function name | Argument Registers | Return Registers | Registers trampled |
 |---------|---------------|--------------------|------------------|--------------------|
-| $9D00 | getc / GETIN | | .A | .Y |
+| $9D00 | [`getc / GETIN`](#9d00-getc) | | .A | .Y |
 | $9D03 | putc / CHROUT | .A | | |
 | $9D06 | print_str | .AX | | .Y |
 | $9D09 | exec | .AX, .Y, r0, r2 | .A | r1 |
@@ -25,25 +25,31 @@ Multitasking OS for the Commander x16
 
 ## Function Reference
 
-### $9D00: getc / GETIN 
+### $9D00: getc 
 - Grabs a character from input
 - Mimics GETIN
 
 Return values:
 - Char from stdin returned in .A
 
-### $9D03: putc / CHROUT 
+---
+
+### $9D03: putc
 - Prints the character passed in .A
 - Mimics the function of CHROUT
 
 Return values:
 - None, but preserves .AXY
 
+---
+
 ### $9D06: print_str
 - Prints the null-terminated string at address .AX
 
 Return values:
 - None
+
+---
 
 ### $9D09: exec
 - Starts a new process with filename pointed to by .AX, with args as subsequent null-term'd strings
@@ -56,6 +62,8 @@ Return values:
 - .A != 0 -> new process has pid .A
 - .A = 0 -> failure
 
+---
+
 ### $9D0C: get_process_info
 - Returns info about process with pid .A
 
@@ -64,6 +72,8 @@ Return values:
 - .X = last completed process with pid .A's return value
 - .Y = (if .A != 0) process's priority, how much time it gets to run
 
+---
+
 ### $9D0F: get_args
 - Returns program arguments
 
@@ -71,11 +81,15 @@ Return values:
 - .AX = pointer to program args
 - .Y = argc
 
+---
+
 ### $9D12: get_process_name
 - Reads first r0.L bytes of the process with pid .Y's name into memory pointed to by .AX
 
 Return values:
 - None
+
+---
 
 ### $9D15: parse_num
 - Parses the number pointed to by .AX
@@ -85,6 +99,8 @@ Return values:
 Return values:
 - .AX = the number parsed
 
+---
+
 ### $9D18: hex_num_to_string
 - Converts the 8-bit number in .A to its base-16 ASCII equivalent
 
@@ -92,12 +108,16 @@ Return values:
 - .X = ASCII conversion of num's hi nybble
 - .A = low nybble
 
+---
+
 ### $9D1B: kill_process
 - Kills the process with pid .A
 
 Return values:
 - .X = 0 on failure, 1 on success
 - .A = 0 on failure, preserves argument on success
+
+---
 
 ### $9D1E: open_file
  - Open file with name pointed to by .AX
@@ -107,11 +127,15 @@ Return values:
 - .A = fd on success, $FF on failure
 - .X = 0 on success, error code on failure
 
+---
+
 ### $9D21: close_file
 - Closes file with fd .A
 
 Return values:
 - None
+
+---
 
 ### $9D24: read_file
 - Reads up to r1 bytes into memory pointed to by r0 from fd .A
@@ -120,10 +144,12 @@ Return values:
 - .Y = 0 on success, else error code
 - .AX = bytes read
 
-
+---
 
 ### $9D27: write_file
 - Not tested
+
+---
 
 ### $9D2A: open_dir_listing
 - Opens a file entry with the current dir listing
@@ -131,3 +157,6 @@ Return values:
 Return values:
 - .A = $FF if the channel already in use, otherwise .A = a new fd
 - .X = 0 on success, otherwise an error code
+
+---
+
