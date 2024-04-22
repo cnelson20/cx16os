@@ -22,6 +22,7 @@ Multitasking OS for the Commander x16
 | $9D24 | [`read_file`](#9d24-read_file) | .A, r0, r1 | .AX, .Y |
 | $9D27 | [`write_file`](#9d27-write_file) | .A, r0, r1 | ~ | ~ |
 | $9D2A | [`open_dir_listing`](#9d2a-open_dir_listing) | | .A, .X | .Y |
+| $9D2D | [`get_pwd`](#9d2d-get_pwd) | r0 r1 | | .A, .X, .Y |
 
 ## Function Reference
 
@@ -157,6 +158,14 @@ Return values:
 Return values:
 - .A = $FF if the channel already in use, otherwise .A = a new fd
 - .X = 0 on success, otherwise an error code
+
+---
+
+### $9D2D: get_pwd
+- Copies the first r1 of the pwd into memory pointed to by r0
+
+Return values:
+- None
 
 ---
 
