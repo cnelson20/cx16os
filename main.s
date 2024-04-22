@@ -17,9 +17,19 @@
 	
 .SEGMENT "CODE"
 
+SWAP_FGBG_COLORS = 1
+
 init:
 	stz ROM_BANK
 	stz current_program_id
+	
+	lda #SWAP_FGBG_COLORS
+	jsr CHROUT
+	;lda #$90
+	;jsr CHROUT
+	lda #SWAP_FGBG_COLORS
+	jsr CHROUT
+	
 	lda #$0f
 	jsr CHROUT ; turn on ascii mode
 	

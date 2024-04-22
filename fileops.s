@@ -977,3 +977,55 @@ open_dir_listing_ext:
 	rts
 @s:
 	.byte "$", 0
+
+;
+; get_pwd_ext
+;
+; copies up to r1 bytes of the cwd into memory pointed to by r0
+;
+.export get_pwd_ext
+get_pwd_ext:
+	inc RAM_BANK
+	
+	lda #<PV_PWD
+	ldx #>PV_PWD
+	jsr strlen_ext
+	inc A
+	
+	; if somehow strlen (pwd) > MAX_FILELEN, only copy MAX_FILELEN bytes
+	cmp #MAX_FILELEN - 1
+	bcc :+
+	lda #MAX_FILELEN - 1
+	:
+	
+	ldx r1 + 1 ; if r1 > 256, above cap
+	bne :+
+	cmp r1 
+	bcc :+ ; if strlen < r1, use strlen as num of bytes to copy
+	lda r1 ; if not, use r1 to cap num of bytes copied
+	:
+	; now have correct num of bytes to copy in .A
+	pha
+	
+	ldsta_word r0, KZE0
+	cnsta_word PV_PWD, KZE1
+	
+	lda RAM_BANK
+	sta KZE3 ; programs's bank + 1 (holds pwd)
+	dec A
+	sta RAM_BANK
+	sta KZE2 ; program's bank in KZE2
+	
+	pla
+	pha
+	jsr memcpy_banks_ext
+	
+	lda current_program_id
+	sta RAM_BANK
+	
+	ply
+	lda #0
+	sta (r0), Y
+	
+	rts
+	

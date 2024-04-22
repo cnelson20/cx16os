@@ -4,6 +4,7 @@ exec = $9D06
 print_str = $9D09
 process_info = $9D0C
 GET_HEX_NUM = $9D18
+get_pwd = $9D2D
 
 open_file = $9D1E
 close_file = $9D21
@@ -13,6 +14,10 @@ r0 = $02
 r1 = $04
 r2 = $06
 
+r0L = $02
+r0H = $03
+r1L = $04
+r1H = $05
 r2L = $06
 r2H = $07
 
@@ -26,7 +31,10 @@ UNDERSCORE = $5F
 LEFT_CURSOR = $9D
 DOLLAR_SIGN = $24
 SPACE = $20
+
 COLOR_WHITE = 5
+COLOR_GREEN = $1E
+COLOR_BLUE = $1F
 
 MODE_R = $52
 MODE_W = $57
@@ -46,6 +54,20 @@ intro_loop:
 intro_end_loop:
 
 new_line:
+	lda #COLOR_GREEN
+	jsr CHROUT
+	lda #<stdin_filename
+	sta r0L
+	lda #>stdin_filename
+	sta r0H
+	lda #MAX_FILELEN
+	sta r1L
+	stz r1H
+	jsr get_pwd
+	lda #<stdin_filename
+	ldx #>stdin_filename
+	jsr print_str
+
 	lda #COLOR_WHITE ; white color
 	jsr CHROUT
 	lda #DOLLAR_SIGN ; '$'
