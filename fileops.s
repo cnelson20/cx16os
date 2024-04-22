@@ -59,7 +59,7 @@ setup_kernal_file_table:
 	sta file_table_count, X
 	dex
 	bpl :- ; mark first 3 files as in use; 0 & 1 are for CMDR kernal, 2 for OS
-	sta file_table_count + 15
+	stz file_table_count + 15
 	
 	jsr update_internal_pwd
 	cnsta_word pwd, KZP1
@@ -424,56 +424,14 @@ open_file_kernal_ext:
 	inx 
 	stz PV_TMP_FILENAME, X
 	
-	lda #1
-	sta RAM_BANK
-	
-	ldy #FILE_TABLE_COUNT_SIZE
-	lda #1
-	sta atomic_action_st ; atomic operation here
-@check_sys_file_table:
-	lda file_table_count, Y
-	beq @found_open_slot
-	
-	dey
-	bpl @check_sys_file_table
-@no_files_left:
-	stz atomic_action_st
-	lda #$FF ; failure code
-	ldx #$FF ; no fds left
-	rts
-	
-@found_open_slot:
-	lda #1
-	sta file_table_count, Y
-	stz atomic_action_st ; atomic write finished
-	
-	tya
-	tax ; system filenum in .X
-	
-	lda current_program_id
-	ora #1
-	sta RAM_BANK	
-	ldy #USER_FILENO_START
-@find_process_fd:
-	lda PV_OPEN_TABLE, Y
+	jsr find_file_pres
 	cmp #$FF
-	beq @found_process_fd
-	
-	iny
-	cpy #PV_OPEN_TABLE_SIZE
-	bcc @find_process_fd
-	
-	; restore RAM_BANK and exit failure
-	lda current_program_id
-	sta RAM_BANK
-	lda #$FF
-	ldx #$FF ; still no fds
+	bne :+
+	; couldn't find filenum
 	rts
-@found_process_fd:
-	txa
-	sta PV_OPEN_TABLE, Y
+	:
 	
-	phy ; push process file no
+	phx ; push process file no
 	pha ; push sys file no
 	
 	lda #1
@@ -568,6 +526,72 @@ open_file_kernal_ext:
 	rts
 
 ;
+; finds and marks a file as in use
+;
+; returns sys filenum in .A and process filenum in .X
+;
+find_file_pres:
+	ldy RAM_BANK
+	phy
+	jsr :+
+	ply
+	sty RAM_BANK
+	rts
+
+	:
+	lda #1
+	sta RAM_BANK
+	
+	ldy #FILE_TABLE_COUNT_SIZE
+	lda #1
+	sta atomic_action_st ; atomic operation here
+@check_sys_file_table:
+	lda file_table_count, Y
+	beq @found_open_slot
+	
+	dey
+	bpl @check_sys_file_table
+@no_files_left:
+	stz atomic_action_st
+	lda #$FF ; failure code
+	ldx #$FF ; no fds left
+	rts
+	
+@found_open_slot:
+	lda #1
+	sta file_table_count, Y
+	stz atomic_action_st ; atomic write finished
+	
+	tya
+	tax ; system filenum in .X
+	
+	lda current_program_id
+	ora #1
+	sta RAM_BANK	
+	ldy #USER_FILENO_START
+@find_process_fd:
+	lda PV_OPEN_TABLE, Y
+	cmp #$FF
+	beq @found_process_fd
+	
+	iny
+	cpy #PV_OPEN_TABLE_SIZE
+	bcc @find_process_fd
+	
+	; restore RAM_BANK and exit failure
+	lda current_program_id
+	sta RAM_BANK
+	lda #$FF
+	ldx #$FF ; still no fds
+	rts
+@found_process_fd:
+	txa
+	sta PV_OPEN_TABLE, Y
+	phy
+	plx
+	rts
+
+;
 ; close_file_kernal
 ;
 ; closes process fd in .A
@@ -601,8 +625,8 @@ close_file_kernal:
 	
 
 @close_file_exit:
-	lda current_program_id
-	sta RAM_BANK
+	ldy current_program_id
+	sty RAM_BANK
 	rts
 
 ;
@@ -644,7 +668,7 @@ read_file_ext:
 	
 	ldx KZE3
 	jsr CHKIN
-	bcs @error_chkin
+	bcs read_error_chkin
 @read_loop:	
 	lda KZE1 + 1 ; is bytes remaining > 255
 	beq :+
@@ -658,7 +682,7 @@ read_file_ext:
 	clc
 	jsr MACPTR
 	; bytes read in .XY
-	bcs @read_error
+	bcs read_slow ; if MACPTR returns with carry set, try read_slow
 	
 	lda current_program_id
 	sta RAM_BANK
@@ -705,20 +729,49 @@ read_file_ext:
 	ldy #$00
 	
 	rts
-@read_error:
-	jsr CLRCHN
-	stz atomic_action_st
-	
-	lda #0
-	tax
-	ldy #$FF
-	rts
-
-@error_chkin:
+read_error_chkin:
 	stz atomic_action_st
 	tay
 	lda #0
 	tax
+	rts
+	
+read_slow:
+	ldx KZE3
+	jsr CHKIN
+	bcs read_error_chkin
+	
+@read_slow_loop:
+	jsr GETIN
+	sta (KZE0)
+
+	inc KZE0
+	bne :+
+	inc KZE0 + 1
+	:
+	dec KZE1
+	bne :+
+	dec KZE1 + 1
+	bne @no_more_bytes
+	:
+	
+	jsr READST
+	cmp #0
+	beq @read_slow_loop
+	
+@no_more_bytes:
+	jsr CLRCHN
+	stz atomic_action_st
+	
+	sec
+	lda KZE0
+	sbc r0
+	tay
+	lda KZE0 + 1
+	sbc r0 + 1
+	tax
+	tya
+	ldy #$00
 	rts
 	
 read_stdin:
@@ -884,3 +937,43 @@ write_stdout:
 	bne @loop
 	inc KZE0 + 1
 	bra @loop
+
+;
+; returns a fd to the dir listing
+;
+.export open_dir_listing_ext
+open_dir_listing_ext:
+	jsr find_file_pres
+	sta KZE0
+	stx KZE1
+	
+	cmp #$FF
+	beq @open_error
+	cpx #$FF
+	beq @open_error
+	
+	lda #1
+	sta atomic_action_st
+
+	lda #1
+	ldx #<@s
+	ldy #>@s
+	jsr SETNAM
+	
+	lda KZE0
+	ldx #8
+	ldy #0 
+	jsr SETLFS
+	jsr OPEN
+	bcs @open_error
+	stz atomic_action_st
+	
+	lda KZE1 ; process filenum
+	ldx #0
+	rts
+@open_error:
+	lda #$FF
+	ldx #$FF
+	rts
+@s:
+	.byte "$", 0

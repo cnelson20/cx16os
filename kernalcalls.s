@@ -12,7 +12,7 @@
 .import kill_process_kernal
 .import is_valid_process
 
-.import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext
+.import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, open_dir_listing_ext
 
 .import irq_already_triggered
 .import atomic_action_st
@@ -35,10 +35,11 @@ call_table:
 	jmp parse_num ; $9D15
 	jmp hex_num_to_string ; $9D18
 	jmp kill_process ; $9D1B
-	jmp open_file ; $9D1E
-	jmp close_file ; $9D21
-	jmp read_file ; $9D24
-	jmp write_file ; $9D27
+	jmp open_file_kernal_ext ; $9D1E
+	jmp close_file_kernal ; $9D21
+	jmp read_file_ext ; $9D24
+	jmp write_file_ext ; $9D27
+	jmp open_dir_listing_ext ; $9D2A
 .export call_table_end
 call_table_end:
 
@@ -118,6 +119,11 @@ fputc:
 	
 	; can just print normally to a file ;
 	jsr CHROUT
+	cmp #$d
+	bne :+
+	lda #$a
+	jsr CHROUT
+	:
 	pha
 	jsr CLRCHN
 	pla
@@ -345,21 +351,23 @@ kill_process:
 	jmp kill_process_kernal
 
 ;
+; open_file_kernal_ext	
+;
 ; opens file with name in .AX
 ; read_mode ('r', 'w', etc.) in .Y
 ;
 ; returns fd in .A on success, else 0
 ; .X contains error if fail
 ;
-open_file:
-	jmp open_file_kernal_ext
 
+;
+; close_file
 ;
 ; closes file with fd .A
 ;	
-close_file:
-	jmp close_file_kernal
 
+;
+; read_file
 ;
 ; reads r1 bytes from file .A into r0
 ;
@@ -367,9 +375,9 @@ close_file:
 ; r0 = buff
 ; r1 = bytes to read
 ;
-read_file:
-	jmp read_file_ext
 
+;
+; write_file
 ;
 ; writes r1 bytes to file .A from r0
 ;
@@ -377,6 +385,3 @@ read_file:
 ; r0 = buff
 ; r1 = bytes to read
 ;
-write_file:
-	jmp write_file_ext
-
