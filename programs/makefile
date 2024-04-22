@@ -1,7 +1,7 @@
 XASM =../../xasm16/xasm
 FLAGS =-addr 0xa200
 
-all: bindir echo ps kill looptest args cat xxd clear ls
+all: bindir echo ps kill looptest args cat xxd clear ls pwd
 
 bindir: ../mnt/bin
 	
@@ -47,6 +47,10 @@ clear: clear.s
 	
 ls: ls.s
 	$(XASM) $(FLAGS) -o $@ ls.s
+	cp $@ ../mnt/bin
+	
+pwd: pwd.s
+	$(XASM) $(FLAGS) -o $@ pwd.s
 	cp $@ ../mnt/bin
 
 	
