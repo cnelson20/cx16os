@@ -1,10 +1,5 @@
-PRINT_STR = $9D09
-CHROUT = $9D03
-GET_HEX_NUM = $9D18
-GET_ARGS = $9D0F
-open_dir_listing = $9D2A
-close_file = $9D21
-read_file = $9D24
+.include "routines.inc"
+.segment "CODE"
 
 r0L = $02
 r0H = $03

@@ -1,7 +1,5 @@
-print_str = $9D09
-CHROUT = $9D03
-get_args = $9D0F
-hex_num_to_str = $9D18
+.include "routines.inc"
+.segment "CODE"
 
 LBKT = $5B
 RBKT = $5D
@@ -28,7 +26,7 @@ continue_loop:
 	lda #LBKT
 	jsr CHROUT
 	lda argc_inc
-	jsr hex_num_to_str
+	jsr hex_num_to_string
 	jsr CHROUT
 	txa
 	jsr CHROUT

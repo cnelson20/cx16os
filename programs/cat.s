@@ -1,10 +1,5 @@
-PRINT_STR = $9D09
-CHROUT = $9D03
-GET_HEX_NUM = $9D18
-GET_ARGS = $9D0F
-open_file = $9D1E
-close_file = $9D21
-read_file = $9D24
+.include "routines.inc"
+.segment "CODE"
 
 r0L = $02
 r0H = $03
@@ -12,7 +7,7 @@ r1L = $04
 r1H = $05
 
 init:
-	jsr GET_ARGS
+	jsr get_args
 	stx $31
 	sta $30
 	sty argc	

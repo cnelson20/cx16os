@@ -1,8 +1,5 @@
-CHROUT = $9D03
-PRINT_STR = $9D09
-PROCESS_NAME = $9D12
-GET_HEX_NUM = $9D18
-PROCESS_STATUS = $9D0C
+.include "routines.inc"
+.segment "CODE"
 
 r0L = $02
 
@@ -15,7 +12,7 @@ main:
 	sta loop_pid
 main_loop:
 	lda loop_pid
-	jsr PROCESS_STATUS 
+	jsr get_process_info
 	cmp #0
 	beq no_such_process
 	
@@ -38,7 +35,7 @@ main_loop:
 	ldy loop_pid
 	lda #<buffer
 	ldx #>buffer
-	jsr PROCESS_NAME
+	jsr get_process_name
 	
 	lda #<buffer
 	ldx #>buffer
@@ -54,7 +51,7 @@ no_such_process:
 loop_pid:
 	.byte 0
 first_line:
-	.ascii " PID CMD"
+	.byte " PID CMD"
 	.byte $0d, $00
 buffer:
 	.res 128

@@ -1,5 +1,5 @@
-CHROUT = $9D03
-get_args = $9D0F
+.include "routines.inc"
+.segment "CODE"
 
 r0L = $02
 r0H = $03

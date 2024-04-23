@@ -1,11 +1,8 @@
-KILL = $9D1B
-PARSE_NUM = $9D15
-PRINT_STR = $9D09
-
-GET_ARGS = $9D0F
+.include "routines.inc"
+.segment "CODE"
 
 main:
-	jsr GET_ARGS
+	jsr get_args
 	stx $31
 	sta $30
 	
@@ -32,11 +29,11 @@ arg_found:
 	
 	lda $32
 	ldx $33
-    jsr PARSE_NUM
+    jsr parse_num
 	cpy #$FF
 	beq @not_valid_number
 	
-	jsr KILL
+	jsr kill_process
 	
 	cpx #0
 	beq @no_such_process_error
@@ -73,11 +70,11 @@ arg_found:
 num_error_string_p1:
 	.asciiz "kill: "
 num_error_string_p2:
-	.ascii ": argument must be process ID / bank"
+	.byte ": argument must be process ID / bank"
 	.byte $0d, $00
 	
 np_error_string_p1:
 	.asciiz "kill: ("
 np_error_string_p2:
-	.ascii ") - No such process"
+	.byte ") - No such process"
 	.byte $0d, $00

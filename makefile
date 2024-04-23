@@ -13,9 +13,6 @@ all: build
 os.prg: $(SOURCES) $(INCS)
 	$(CC) $(FLAGS) $(SOURCES) -o $(PROGRAM)
 
-shell: shell.s
-	$(CASM) -o shell -addr 0xa200 shell.s
-
 programs: FORCE
 	make -C programs/
 
@@ -27,9 +24,8 @@ copy: cx16os.img
 clean:
 	rm programs/[A-Z]*[A-Z]
 
-build: os.prg shell programs
+build: os.prg programs
 	cp os.prg mnt/OS.PRG
-	cp shell mnt/bin
 	cp words.txt mnt/
 
 sd: build copy

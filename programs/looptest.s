@@ -1,4 +1,5 @@
-CHROUT = $9D03
+.include "routines.inc"
+.segment "CODE"
 
 init:
 	ldx #$BB

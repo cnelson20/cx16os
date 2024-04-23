@@ -1,14 +1,5 @@
-CHRIN = $9D00
-CHROUT = $9D03
-exec = $9D06
-print_str = $9D09
-process_info = $9D0C
-GET_HEX_NUM = $9D18
-get_pwd = $9D2D
-
-open_file = $9D1E
-close_file = $9D21
-read_file = $9D24
+.include "routines.inc"
+.segment "CODE"
 
 r0 = $02
 r1 = $04
@@ -84,7 +75,7 @@ new_line:
 	ldx #0
 wait_for_input:
 	phx
-	jsr CHRIN
+	jsr GETIN
 	plx
 	cmp #0
 	beq wait_for_input
@@ -386,7 +377,7 @@ narg_not_0_amp:
 	jmp new_line
 wait_child:	
 	lda child_id
-	jsr process_info
+	jsr get_process_info
 	cmp #0
 	bne wait_child
 	
@@ -510,12 +501,12 @@ args_offset_arr:
 	.res 16, 0
 
 welcome_string:
-	.ascii "Commander X16 OS Shell"
+	.byte "Commander X16 OS Shell"
 	.byte $0d, $00
 exec_error_p1_message:
 	.asciiz "Error in exec '"
 exec_error_p2_message:
-	.ascii "'"
+	.byte "'"
 	.byte $0d, $00
 
 open_error_p1:

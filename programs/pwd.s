@@ -1,6 +1,5 @@
-PRINT_STR = $9D09
-CHROUT = $9D03
-get_pwd = $9D2D
+.include "routines.inc"
+.segment "CODE"
 
 ENOUGH_BYTES = 512
 

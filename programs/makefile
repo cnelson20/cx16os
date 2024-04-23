@@ -1,56 +1,59 @@
-XASM =../../xasm16/xasm
-FLAGS =-addr 0xa200
+CC = cl65
+FLAGS =-t none -C cl65_progs.cfg
 
-all: bindir echo ps kill looptest args cat xxd clear ls pwd
+all: bindir shell echo ps kill looptest args cat xxd clear ls pwd
 
 bindir: ../mnt/bin
 	
-
 ../mnt/bin:	
 	-mkdir ../mnt/bin
 
-cat: cat.s
-	$(XASM) $(FLAGS) -o $@ cat.s
+shell: shell.s
+	$(CC) $(FLAGS) -o $@ shell.s
 	cp $@ ../mnt/bin
 
-echo: echo.s
-	$(XASM) $(FLAGS) -o $@ echo.s
+cat: cat.s routines.inc
+	$(CC) $(FLAGS) -o $@ cat.s
 	cp $@ ../mnt/bin
 
-kill: kill.s
-	$(XASM) $(FLAGS) -o $@ kill.s
+echo: echo.s routines.inc
+	$(CC) $(FLAGS) -o $@ echo.s
 	cp $@ ../mnt/bin
 
-ps: ps.s
-	$(XASM) $(FLAGS) -o $@ ps.s
+kill: kill.s routines.inc
+	$(CC) $(FLAGS) -o $@ kill.s
 	cp $@ ../mnt/bin
 
-printtest: printtest.s
-	$(XASM) $(FLAGS) -o $@ printtest.s
-	cp $@ ../mnt/bin
-	
-looptest: looptest.s
-	$(XASM) $(FLAGS) -o $@ looptest.s
-	cp $@ ../mnt/bin
-	
-args: args.s
-	$(XASM) $(FLAGS) -o $@ args.s
-	cp $@ ../mnt/bin
-	
-xxd: xxd.s
-	$(XASM) $(FLAGS) -o $@ xxd.s
+ps: ps.s routines.inc
+	$(CC) $(FLAGS) -o $@ ps.s
 	cp $@ ../mnt/bin
 
-clear: clear.s
-	$(XASM) $(FLAGS) -o $@ clear.s
+printtest: printtest.s routines.inc
+	$(CC) $(FLAGS) -o $@ printtest.s
 	cp $@ ../mnt/bin
 	
-ls: ls.s
-	$(XASM) $(FLAGS) -o $@ ls.s
+looptest: looptest.s routines.inc
+	$(CC) $(FLAGS) -o $@ looptest.s
 	cp $@ ../mnt/bin
 	
-pwd: pwd.s
-	$(XASM) $(FLAGS) -o $@ pwd.s
+args: args.s routines.inc
+	$(CC) $(FLAGS) -o $@ args.s
+	cp $@ ../mnt/bin
+	
+xxd: xxd.s routines.inc
+	$(CC) $(FLAGS) -o $@ xxd.s
+	cp $@ ../mnt/bin
+
+clear: clear.s routines.inc
+	$(CC) $(FLAGS) -o $@ clear.s
+	cp $@ ../mnt/bin
+	
+ls: ls.s routines.inc
+	$(CC) $(FLAGS) -o $@ ls.s
+	cp $@ ../mnt/bin
+	
+pwd: pwd.s routines.inc
+	$(CC) $(FLAGS) -o $@ pwd.s
 	cp $@ ../mnt/bin
 
 	
