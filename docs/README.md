@@ -23,6 +23,7 @@ Multitasking OS for the Commander x16
 | $9D27 | [`write_file`](#9d27-write_file) | .A, r0, r1 | ~ | ~ |
 | $9D2A | [`open_dir_listing`](#9d2a-open_dir_listing) | | .A, .X | .Y |
 | $9D2D | [`get_pwd`](#9d2d-get_pwd) | r0, r1 | | .A, .X, .Y |
+| $9D30 | [`chdir`](#9d30-chdir) | .AX | ~ | ~ |
 
 ## Function Reference
 
@@ -148,8 +149,12 @@ Return values:
 ---
 
 ### $9D27: write_file
+- Writes up to r1 bytes into fd .A from memory starting at r0
 - Not tested
 
+Return values:
+- .Y = 0 on success, else error code
+- .AX = bytes written
 ---
 
 ### $9D2A: open_dir_listing
@@ -166,6 +171,15 @@ Return values:
 
 Return values:
 - None
+
+---
+
+### $9D30: chdir
+- Attempts to change the working directory to what's pointed to by .AX
+- Not yet implemented
+
+Return values:
+- TBD
 
 ---
 
