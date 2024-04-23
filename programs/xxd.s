@@ -42,7 +42,7 @@ found_end_word:
 	cmp #$FF
 	bne file_print_loop
 	jmp file_error ; if = $FF , jmp to file_error
-
+	
 file_print_loop:
 	;stp
 	lda #<buff
@@ -71,6 +71,25 @@ file_print_loop:
 	ldx #1
 	stx read_again
 @print_read_bytes:
+
+	; print data offset ;
+	ldy #3
+	:
+	phy
+	lda data_offset, Y
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	ply
+	dey
+	bpl :-
+	
+	lda #':'
+	jsr CHROUT
+	lda #$20
+	jsr CHROUT
+
 	ldy #0
 print_hex_loop:
 	lda buff, Y
@@ -136,6 +155,21 @@ print_text_done:
 	
 	lda read_again
 	beq file_out_bytes
+	
+	clc
+	lda data_offset
+	adc #BYTES_PER_ROW
+	sta data_offset 
+	lda data_offset + 1
+	adc #0
+	sta data_offset + 1
+	lda data_offset + 2
+	adc #0
+	sta data_offset + 2
+	lda data_offset + 3
+	adc #0
+	sta data_offset + 3
+	
 	jmp file_print_loop
 	
 file_out_bytes:
@@ -180,6 +214,9 @@ dont_need_close:
 	jsr CHROUT
 	
 	jmp main
+
+data_offset:
+	.res 4
 	
 fd:
 	.byte 0

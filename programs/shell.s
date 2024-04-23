@@ -5,16 +5,7 @@ r0 = $02
 r1 = $04
 r2 = $06
 
-r0L = $02
-r0H = $03
-r1L = $04
-r1H = $05
-r2L = $06
-r2H = $07
-
 ptr0 = $30
-ptr0_l = $30
-ptr0_h = $31
 
 CMD_MAX_SIZE = 128
 
@@ -48,12 +39,12 @@ new_line:
 	lda #COLOR_GREEN
 	jsr CHROUT
 	lda #<stdin_filename
-	sta r0L
+	sta r0
 	lda #>stdin_filename
-	sta r0H
+	sta r0 + 1
 	lda #MAX_FILELEN
-	sta r1L
-	stz r1H
+	sta r1
+	stz r1 + 1
 	jsr get_pwd
 	lda #<stdin_filename
 	ldx #>stdin_filename
@@ -362,9 +353,9 @@ narg_not_0_amp:
 	jsr setup_prog_redirects
 	ldy num_args
 	lda new_stdin_fileno
-	sta r2L
+	sta r2
 	lda new_stdout_fileno
-	sta r2H
+	sta r2 + 1
 	lda #<output
 	ldx #>output
 	jsr exec
@@ -477,6 +468,27 @@ setup_prog_redirects:
 	jsr CHROUT
 	jmp new_line
 
+;
+; Error & intro messages
+;
+welcome_string:
+	.byte "Commander X16 OS Shell"
+	.byte $0d, $00
+exec_error_p1_message:
+	.asciiz "Error in exec '"
+exec_error_p2_message:
+	.byte "'"
+	.byte $0d, $00
+
+open_error_p1:
+	.asciiz "Error opening file '"
+
+open_error_p2:
+	.asciiz "', code #:"
+
+.SEGMENT "BSS"
+; program vars 
+
 in_quotes:
 	.byte 0
 do_wait_child:
@@ -496,24 +508,8 @@ command_length:
 curr_arg:
 	.byte 0
 
-
 args_offset_arr:
 	.res 16, 0
-
-welcome_string:
-	.byte "Commander X16 OS Shell"
-	.byte $0d, $00
-exec_error_p1_message:
-	.asciiz "Error in exec '"
-exec_error_p2_message:
-	.byte "'"
-	.byte $0d, $00
-
-open_error_p1:
-	.asciiz "Error opening file '"
-
-open_error_p2:
-	.asciiz "', code #:"
 	
 MAX_FILELEN = 128
 

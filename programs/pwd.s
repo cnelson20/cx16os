@@ -3,22 +3,19 @@
 
 ENOUGH_BYTES = 512
 
-r0L = $02
-r0H = $03
-
-r1L = $04
-r1H = $05
+r0 := $02
+r1 := $04
 
 start:
 	lda #<end
-	sta r0L
+	sta r0
 	lda #>end
-	sta r0H
+	sta r0 + 1
 	
 	lda #<ENOUGH_BYTES
-	sta r1L
+	sta r1
 	lda #>ENOUGH_BYTES
-	sta r1H
+	sta r1 + 1
 	
 	jsr get_pwd
 	

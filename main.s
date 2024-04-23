@@ -2,6 +2,8 @@
 .include "prog.inc"
 .include "macs.inc"
 
+.include "ascii_charmap.inc"
+
 .import print_str_ext
 .import strlen_int, strncpy_int
 .import setup_kernal_file_table, setup_process_file_table_int
