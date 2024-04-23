@@ -17,7 +17,7 @@ Multitasking OS for the Commander x16
 | $9D15 | [`parse_num`](#9d15-parse_num) | .AX | .AX | .Y
 | $9D18 | [`hex_num_to_string`](#9d18-hex_num_to_string) | .A | .A, .X | |
 | $9D1B | [`kill_process`](#9d1b-kill_process) | .A | .A, .X | |
-| $9D1E | [`open_file`](#9d1e-open_file) | .A, .X, .Y | .A, .X | |
+| $9D1E | [`open_file`](#9d1e-open_file) | .AX, .Y | .A, .X | |
 | $9D21 | [`close_file`](#9d21-close_file) | .A | | .X, .Y
 | $9D24 | [`read_file`](#9d24-read_file) | .A, r0, r1 | .AX, .Y |
 | $9D27 | [`write_file`](#9d27-write_file) | .A, r0, r1 | ~ | ~ |
