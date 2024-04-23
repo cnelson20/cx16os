@@ -9,8 +9,8 @@ Multitasking OS for the Commander x16
 |---------|---------------|--------------------|------------------|--------------------|
 | $9D00 | [`getc / GETIN`](#9d00-getc) | | .A | .Y |
 | $9D03 | [`putc / CHROUT`](#9d03-putc) | .A | | |
-| $9D06 | [`print_str`](#9d06-print_str) | .AX | | .Y |
-| $9D09 | [`exec`](#9d09-exec) | .AX, .Y, r0, r2 | .A | r1 |
+| $9D06 | [`exec`](#9d09-exec) | .AX, .Y, r0, r2 | .A | r1 |
+| $9D09 | [`print_str`](#9d06-print_str) | .AX | | .Y |
 | $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .X, .Y, r0 | |
 | $9D0F | [`get_args`](#9d0f-get_args) | | .A, .X, .Y | |
 | $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | |
@@ -44,14 +44,6 @@ Return values:
 
 ---
 
-### $9D06: print_str
-- Prints the null-terminated string at address .AX
-
-Return values:
-- None
-
----
-
 ### $9D09: exec
 - Starts a new process with filename pointed to by .AX, with args as subsequent null-term'd strings
 - .Y should contain number of args represented by string in .AX
@@ -62,6 +54,14 @@ Return values:
 Return values:
 - .A != 0 -> new process has pid .A
 - .A = 0 -> failure
+
+---
+
+### $9D06: print_str
+- Prints the null-terminated string at address .AX
+
+Return values:
+- None
 
 ---
 
