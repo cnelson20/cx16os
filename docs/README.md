@@ -179,7 +179,10 @@ Return values:
 - Not yet implemented
 
 Return values:
-- TBD
+- Returns .A = 0 if attempt to chdir was a success
+- Returns .A != 0 if attempt to chdir failed
+- Note: Does not determine whether the directory actually changed / was valid
+- The program can use get_pwd to see if directory actually changed
 
 ---
 
