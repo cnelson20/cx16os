@@ -12,17 +12,18 @@ Multitasking OS for the Commander x16
 | $9D06 | [`exec`](#9d09-exec) | .AX, .Y, r0, r2 | .A | r1 |
 | $9D09 | [`print_str`](#9d06-print_str) | .AX | | .Y |
 | $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .X, .Y, r0 | |
-| $9D0F | [`get_args`](#9d0f-get_args) | | .A, .X, .Y | |
+| $9D0F | [`get_args`](#9d0f-get_args) | | .AX, .Y | |
 | $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | |
 | $9D15 | [`parse_num`](#9d15-parse_num) | .AX | .AX | .Y
 | $9D18 | [`hex_num_to_string`](#9d18-hex_num_to_string) | .A | .A, .X | |
 | $9D1B | [`kill_process`](#9d1b-kill_process) | .A | .A, .X | |
-| $9D1E | [`open_file`](#9d1e-open_file) | .A, .X, .Y | .A, .X | |
-| $9D21 | [`close_file`](#9d21-close_file) | .A | | .X, .Y
-| $9D24 | [`read_file`](#9d24-read_file) | .A, r0, r1 | .AX, .Y |
-| $9D27 | [`write_file`](#9d27-write_file) | .A, r0, r1 | ~ | ~ |
+| $9D1E | [`open_file`](#9d1e-open_file) | .AX, .Y | .A, .X | |
+| $9D21 | [`close_file`](#9d21-close_file) | .A | | .X, .Y |
+| $9D24 | [`read_file`](#9d24-read_file) | .A, r0, r1 | .AX, .Y | |
+| $9D27 | [`write_file`](#9d27-write_file) | .A, r0, r1 | .AX, .Y | |
 | $9D2A | [`open_dir_listing`](#9d2a-open_dir_listing) | | .A, .X | .Y |
 | $9D2D | [`get_pwd`](#9d2d-get_pwd) | r0, r1 | | .A, .X, .Y |
+| $9D30 | [`chdir`](#9d30-chdir) | .AX | .A | .Y |
 
 ## Function Reference
 
@@ -148,8 +149,12 @@ Return values:
 ---
 
 ### $9D27: write_file
+- Writes up to r1 bytes into fd .A from memory starting at r0
 - Not tested
 
+Return values:
+- .Y = 0 on success, else error code
+- .AX = bytes written
 ---
 
 ### $9D2A: open_dir_listing
@@ -166,6 +171,18 @@ Return values:
 
 Return values:
 - None
+
+---
+
+### $9D30: chdir
+- Attempts to change the working directory to what's pointed to by .AX
+- Not yet implemented
+
+Return values:
+- Returns .A = 0 if attempt to chdir was a success
+- Returns .A != 0 if attempt to chdir failed
+- Note: Does not determine whether the directory actually changed / was valid
+- The program can use get_pwd to see if directory actually changed
 
 ---
 

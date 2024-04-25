@@ -1,5 +1,6 @@
 .include "prog.inc"
 .include "cx16.inc"
+.include "ascii_charmap.inc"
 
 .SEGMENT "CODE"
 
@@ -13,7 +14,7 @@
 .import is_valid_process
 
 .import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, open_dir_listing_ext
-.import get_pwd_ext
+.import get_pwd_ext, chdir_ext
 
 .import irq_already_triggered
 .import atomic_action_st
@@ -42,6 +43,7 @@ call_table:
 	jmp write_file_ext ; $9D27
 	jmp open_dir_listing_ext ; $9D2A
 	jmp get_pwd_ext ; $9D2D
+	jmp chdir_ext ; $9D30
 .export call_table_end
 call_table_end:
 

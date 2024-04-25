@@ -1,6 +1,7 @@
 .include "prog.inc"
 .include "cx16.inc"
 .include "macs.inc"
+.include "ascii_charmap.inc"
 
 .SEGMENT "CODE"
 

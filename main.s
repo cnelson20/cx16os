@@ -1,7 +1,6 @@
 .include "cx16.inc"
 .include "prog.inc"
 .include "macs.inc"
-
 .include "ascii_charmap.inc"
 
 .import print_str_ext
@@ -527,7 +526,11 @@ find_next_process:
 @loop: 
 	txa
 	jsr is_valid_process
+	beq @not_valid_process
+	
+	lda process_priority_table, X
 	bne @exit_loop
+	
 @not_valid_process:	
 	inx
 	bra @loop

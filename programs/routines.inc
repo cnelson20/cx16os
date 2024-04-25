@@ -27,3 +27,4 @@ read_file := $9D24
 write_file := $9D27
 open_dir_listing := $9D2A
 get_pwd := $9D2D
+chdir := $9D30
