@@ -15,6 +15,7 @@ strncpy_int:
 	pha
 	phx
 	jsr strlen_int
+	inc A ; need to copy \0 byte as well
 	ply_word KZP1
 	ply_word KZP0
 	ply
@@ -22,10 +23,15 @@ strncpy_int:
 	sty KZP2
 	cmp KZP2
 	bcc :+
-	lda KZP2
+	; if strlen > KZE2, insure resulting string is null term'd
+	lda #0
+	ldy KZP2
+	dey
+	sta (KZP0), Y
+	tya
 	:
 	
-	jmp memcpy_int
+	jmp memcpy_int	
 
 ;
 ; gets length of str in .AX

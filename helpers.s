@@ -36,6 +36,7 @@ strncpy_ext:
 	pha
 	phx
 	jsr strlen_ext
+	inc A ; need to copy \0 byte as well
 	ply_word KZE1
 	ply_word KZE0
 	ply
@@ -43,7 +44,12 @@ strncpy_ext:
 	sty KZE2
 	cmp KZE2
 	bcc :+
-	lda KZE2
+	; if strlen > KZE2, insure resulting string is null term'd
+	lda #0
+	ldy KZE2
+	dey
+	sta (KZE0), Y
+	tya
 	:
 	
 	jmp memcpy_ext
