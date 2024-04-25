@@ -420,11 +420,22 @@ switch_next_program:
 	lda @new_program_id
 	sta current_program_id	
 	
-	; crash is currently below this line ;
-	
 	jmp restore_new_process
 @new_program_id:
 	.byte 0
+	
+;
+; surrender_process_time
+; sets current process to have 1 frame remaining
+;
+surrender_process_time:
+	pha
+	lda #1
+	sta schedule_timer
+	wai
+	pla
+	rts
+	
 ;
 ; save info about current process
 ;

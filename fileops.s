@@ -373,6 +373,53 @@ setup_process_file_table_int:
 	rts
 
 ;
+; wait_dos_channel
+;
+; waits for dos channel to open up
+;
+wait_dos_channel:
+	pha	; preserve .A, RAM_BANK, and atomic_action_st
+	lda RAM_BANK
+	pha
+	lda atomic_action_st
+	pha 
+	
+	:
+	lda #1
+	sta atomic_action_st
+	sta RAM_BANK
+	lda file_table_count + 15
+	beq :+
+	; if not open, wait for it to be
+	stz atomic_action_st
+	wai
+	bra :-
+	:
+	lda #1
+	sta file_table_count + 15
+	
+	pla
+	sta atomic_action_st
+	pla 
+	sta RAM_BANK
+	pla
+	rts
+
+free_dos_channel:
+	pha
+	lda RAM_BANK
+	pha
+	
+	lda #1
+	sta RAM_BANK
+	stz file_table_count + 15
+	
+	pla
+	sta RAM_BANK
+	pla
+	rts
+
+;
 ; open_file_kernal_ext
 ; 
 ; .A = $FF on failure, or a fd on success
@@ -952,9 +999,56 @@ open_dir_listing_ext:
 	cpx #$FF
 	beq @open_error
 	
+	; need to wait for channel 15 to open up ;
+	jsr wait_dos_channel
+	
 	lda #1
 	sta atomic_action_st
-
+	
+	; cd to process' pwd ;
+	pha_byte KZE0
+	pha_byte KZE1
+	
+	inc RAM_BANK
+	
+	lda #'C'
+	sta PV_PWD - 3
+	lda #'D'
+	sta PV_PWD - 2
+	lda #':'
+	sta PV_PWD - 1
+	
+	ldax_addr (PV_PWD - 3)
+	pha
+	phx
+	jsr strlen_ext
+	ply
+	plx
+	jsr SETNAM
+	
+	pla_byte KZE1
+	pla_byte KZE0
+	
+	lda #15
+	ldx #8
+	tay
+	jsr SETLFS
+	
+	jsr OPEN
+	dec RAM_BANK ; doesn't affect carry bit
+	php 
+	
+	jsr free_dos_channel
+	
+	plp
+	bcs @open_error
+	
+	; in the future: maybe check status ;	
+	lda #15
+	jsr CLOSE
+	
+	; now get dir listing ;
+	
 	lda #1
 	ldx #<@s
 	ldy #>@s
@@ -1054,20 +1148,9 @@ chdir_ext:
 	sta PV_TMP_FILENAME + 2
 	
 	; need to wait for dos channel to open up ;	
-	@wait_dos_open:
+	jsr wait_dos_channel
 	lda #1
 	sta atomic_action_st
-	sta RAM_BANK
-	
-	lda file_table_count + 15
-	beq :+
-	stz atomic_action_st
-	wai
-	bra @wait_dos_open
-	:
-	; we can do our stuff now ;
-	lda #1
-	sta file_table_count + 15
 	
 	lda current_program_id
 	inc A
