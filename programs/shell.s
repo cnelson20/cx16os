@@ -6,6 +6,8 @@ r1 = $04
 r2 = $06
 
 ptr0 = $30
+ptr1 = $32
+ptr2 = $34
 
 CMD_MAX_SIZE = 128
 
@@ -26,16 +28,24 @@ GT = $3E
 LT = $3C
 
 init:
-	ldx #0
-intro_loop:
-	lda welcome_string, X
-	beq intro_end_loop
-	jsr CHROUT
-	inx
-	bne intro_loop
-intro_end_loop:
+	lda #<welcome_string
+	ldx #>welcome_string
+	jsr print_str
+	
+	stz new_stdin_fileno
+	stz new_stdout_fileno
 
 new_line:
+	; close these files in case got through
+	lda new_stdin_fileno
+	beq :+
+	jsr close_file
+	:
+	lda new_stdout_fileno
+	beq :+
+	jsr close_file
+	:
+	
 	lda #COLOR_GREEN
 	jsr CHROUT
 	lda #<stdin_filename
@@ -350,6 +360,11 @@ copy_back_args:
 	sty command_length
 	rts
 narg_not_0_amp:
+	jsr check_special_cmds
+	beq :+
+	jmp new_line
+	:
+
 	jsr setup_prog_redirects
 	ldy num_args
 	lda new_stdin_fileno
@@ -379,10 +394,12 @@ exec_error:
 	lda new_stdin_fileno
 	beq @new_stdin_file_zero
 	jsr close_file
+	stz new_stdin_fileno
 @new_stdin_file_zero:
 	lda new_stdout_fileno
 	beq @new_stdout_file_zero
 	jsr close_file
+	stz new_stdout_fileno
 @new_stdout_file_zero:
 	
 	lda #<exec_error_p1_message
@@ -468,6 +485,52 @@ setup_prog_redirects:
 	jsr CHROUT
 	jmp new_line
 
+; returns non-zero in .A if a special cmd was encountered
+check_special_cmds:
+	; check for cd ;
+	lda #<string_cd
+	ldx #>string_cd
+	jsr cmd_cmp
+	bne :+
+	
+	ldx #1
+	lda args_offset_arr, X
+	clc 
+	adc #<output
+	tay
+	lda #>output
+	adc #0
+	tax
+	tya
+	
+	jsr chdir
+	
+	lda #1
+	rts
+	:
+	
+	lda #0
+	rts
+
+cmd_cmp:
+	sta ptr2
+	stx ptr2 + 1
+	
+	ldy #0
+	:
+	sec
+	lda (ptr2), Y
+	sbc output, Y
+	bne @ex ; unequal
+	lda output, Y
+	beq @ex ; equal
+	iny
+	bra :-
+		
+	rts
+@ex:	
+	rts
+
 ;
 ; Error & intro messages
 ;
@@ -486,7 +549,10 @@ open_error_p1:
 open_error_p2:
 	.asciiz "', code #:"
 
-.SEGMENT "BSS"
+; special cmd strings
+string_cd:
+	.asciiz "cd"
+
 ; program vars 
 
 in_quotes:

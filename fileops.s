@@ -1,6 +1,7 @@
 .include "prog.inc"
 .include "cx16.inc"
 .include "macs.inc"
+.include "ascii_charmap.inc"
 
 .SEGMENT "CODE"
 
@@ -1027,4 +1028,150 @@ get_pwd_ext:
 	sta (r0), Y
 	
 	rts
+
+;
+; changes process' pwd
+; dir to cd to in .AX
+;
+.export chdir_ext
+chdir_ext:
+	phy_word KZES4
 	
+	sta KZES4
+	stx KZES4 + 1
+	
+	; cd to process' current pwd ;
+	inc RAM_BANK
+	
+	lda #'C'
+	sta PV_PWD - 3
+	sta PV_TMP_FILENAME
+	lda #'D'
+	sta PV_PWD - 2
+	sta PV_TMP_FILENAME + 1
+	lda #':'
+	sta PV_PWD - 1
+	sta PV_TMP_FILENAME + 2
+	
+	; need to wait for dos channel to open up ;	
+	@wait_dos_open:
+	lda #1
+	sta atomic_action_st
+	sta RAM_BANK
+	
+	lda file_table_count + 15
+	beq :+
+	stz atomic_action_st
+	wai
+	bra @wait_dos_open
+	:
+	; we can do our stuff now ;
+	lda #1
+	sta file_table_count + 15
+	
+	lda current_program_id
+	inc A
+	sta RAM_BANK
+	
+	ldax_addr (PV_PWD - 3)
+	pha
+	phx
+	jsr strlen_ext
+	ply
+	plx
+	jsr SETNAM
+	
+	lda #15
+	ldx #8
+	tay
+	jsr SETLFS
+	
+	jsr OPEN
+	bcc :+
+	jmp @open_error ; bcs
+	:
+	
+	lda #15
+	jsr CLOSE
+	
+	stz atomic_action_st
+	
+	; copy memory around ;
+	
+	cnsta_word (PV_TMP_FILENAME + 3), KZE0
+	ldsta_word KZES4, KZE1
+	lda current_program_id
+	sta KZE3
+	inc A
+	sta KZE2
+	; load 128 - 3 bytes 
+	lda #128 - 3
+	jsr memcpy_banks_ext
+	
+	; now cd to new directory ;
+	
+	lda #1 ; file stuff again 
+	sta atomic_action_st
+	
+	lda current_program_id
+	inc A
+	sta RAM_BANK
+	
+	ldax_addr PV_TMP_FILENAME
+	pha
+	phx
+	jsr strlen_ext
+	ply
+	plx
+	jsr SETNAM
+	
+	lda #15
+	ldx #8
+	tay
+	jsr SETLFS
+	
+	jsr OPEN
+	bcs @open_error
+	
+	lda #15
+	jsr CLOSE
+	
+	; now need to fetch new dir ;
+	
+	lda #1
+	sta RAM_BANK
+	sta KZE3
+	jsr update_internal_pwd
+	
+	stz atomic_action_st
+	
+	; copy kernal pwd to process pwd
+	cnsta_word PV_PWD, KZE0
+	cnsta_word pwd, KZE1
+	
+	lda current_program_id
+	inc A
+	sta KZE2
+	jsr memcpy_banks_ext
+	
+	; some ending code ;
+	
+	lda #1
+	sta RAM_BANK
+	stz file_table_count + 15	
+	
+	ply_word KZES4
+	lda current_program_id
+	sta RAM_BANK
+	
+	lda #0
+	rts
+	
+@open_error:
+	stz atomic_action_st
+	ply_word KZES4
+	lda current_program_id
+	sta RAM_BANK
+	lda #1
+	rts
+
