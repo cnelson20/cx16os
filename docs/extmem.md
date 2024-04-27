@@ -13,7 +13,7 @@ Routines to expand a program's data access beyond its allocated $2000 bytes
 | $9D42 | [`writef_byte_extmem_y`](#write_byte_extmem_y) | .A, r4, .Y | | .A |
 | $9D48 | [`writef_word_extmem_y`](#write_word_extmem_y) | .AX, r4, .Y | | .AX |
 | $9D36 | [`vwrite_byte_extmem_y`] | ~ | ~ | ~ |
-| $9D4B | [`memmove_extmem`] | r4, r5, r6, r7, .AX | .A | .XY |
+| $9D4B | [`memmove_extmem`](#memmove_extmem) | r4, r5, r6, r7, .AX | .A | .XY |
 
 ### res_extmem_bank
 - Get a bank to use other extmem routines with
