@@ -1,7 +1,8 @@
 ## cx16os
 Multitasking OS for the Commander x16
 
-
+[I/O, Processes, Other Routines Table](#Function-table)
+[Extmem Routines](extmem.md)
 
 
 ### Function table:
