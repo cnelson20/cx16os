@@ -296,6 +296,7 @@ get_dir_filename_ext:
 	inc A
 	:
 	pha ; store n
+	ldx #0
 	jsr memcpy_ext
 	; make sure string is null term'd
 	pla ; pull n
@@ -307,6 +308,7 @@ get_dir_filename_ext:
 	ldsta_word KZES5, KZE1
 	ldsta_word KZES4, KZE0
 	lda KZES6
+	ldx #0
 	jsr memcpy_ext
 	
 	pla_word KZES6
@@ -439,7 +441,8 @@ open_file_kernal_ext:
 	sta KZE3
 	inc A
 	sta KZE2
-	lda #MAX_FILELEN
+	lda #<MAX_FILELEN
+	ldx #0
 	jsr memcpy_banks_ext
 	
 	ldax_addr PV_TMP_FILENAME
@@ -1066,6 +1069,7 @@ open_dir_listing_ext:
 	ldx #0
 	rts
 @open_error:
+	stz atomic_action_st
 	lda #$FF
 	ldx #$FF
 	rts
@@ -1112,6 +1116,7 @@ get_pwd_ext:
 	
 	pla
 	pha
+	ldx #0
 	jsr memcpy_banks_ext
 	
 	lda current_program_id
@@ -1189,6 +1194,7 @@ chdir_ext:
 	sta KZE2
 	; load 128 - 3 bytes 
 	lda #128 - 3
+	ldx #0
 	jsr memcpy_banks_ext
 	
 	; now cd to new directory ;
@@ -1235,6 +1241,9 @@ chdir_ext:
 	lda current_program_id
 	inc A
 	sta KZE2
+	
+	lda #<MAX_FILELEN
+	ldx #0
 	jsr memcpy_banks_ext
 	
 	; some ending code ;

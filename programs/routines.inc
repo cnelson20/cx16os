@@ -28,3 +28,16 @@ write_file := $9D27
 open_dir_listing := $9D2A
 get_pwd := $9D2D
 chdir := $9D30
+
+res_extmem_bank := $9D33
+set_extmem_bank := $9D36
+
+readf_byte_extmem_y := $9D39
+readf_word_extmem_y := $9D3C
+vread_byte_extmem_y := $9D3F
+
+writef_byte_extmem_y := $9D42
+writef_word_extmem_y := $9D46
+vwrite_byte_extmem_y := $9D3F
+
+memmove_extmem := $9D4B
