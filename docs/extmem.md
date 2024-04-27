@@ -28,7 +28,3 @@ Routines to expand a program's data access beyond its allocated $2000 bytes
 - Does the equivalent of `STA (r4), Y` to memory of the bank set by [set_extmem_bank](#set_extmem_bank)
 - Preserves all registers
 
-### read_byte_extmem_x
-- Does the equivalent of `STA (r4), X` to memory of the bank set by [set_extmem_bank](#set_extmem_bank)
-(This addressing mode does not exist on a 65C02, but 
-- Preserves all registers
