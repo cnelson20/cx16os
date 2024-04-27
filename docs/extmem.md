@@ -5,8 +5,8 @@ Routines to expand a program's data access beyond its allocated $2000 bytes
 ### Function table:
 | Address | Function name | Argument Registers | Return Registers | Registers trampled |
 |---------|---------------|--------------------|------------------|--------------------|
-| $9D30 | [`res_extmem_bank`] | | .A | .XY |
-| $9D33 | [`set_extmem_bank`] | .A | .A | .X |
+| $9D30 | [`res_extmem_bank`](#res_extmem_bank) | | .A | .XY |
+| $9D33 | [`set_extmem_bank`](#set_extmem_bank) | .A | .A | .X |
 | $9D36 | [`read_byte_extmem_y`] | .Y | .A | |
 | $9D39 | [`read_byte_extmem_x`] | .X | .A | |
 | $9D3F | [`read_word_extmem_y`] | .Y | .AX | |
