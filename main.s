@@ -763,6 +763,10 @@ setup_process_info:
 	
 	lda RAM_BANK
 	sta STORE_PROG_EXTMEM_BANK
+	lda #<r4
+	sta STORE_PROG_EXTMEM_WPTR
+	lda #<r5
+	sta STORE_PROG_EXTMEM_RPTR
 	
 	lda #%00000000
 	sta STORE_REG_STATUS

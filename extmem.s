@@ -51,12 +51,20 @@ clear_process_extmem_banks:
 	rts
 
 ;
-; Set a process' extmem bank
+; Set a process' extmem bank (in .A)
 ; Returns 0 on success, !0 on error
 ; preserves .Y
 ;
 .export set_extmem_bank
 set_extmem_bank:
+	cmp #0
+	bne :+
+	
+	lda current_program_id
+	sta STORE_PROG_EXTMEM_BANK
+	rts
+	
+	:
 	pha
 	and #$FE ; %1111 1110
 	tax
@@ -72,37 +80,101 @@ set_extmem_bank:
 	sta STORE_PROG_EXTMEM_BANK
 	lda #0
 	rts
-	
+
 ;
-; Read (r5), Y from extmem
+; Set ptr to read from for readf calls
+; Returns 0 in .A if ptr is valid
+;
+.export set_extmem_rptr
+set_extmem_rptr:
+	cmp #$02
+	bcc :+
+	cmp #$20
+	bcs :+
+	; first zp set ;
+	sta STORE_PROG_EXTMEM_RPTR
+	rts
+	:
+	cmp #$30
+	bcc :+
+	cmp #$50
+	bcs :+
+	; second zp set ;
+	sta STORE_PROG_EXTMEM_RPTR
+	rts
+	:
+	; not valid zp space, fail ;
+	lda #0
+	rts
+
+;
+; Same for writef calls
+;
+.export set_extmem_wptr
+set_extmem_wptr:
+	cmp #$02
+	bcc :+
+	cmp #$20
+	bcs :+
+	; first zp set ;
+	sta STORE_PROG_EXTMEM_WPTR
+	rts
+	:
+	cmp #$30
+	bcc :+
+	cmp #$50
+	bcs :+
+	; second zp set ;
+	sta STORE_PROG_EXTMEM_WPTR
+	rts
+	:
+	; not valid zp space, fail ;
+	lda #0
+	rts
+
+;
+; Read (rptr), Y from extmem
 ; preserves .X, .Y
 ;
-.export read_byte_extmem_y
-read_byte_extmem_y:
+.export readf_byte_extmem_y
+readf_byte_extmem_y:
+	phx
+	ldx STORE_PROG_EXTMEM_RPTR
+	lda $00, X
+	sta KZE0
+	lda $01, X
+	sta KZE0 + 1
+	
 	lda STORE_PROG_EXTMEM_BANK
 	sta RAM_BANK
 	
-	lda (r5), Y
+	lda (KZE0), Y
 	
-	pha
-	lda current_program_id
-	sta RAM_BANK
-	pla
+	ldx current_program_id
+	stx RAM_BANK
+	
+	plx
 	rts 
 
 ;
-; Read two bytes from (r5), Y
+; Read two bytes from (rptr), Y
 ; .Y will be incremented by 2 after call
 ;
-.export read_word_extmem_y
-read_word_extmem_y:
+.export readf_word_extmem_y
+readf_word_extmem_y:
+	ldx STORE_PROG_EXTMEM_RPTR
+	lda $00, X
+	sta KZE0
+	lda $01, X
+	sta KZE0 + 1
+	
 	lda STORE_PROG_EXTMEM_BANK
 	sta RAM_BANK
 	
-	lda (r5), Y
+	lda (KZE0), Y
 	tax
 	iny 
-	lda (r5), Y
+	lda (KZE0), Y
 	iny
 	
 	pha
@@ -114,38 +186,54 @@ read_word_extmem_y:
 	rts
 
 ;
-; Write (r4), Y to extmem
+; Write (wptr), Y to extmem
 ; preserves .X, .Y, NOT .A
 ;
-.export write_byte_extmem_y
-write_byte_extmem_y:
+.export writef_byte_extmem_y
+writef_byte_extmem_y:
 	pha 
+	phx
+	ldx STORE_PROG_EXTMEM_WPTR
+	lda $00, X
+	sta KZE0
+	lda $01, X
+	sta KZE0 + 1
+	
 	lda STORE_PROG_EXTMEM_BANK
 	sta RAM_BANK
+	plx
 	pla
 	
-	sta (r4), Y
+	sta (KZE0), Y
 	
 	lda current_program_id
 	sta RAM_BANK
 	rts 
 
 ;
-; Write two bytes to (r4), Y
+; Write two bytes to (wptr), Y
 ; .Y will be incremented by 2 after call
 ; Does not preserve .AX
 ;
-.export write_word_extmem_y
-write_word_extmem_y:
+.export writef_word_extmem_y
+writef_word_extmem_y:
 	pha
+	phx
+	ldx STORE_PROG_EXTMEM_WPTR
+	lda $00, X
+	sta KZE0
+	lda $01, X
+	sta KZE0 + 1
+	
 	lda STORE_PROG_EXTMEM_BANK
 	sta RAM_BANK
+	plx
 	pla
 	
-	lda (r4), Y
+	lda (KZE0), Y
 	txa
 	iny 
-	lda (r4), Y
+	lda (KZE0), Y
 	iny
 	
 	lda current_program_id
@@ -153,11 +241,66 @@ write_word_extmem_y:
 	rts
 
 ;
+; vread_byte_extmem_y
+;
+; Reads a byte into .A from mem addr (X) + Y
+; preserves .XY
+;
+.export vread_byte_extmem_y
+vread_byte_extmem_y:
+	lda $00, X
+	sta KZE0
+	lda $01, X
+	sta KZE0 + 1
+	
+	lda STORE_PROG_EXTMEM_BANK
+	sta RAM_BANK
+	
+	lda (KZE0), Y
+	
+	phy
+	tay
+	lda current_program_id
+	sta RAM_BANK
+	tya
+	ply
+	
+	rts
+
+;
+; vwrite_byte_extmem_y
+;
+; Writes .A to mem addr (X) + Y
+; .preserves .XY
+;
+.export vwrite_byte_extmem_y
+vwrite_byte_extmem_y:
+	phy
+	sta KZE1
+	
+	lda $00, X
+	sta KZE0
+	lda $01, X
+	sta KZE1	
+	
+	lda STORE_PROG_EXTMEM_BANK
+	sta RAM_BANK
+	
+	lda KZE1
+	sta (KZE0), Y
+	
+	lda current_program_id
+	sta RAM_BANK
+	
+	ply
+	rts
+
+;
 ; Copies bytes to/from/between extmem and prog base mem
-; r4 = dst
-; r6.L = dest bank (0 = prog bank)
-; r5 = src
-; r7.L = src bank (0 = prog bank)
+; r0 = dst
+; r2.L = dest bank (0 = prog bank)
+; r1 = src
+; r3.L = src bank (0 = prog bank)
 ; .AX = num bytes to copy
 ; If banks are same, will use quicker copy routine
 ;
@@ -168,7 +311,7 @@ memmove_extmem:
 	sta KZE0
 	stx KZE0 + 1
 	
-	lda r6 ; if r6 = 0, data dest is prog mem
+	lda r2 ; if r2 = 0, data dest is prog mem
 	bne :+
 	lda current_program_id
 	sta KZE2
@@ -183,10 +326,10 @@ memmove_extmem:
 	lda #1 ; non-zero
 	rts
 	:
-	lda r6
+	lda r2
 	sta KZE2
 @check_bank_src:
-	lda r7 ; if r7 = 0, src is prog mem
+	lda r3 ; if r3 = 0, src is prog mem
 	bne :+
 	lda current_program_id
 	sta KZE3
@@ -201,7 +344,7 @@ memmove_extmem:
 	lda #1
 	rts
 	:
-	lda r7
+	lda r3
 	sta KZE3
 @check_banks_match:
 	lda KZE0
@@ -209,8 +352,8 @@ memmove_extmem:
 	pha
 	phx
 	
-	ldsta_word r4, KZE0
-	ldsta_word r5, KZE1
+	ldsta_word r0, KZE0
+	ldsta_word r1, KZE1
 
 	lda KZE2
 	cmp KZE3

@@ -31,13 +31,15 @@ chdir := $9D30
 
 res_extmem_bank := $9D33
 set_extmem_bank := $9D36
+set_extmem_rptr := $9D39
+set_extmem_wptr := $9D3C
 
-readf_byte_extmem_y := $9D39
-readf_word_extmem_y := $9D3C
-vread_byte_extmem_y := $9D3F
+readf_byte_extmem_y := $9D3F
+readf_word_extmem_y := $9D42
+vread_byte_extmem_y := $9D45
 
-writef_byte_extmem_y := $9D42
-writef_word_extmem_y := $9D46
-vwrite_byte_extmem_y := $9D3F
+writef_byte_extmem_y := $9D48
+writef_word_extmem_y := $9D4B
+vwrite_byte_extmem_y := $9D3E
 
-memmove_extmem := $9D4B
+memmove_extmem := $9D51

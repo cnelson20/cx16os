@@ -1,10 +1,10 @@
 .include "routines.inc"
 .segment "CODE"
 
-r4 := $0A
-r5 := $0C
-r6 := $0E
-r7 := $10
+r0 := $02
+r1 := $04
+r2 := $06
+r3 := $08
 
 ptr0 := $30
 
@@ -17,18 +17,18 @@ copytest:
 	
 	; str1
 	lda #<STR_BASE
-	sta r4
+	sta r0
 	lda #>STR_BASE
-	sta r4 + 1
+	sta r0 + 1
 	
 	lda #<str1
-	sta r5
+	sta r1
 	lda #>str1
-	sta r5 + 1
+	sta r1 + 1
 	
 	lda extmem_bank
-	sta r6
-	stz r7
+	sta r2
+	stz r3
 	
 	lda #<str1
 	ldx #>str1
@@ -41,19 +41,19 @@ copytest:
 	clc
 	lda #<STR_BASE
 	adc strlen1
-	sta r4
+	sta r0
 	lda #>STR_BASE
 	adc #0
-	sta r4 + 1
+	sta r0 + 1
 	
 	lda #<str2
-	sta r5
+	sta r1
 	lda #>str2
-	sta r5 + 1
+	sta r1 + 1
 	
 	lda extmem_bank
-	sta r6
-	stz r7
+	sta r2
+	stz r3
 	
 	lda #<str2
 	ldx #>str2
@@ -64,24 +64,24 @@ copytest:
 	jsr memmove_extmem
 	
 	; copy back
-	lda #<combined
-	sta r4
-	lda #>combined
-	sta r4 + 1
-	stz r6
+	lda extmem_bank
+	jsr set_extmem_bank
+	lda #<ptr0
+	jsr set_extmem_rptr
 	
 	lda #<STR_BASE
-	sta r5
+	sta ptr0
 	lda #>STR_BASE
-	sta r5 + 1
-	lda extmem_bank
-	sta r7
+	sta ptr0 + 1
 	
-	lda strlen1
-	clc
-	adc strlen2
-	ldx #0
-	jsr memmove_extmem
+	ldy #0
+	:
+	jsr readf_byte_extmem_y
+	sta combined, Y
+	beq :+
+	iny
+	bne :-
+	:
 	
 	lda #<combined
 	ldx #>combined
@@ -117,4 +117,4 @@ str2:
 	.byte "World!"
 	.byte $d, 0
 	
-combined:
+combined := $B000

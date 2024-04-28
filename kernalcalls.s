@@ -16,8 +16,9 @@
 .import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, open_dir_listing_ext
 .import get_pwd_ext, chdir_ext
 
-.import res_extmem_bank, set_extmem_bank, read_byte_extmem_y, read_byte_extmem_x, read_word_extmem_y
-.import write_byte_extmem_y, write_byte_extmem_x, write_word_extmem_y, memmove_extmem
+.import res_extmem_bank, set_extmem_bank, set_extmem_rptr, set_extmem_wptr
+.import readf_byte_extmem_y, readf_word_extmem_y, vread_byte_extmem_y
+.import writef_byte_extmem_y, writef_word_extmem_y, vwrite_byte_extmem_y, memmove_extmem
 	
 .import irq_already_triggered
 .import atomic_action_st
@@ -49,13 +50,15 @@ call_table:
 	jmp chdir_ext ; $9D30
 	jmp res_extmem_bank ; $9D33
 	jmp set_extmem_bank ; $9D36
-	jmp read_byte_extmem_y ; $9D39
-	jmp read_word_extmem_y ; $9D3C
-	jmp $0000
-	jmp write_byte_extmem_y ; $9D42
-	jmp write_word_extmem_y ; $9D45
-	jmp $0000
-	jmp memmove_extmem ; $9D4B
+	jmp set_extmem_rptr ; $9D39
+	jmp set_extmem_wptr ; $9D3C
+	jmp readf_byte_extmem_y ; $9D3F
+	jmp readf_word_extmem_y ; $9D42
+	jmp vread_byte_extmem_y ; $9D45
+	jmp writef_byte_extmem_y ; $9D48
+	jmp writef_word_extmem_y ; $9D4B
+	jmp vwrite_byte_extmem_y ; $9D4E
+	jmp memmove_extmem ; $9D51
 .export call_table_end
 call_table_end:
 
