@@ -35,26 +35,26 @@ Set ptr to use for writef_* calls
 Returns 0 if ptr is valid, non-zero other  
 
 ### readf_byte_extmem_y
-- Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_rptr](#set_extmem_rptr)
+- Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_rptr](#set_extmem_rptr)  
 Does the equivalent of `LDA (rptr), Y` from memory of the previously set bank  
 Preserves all registers  
 
 ### readf_word_extmem_y
-- Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_rptr](#set_extmem_rptr)
+- Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_rptr](#set_extmem_rptr)  
 Reads 2 bytes into .AX from mem addr `(rptr) + Y` on the previously set bank  
 .Y will be incremented by 2 after the call  
 
 ### writef_byte_extmem_y
-- Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_wptr](#set_extmem_wptr)
+- Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_wptr](#set_extmem_wptr)  
 Does the equivalent of `STA (wptr), Y` to memory of the previously set bank  
 Preserves .X & .Y but tramples .A  
 
 ### writef_word_extmem_y
-- Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_wptr](#set_extmem_wptr)
+- Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_wptr](#set_extmem_wptr)  
 Writes 2 bytes from .AX to mem addr `(wptr) + Y` on the previously set bank  
 Tramples .AX, .Y will be incremented by 2 after the call  
 
 ### memmove_extmem
-Moves .AX bytes from r7.r5 to r6.r4 (bank r7.L, addr r5 to bank r6.L, addr r4)  
-To indicate copies to/from prog space, r6/r7 should be 0  
+Moves .AX bytes from r3.r1 to r2.r0 (bank r3.L, addr r1 to bank r2.L, addr r0)  
+To indicate copies to/from prog space, r2/r3 should be 0  
 Returns 0 if both banks are accessable by the current program and copy happened, non-zero otherwise  
