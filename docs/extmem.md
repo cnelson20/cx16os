@@ -46,6 +46,12 @@ Preserves all registers
 Reads 2 bytes into .AX from mem addr `(rptr) + Y` on the previously set bank  
 .Y will be incremented by 2 after the call  
 
+### vread_byte_extmem_y
+- Prepatory Routines: [set_extmem_bank](#set_extmem_bank)  
+
+Reads into .A from mem addr `(X) + Y` on the previous set bank  
+Tramples .A, .XY are preserved  
+
 ### writef_byte_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_wptr](#set_extmem_wptr)  
 Does the equivalent of `STA (wptr), Y` to memory of the previously set bank  
@@ -56,6 +62,12 @@ Preserves .X & .Y but tramples .A
 
 Writes 2 bytes from .AX to mem addr `(wptr) + Y` on the previously set bank  
 Tramples .AX, .Y will be incremented by 2 after the call  
+
+### vwrite_byte_extmem_y
+- Prepatory Routines: [set_extmem_bank](#set_extmem_bank)  
+
+Writes .A to mem addr `(X) + Y` on the previous set bank  
+Tramples .A, .XY are preserved  
 
 ### memmove_extmem
 Moves .AX bytes from r3.r1 to r2.r0 (bank r3.L, addr r1 to bank r2.L, addr r0)  
