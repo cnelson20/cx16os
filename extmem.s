@@ -9,6 +9,7 @@
 
 ;
 ; Finds the next available extmem banks, returns in .A
+; Zeros out those banks
 ; Returns 0 on error
 ;
 .export res_extmem_bank
@@ -25,7 +26,38 @@ res_extmem_bank:
 	sta process_table, X
 	txa
 	
-	:	
+	:
+	; zero out these banks ;
+	; start with bank + 1 ;
+	sta KZE0
+	inc A
+	sta RAM_BANK
+	
+	lda #<$A000
+	sta r0
+	lda #>$A000
+	sta r0 + 1
+	
+	stz r1
+	lda #>$2000
+	sta r1 + 1
+	lda #0
+	jsr memory_fill
+	
+	; now do bank ( +0 ) ;
+	lda KZE0
+	sta RAM_BANK
+	
+	stz r1
+	lda #>$2000
+	sta r1 + 1
+	lda #0
+	jsr memory_fill
+	
+	lda current_program_id
+	sta RAM_BANK
+	
+	lda KZE0
 	stz atomic_action_st
 	rts
 
