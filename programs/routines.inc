@@ -43,3 +43,5 @@ writef_word_extmem_y := $9D4B
 vwrite_byte_extmem_y := $9D3E
 
 memmove_extmem := $9D51
+
+wait_process := $9D5D
