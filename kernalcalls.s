@@ -30,6 +30,7 @@
 .import active_process_sp
 .import current_program_id
 
+
 .export call_table
 call_table:
 	jmp getc ; $9D00
@@ -168,6 +169,16 @@ fputc:
 ; filters certain invalid chars, then calls CHROUT 
 ;
 putc_v:
+	; need to handle quote mode ;
+	cmp #$22 ; "
+	bne :+
+	pha
+	lda #$80
+	jsr CHROUT
+	pla
+	jmp CHROUT
+	:
+
 	pha
 	and #$7F
 	cmp #$20
