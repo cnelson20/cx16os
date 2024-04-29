@@ -21,6 +21,8 @@
 | $9D2A | [`open_dir_listing`](#9d2a-open_dir_listing) | | .A, .X | .Y |
 | $9D2D | [`get_pwd`](#9d2d-get_pwd) | r0, r1 | | .A, .X, .Y |
 | $9D30 | [`chdir`](#9d30-chdir) | .AX | .A | .Y |
+| $9D33-$9D51 | [`Extmem routines`](extmem.md) | | | |
+| $9D5D | [`wait_process`](#9d51-wait_process) | .A, | .A | .XY |
 
 ## Function Reference
 
@@ -180,5 +182,14 @@ Return values:
 - Returns .A != 0 if attempt to chdir failed
 - Note: Does not determine whether the directory actually changed / was valid
 - The program can use get_pwd to see if directory actually changed
+
+---
+
+### $9D51: wait_process
+- Halts process execution until the process in .A exits
+- Lowers process priority until routine is over (existing priority is restored)
+
+Return values:
+- Returns process return value in .A
 
 ---
