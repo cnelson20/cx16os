@@ -437,6 +437,7 @@ switch_next_program:
 ; surrender_process_time
 ; sets current process to have 1 frame remaining
 ;
+.export surrender_process_time
 surrender_process_time:
 	pha
 	lda #1
@@ -466,6 +467,14 @@ save_current_process:
 	sta STORE_RAM_ZP_SET2, X
 	inx 
 	cpx #ZP_SET2_SIZE
+	bcc :-
+	
+	ldx #0
+	:
+	lda ZP_KZE_START, X
+	sta STORE_RAM_ZP_KZE, X
+	inx
+	cpx #ZP_KZE_SIZE
 	bcc :-
 	
 	ldx #$80
@@ -498,6 +507,14 @@ restore_new_process:
 	sta ZP_SET2_START, X
 	inx 
 	cpx #ZP_SET2_SIZE
+	bcc :-
+	
+	ldx #0
+	:
+	lda STORE_RAM_ZP_KZE, X
+	sta ZP_KZE_START, X
+	inx
+	cpx #ZP_KZE_SIZE
 	bcc :-
 	
 	ldx #$80
