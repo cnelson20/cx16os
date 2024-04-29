@@ -80,10 +80,13 @@ UNDERSCORE = $5F
 ERRNO_INVALID_FORMAT := $01
 ERRNO_UNK_CMD := $02
 ERRNO_INVALID_ADDR := $03
+ERRNO_NO_CUR_FILENAME := $04
+ERRNO_CANNOT_OPEN_FILE := $05
 
 NUL = $00
 CUR = $01
 ALL = $02
+LST = $03
 
 main:
 	jsr res_extmem_bank
@@ -261,16 +264,24 @@ parse_user_cmd:
 	jmp indicate_input_error
 	:
 	
+	lda input_begin_set
+	bne :+
+	
 	lda #1
 	sta input_begin_set
 	sta input_begin_lineno
 	stz input_begin_lineno + 1
+	:
+	lda input_end_set
+	bne :+
+	
 	lda #1
 	sta input_end_set
 	lda line_count
 	sta input_end_lineno
 	lda line_count + 1
 	sta input_end_lineno + 1
+	:
 	stz parse_cmd_first_num
 	
 	inx ; comma is 1 char
@@ -415,10 +426,10 @@ storeax_linenos:
 	sta input_begin_lineno
 	stx input_begin_lineno + 1
 	
+	pha
 	lda #1
 	sta input_begin_set
-	
-	rts
+	pla
 	:
 	sta input_end_lineno
 	stx input_end_lineno + 1
@@ -690,6 +701,7 @@ stitch_input_lines:
 	bne @not_last_line
 	lda input_begin_lineno + 1
 	cmp line_count + 1
+	bne @not_last_line
 	
 	; if this is last line, null this out
 	ldy #2
@@ -699,7 +711,7 @@ stitch_input_lines:
 	dey
 	bpl :-
 	
-	rts
+	bra @calc_new_line_count
 	
 @not_last_line:
 	; otherwise fill it correctly ;
@@ -715,7 +727,16 @@ stitch_input_lines:
 	lda (ptr0), Y
 	ldy #2
 	jsr writef_byte_extmem_y
-	
+
+@calc_new_line_count:
+	clc
+	lda input_begin_lineno
+	adc input_mode_line_count
+	sta curr_lineno
+	lda input_begin_lineno + 1
+	adc input_mode_line_count + 1
+	sta curr_lineno + 1
+
 	rts
 	
 @new_first_line:
@@ -817,9 +838,13 @@ cmd_list_chars:
 cmd_list_size := * - cmd_list_chars
 	
 cmd_list_default_lines:
+	; a, c, d, e, E, f, g, G
 	.byte CUR, CUR, CUR, NUL, NUL, CUR, ALL, ALL
+	; h, i, j, l, m, n, p, q
 	.byte NUL, CUR, CUR, CUR, CUR, CUR, CUR, NUL
-	.byte NUL, ALL, CUR, CUR, CUR, ALL, ALL, CUR
+	; Q, r, t, v, V, w, W, x
+	.byte NUL, LST, CUR, CUR, CUR, ALL, ALL, CUR
+	; y, o, N
 	.byte CUR, NUL, CUR
 	
 ; functions have the prototype: void fxn(.A cmd);
@@ -828,11 +853,11 @@ cmd_list_fxns:
 	.word enter_input_mode, not_implemented, not_implemented, not_implemented
 	.word not_implemented, not_implemented, not_implemented, not_implemented
 	; h, i, j, l, m, n, p, q
-	.word not_implemented, print_last_error, enter_input_mode, not_implemented
+	.word print_last_error, enter_input_mode, not_implemented, not_implemented
 	.word not_implemented, print_lines, print_lines, exit_ed
 	; Q, r, t, v, V, w, W, x
-	.word exit_ed, not_implemented, not_implemented, not_implemented
-	.word not_implemented, not_implemented, not_implemented, not_implemented
+	.word exit_ed, read_buf_file, not_implemented, not_implemented
+	.word not_implemented, write_buf_file, not_implemented, not_implemented
 	; y, o, N
 	.word not_implemented, toggle_obtuse, print_line_nums
 	
@@ -1059,7 +1084,165 @@ print_lines:
 @end:
 	rts
 
+get_io_filename:
+	lda input ; args are copied into input
+	beq @use_default_filename ; if arg = "", use the default filename
+	
+	; if arg provided, use user-provided filename ;
+	
+	; if default_filename is unset, set it to this filename ;
+	lda default_filename
+	bne @default_filename_alr_set
+	ldx #0
+	:
+	lda input, X
+	beq :+
+	sta default_filename, X
+	inx
+	cpx #DEFAULT_FILENAME_SIZE - 1
+	bcc :-
+	:
+	stz default_filename, X
+	
+@default_filename_alr_set:
+	lda #<input
+	ldx #>input
+	rts
+	
+@use_default_filename:
+	lda default_filename
+	bne :+
+	lda #ERRNO_NO_CUR_FILENAME
+	sta last_error
+	rts
+	:
+	lda #<default_filename
+	ldx #>default_filename
+	rts
 
+read_buf_file:
+	jsr get_io_filename
+	lda last_error
+	beq @open_file
+	rts
+@open_file:
+	
+	rts
+
+	
+write_buf_file:
+	jsr get_io_filename
+	lda last_error ; if error, return
+	beq @open_file
+	rts
+@open_file:
+	; now we can open file for writing ;
+	
+	; check whether to append or overwrite ;
+	; not implementing this right now so assume overwrite 'W' ;
+	ldy #'W'
+	jsr open_file
+	cmp #$FF
+	bne @open_success
+	; open failed ;
+	lda #ERRNO_CANNOT_OPEN_FILE
+	sta last_error
+	rts
+@open_success:
+	sta ptr0 ; store fileno in ptr0
+	
+	dec_word input_begin_lineno
+	lda input_begin_lineno
+	sta ptr1
+	sta ptr2
+	lda input_begin_lineno + 1
+	sta ptr1 + 1
+	sta ptr2 + 1
+
+	; calc offset into lines_ordered ;
+	asl ptr2
+	rol ptr2 + 1
+	asl ptr2 
+	rol ptr2 + 1
+	lda ptr2
+	clc
+	adc #<lines_ordered
+	sta ptr2
+	lda ptr2 + 1
+	adc #>lines_ordered
+	sta ptr2 + 1
+
+@write_loop:
+	; ptr1 holds lineno - 1, which should be < than input_end_lineno
+	lda ptr1 + 1
+	cmp input_end_lineno + 1
+	bcc :+
+	bne @end
+	lda ptr1
+	cmp input_end_lineno
+	bcs @end
+	:
+	
+	; let's write this line to the file ;
+	lda #<line_copy
+	sta r0
+	lda #>line_copy
+	sta r0 + 1
+	stz r2
+	
+	ldy #0
+	clc
+	lda (ptr2), Y
+	adc #4
+	sta r1
+	iny ; y = 1
+	lda (ptr2), Y
+	adc #0
+	sta r1 + 1
+	
+	iny ; y = 2
+	lda (ptr2), Y
+	sta r3
+	iny ; y = 3
+	lda (ptr2), Y
+	ldx #0
+	
+	jsr memmove_extmem
+	
+	ldy #3
+	lda (ptr2), Y
+	tax
+	lda #$d
+	sta line_copy, X
+	inx
+	stz line_copy, X
+	
+	stx r1
+	stz r1 + 1
+	
+	; line_copy is in r0 ;
+	lda ptr0
+	jsr write_file
+	
+	; increment vars ;
+	inc_word ptr1
+	lda ptr2
+	clc
+	adc #4
+	sta ptr2
+	lda ptr2 + 1
+	adc #0
+	sta ptr2 + 1
+	
+	jmp @write_loop	
+	
+@end:
+	lda ptr0
+	jsr close_file
+	
+	stz edits_made
+	rts
+	
 print_cmd_info:
 	phx 
 	; print cmd ;
@@ -1121,6 +1304,13 @@ use_def_beginno:
 	stz input_begin_lineno + 1	
 	rts
 	:
+	cmp #LST
+	bne :+
+	lda line_count
+	sta input_begin_lineno
+	lda line_count + 1
+	sta input_begin_lineno + 1
+	:
 	; presumably NUL, just exit
 	rts
 	
@@ -1135,7 +1325,10 @@ use_def_endno:
 	rts
 @not_cur:
 	cmp #ALL
+	beq :+
+	cmp #LST
 	bne @not_all
+	:
 	lda line_count
 	sta input_end_lineno
 	lda line_count + 1
@@ -1147,6 +1340,9 @@ use_def_endno:
 
 print_error:
 	lda last_error
+	bne :+
+	rts ; rts if no error
+	:
 	asl
 	tax
 	lda errno_pointers, X
@@ -1160,7 +1356,7 @@ print_error:
 	jmp CHROUT
 
 errno_pointers:
-	.word $FFFF, errno_str_invalid_format, errno_str_unk_cmd, errno_str_invalid_addr
+	.word $FFFF, errno_str_invalid_format, errno_str_unk_cmd, errno_str_invalid_addr, errno_str_no_cur_filename, errno_str_cannot_open_file
 	
 errno_str_invalid_format:
 	.asciiz "Invalid format"
@@ -1168,6 +1364,11 @@ errno_str_unk_cmd:
 	.asciiz "Unknown command"
 errno_str_invalid_addr:
 	.asciiz "Invalid address"
+errno_str_no_cur_filename:
+	.asciiz "No current filename"
+errno_str_cannot_open_file:
+	.asciiz "Cannot open file"
+
 
 ; get next avail extmem space ;
 ; args: .AX -> data len ; (0 = 256)
@@ -1389,6 +1590,10 @@ input_mode:
 	.byte 0
 edits_made:
 	.byte 0
+
+DEFAULT_FILENAME_SIZE = 64
+default_filename:
+	.res DEFAULT_FILENAME_SIZE,0
 	
 extmem_banks:
 	.res 256, 0
