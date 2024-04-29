@@ -1,15 +1,15 @@
 CC = cl65
 FLAGS =-t none -C cl65_progs.cfg
 
-all: bindir shell echo ps kill looptest args cat xxd clear ls pwd extmemtest
+all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed
 
 bindir: ../mnt/bin
 	
 ../mnt/bin:	
 	-mkdir ../mnt/bin
 
-extmemtest: extmemtest.s
-	$(CC) $(FLAGS) -o $@ extmemtest.s
+ed: ed.s
+	$(CC) $(FLAGS) -o $@ ed.s
 	cp $@ ../mnt/bin
 
 shell: shell.s
