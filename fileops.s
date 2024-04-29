@@ -863,11 +863,9 @@ read_stdin:
 ;
 .export write_file_ext
 write_file_ext:
-	lda RAM_BANK
-	sta KZE2 + 1
-	inc A
-	sta RAM_BANK
 	tay
+	inc RAM_BANK
+	
 	lda PV_OPEN_TABLE, Y
 	dec RAM_BANK
 	
@@ -882,8 +880,6 @@ write_file_ext:
 	cmp #1
 	beq write_stdout
 	
-	
-	
 @write_to_file:
 	lda #1
 	sta atomic_action_st ; needs to be uninterrupted
@@ -895,7 +891,7 @@ write_file_ext:
 	jmp @write_file_exit
 	
 @write_file_loop:
-	lda KZE2 + 1 ; restore RAM bank every loop
+	lda current_program_id ; restore RAM bank every loop
 	sta RAM_BANK
 	
 	lda KZE1 + 1
@@ -954,7 +950,7 @@ write_file_ext:
 	ply
 	stz atomic_action_st
 	
-	lda KZE2
+	lda current_program_id
 	sta RAM_BANK
 	
 	lda #0
