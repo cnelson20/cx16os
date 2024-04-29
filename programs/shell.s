@@ -104,14 +104,6 @@ char_entered:
 	
 	jsr CHROUT
 	
-	cmp #$22
-	bne not_quote_entered
-	lda #$22
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-not_quote_entered:
-	
 	lda #UNDERSCORE
 	jsr CHROUT
 	lda #LEFT_CURSOR
