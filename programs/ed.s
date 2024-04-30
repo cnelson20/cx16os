@@ -27,6 +27,14 @@
 	pla
 .endmacro
 
+.macro dec_ax
+	dec A
+	cmp #$FF
+	bne :+
+	dex
+	:
+.endmacro
+
 .macro phy_byte addr
 	ldy addr
 	phy
@@ -119,7 +127,6 @@ loop:
 	lda input_mode
 	bne @handle_input_mode
 @parse_commands:
-	;stp
 	jsr parse_user_cmd
 	lda input_cmd
 	bne :+
@@ -128,7 +135,6 @@ loop:
 	jmp loop
 	:	
 	jsr do_user_cmd
-	;stp
 
 	jmp loop
 @handle_input_mode:	
@@ -800,6 +806,26 @@ do_user_cmd:
 	jsr use_def_endno
 	:
 	
+	; if end line > line count, error ;
+	; but if arg mode = null, don't care ;
+	lda cmd_list_default_lines
+	cmp #NUL
+	beq :++
+	lda input_end_lineno + 1
+	cmp line_count + 1
+	bcc :++ ; if <, continue
+	bne :+ ; if >, return
+	; high bytes are equal
+	lda input_end_lineno
+	cmp line_count
+	bcc :++
+	beq :++ ; continue if < or = (<=)
+	:
+	lda #ERRNO_INVALID_ADDR
+	sta last_error
+	rts
+	:
+	
 	lda print_cmd_info_flag
 	beq :+
 	jsr print_cmd_info
@@ -850,7 +876,7 @@ cmd_list_default_lines:
 ; functions have the prototype: void fxn(.A cmd);
 cmd_list_fxns:
 	; a, c, d, e, E, f, g, G
-	.word enter_input_mode, not_implemented, not_implemented, not_implemented
+	.word enter_input_mode, not_implemented, delete_lines, not_implemented
 	.word not_implemented, not_implemented, not_implemented, not_implemented
 	; h, i, j, l, m, n, p, q
 	.word print_last_error, enter_input_mode, not_implemented, not_implemented
@@ -1084,6 +1110,189 @@ print_lines:
 @end:
 	rts
 
+delete_lines:
+	lda input_begin_lineno
+	ora input_begin_lineno
+	bne :+
+	lda #ERRNO_INVALID_ADDR
+	sta last_error
+	rts
+	:
+	
+	lda input_begin_lineno
+	ldx input_begin_lineno + 1
+	dec_ax
+	sta ptr0
+	stx ptr0 + 1
+	
+	lda ptr0
+	ldx ptr0 + 1
+	jsr get_lines_ordered_offset_alr_decremented
+	sta ptr1
+	stx ptr1 + 1
+	
+@delete_loop:
+	lda ptr0 + 1
+	cmp input_end_lineno + 1
+	bcc @delete_line
+	bne @end
+	lda ptr0
+	cmp input_end_lineno
+	bcs @end
+	
+@delete_line:
+	ldy #0
+	lda (ptr1), Y
+	sta r0
+	iny ; y = 1
+	lda (ptr1), Y
+	sta r0 + 1
+	
+	iny ; y = 2
+	lda (ptr1), Y
+	jsr set_extmem_bank
+	
+	iny ; y = 3
+	lda (ptr1), Y ; data size
+	clc
+	adc #3
+	ora #$3F
+	inc A
+	sta r1
+	stz r1 + 1
+	
+	lda #0
+	jsr fill_extmem
+	
+	lda ptr1
+	clc
+	adc #4
+	sta ptr1
+	lda ptr1 + 1
+	adc #0
+	sta ptr1 + 1
+	
+	inc_word ptr0
+	
+	jmp @delete_loop
+
+@end:
+	lda input_begin_lineno
+	cmp #1
+	bne @not_first_line
+	lda input_begin_lineno + 1
+	cmp #0
+	bne @not_first_line
+
+@is_first_line:	; begin = line 1
+	
+	; is end line the last line ? ;
+	lda input_end_lineno
+	cmp line_count
+	bne :+
+	lda input_end_lineno + 1
+	cmp line_count + 1
+	bne :+
+	; all lines deleted ;
+	stz first_line
+	stz first_line + 1
+	stz first_line + 2
+	
+	stz curr_lineno
+	stz curr_lineno + 1
+	
+	jmp @reorder	
+	:
+	
+	lda input_end_lineno
+	ldx input_end_lineno + 1
+	jsr get_lines_ordered_offset_alr_decremented
+	sta ptr1
+	stx ptr1 + 1
+	ldy #3
+	:
+	lda (ptr1), Y
+	sta first_line, Y
+	dey
+	bpl :-
+	
+	lda #1
+	sta curr_lineno
+	stz curr_lineno + 1
+	jmp @reorder
+	
+@not_first_line:
+	lda ptr0
+	ldx ptr0 + 1
+	dec_ax
+	jsr get_lines_ordered_offset_not_decremented ; need to decrement again to get line + 1
+	sta ptr1
+	stx ptr1 + 1
+	
+	ldy #0
+	lda (ptr1), Y
+	sta ptr3
+	iny ; y = 1
+	lda (ptr1), Y
+	sta ptr3 + 1
+	iny
+	lda (ptr1), Y
+	jsr set_extmem_bank
+	
+	lda #<ptr3
+	jsr set_extmem_wptr
+
+	lda input_end_lineno
+	ldx input_end_lineno + 1
+	cmp line_count
+	bne @not_last_line
+	cpx line_count + 1
+	bne @not_last_line
+	; this is the last line ;
+	
+	ldy #2
+	lda #0
+	:
+	jsr writef_byte_extmem_y
+	dey
+	bpl :-
+	
+	lda input_begin_lineno
+	ldx input_begin_lineno + 1
+	dec_ax
+	sta curr_lineno
+	stx curr_lineno + 1
+	
+	jmp @reorder
+	
+@not_last_line:
+	; end line in .AX
+	jsr get_lines_ordered_offset_alr_decremented
+	sta ptr2
+	stx ptr2 + 1
+	
+	ldy #2
+	:
+	lda (ptr2), Y
+	jsr writef_byte_extmem_y
+	dey
+	bpl :-
+	
+	; change curr_lineno ;
+	lda input_begin_lineno
+	sta curr_lineno
+	lda input_begin_lineno + 1
+	sta curr_lineno + 1
+	; jmp @reorder
+	
+@reorder:
+	jsr reorder_lines
+
+	lda #1
+	sta edits_made
+	
+	rts
+
 get_io_filename:
 	lda input ; args are copied into input
 	beq @use_default_filename ; if arg = "", use the default filename
@@ -1126,16 +1335,36 @@ read_buf_file:
 	beq @open_file
 	rts
 @open_file:
+	ldy #0
+	jsr open_file
+	bne @open_success
+	cmp #$FF
+	bne @open_success
+	; open failed ;
+	lda #ERRNO_CANNOT_OPEN_FILE
+	sta last_error
+	rts
+@open_success:
+	sta ptr0
+	
+	; read data ;
+	
+	
+@end:
+	lda ptr0
+	jsr close_file
 	
 	rts
-
 	
 write_buf_file:
 	jsr get_io_filename
+	pha
 	lda last_error ; if error, return
 	beq @open_file
+	pla
 	rts
 @open_file:
+	pla
 	; now we can open file for writing ;
 	
 	; check whether to append or overwrite ;
@@ -1151,26 +1380,16 @@ write_buf_file:
 @open_success:
 	sta ptr0 ; store fileno in ptr0
 	
-	dec_word input_begin_lineno
+	stp
 	lda input_begin_lineno
+	ldx input_begin_lineno + 1
+	dec_ax
 	sta ptr1
+	stx ptr1 + 1
+	
+	jsr get_lines_ordered_offset_alr_decremented
 	sta ptr2
-	lda input_begin_lineno + 1
-	sta ptr1 + 1
-	sta ptr2 + 1
-
-	; calc offset into lines_ordered ;
-	asl ptr2
-	rol ptr2 + 1
-	asl ptr2 
-	rol ptr2 + 1
-	lda ptr2
-	clc
-	adc #<lines_ordered
-	sta ptr2
-	lda ptr2 + 1
-	adc #>lines_ordered
-	sta ptr2 + 1
+	stx ptr2 + 1
 
 @write_loop:
 	; ptr1 holds lineno - 1, which should be < than input_end_lineno
@@ -1500,6 +1719,30 @@ space_left_extmem_ptr:
 	tax
 	pla
 	rts
+
+get_lines_ordered_offset_not_decremented:
+	dec A
+	cmp #$FF
+	bne :+
+	dex
+	:
+get_lines_ordered_offset_alr_decremented:
+	stx @word_tmp
+	asl A
+	rol @word_tmp
+	asl A
+	rol @word_tmp
+	clc
+	adc #<lines_ordered
+	pha
+	lda @word_tmp
+	adc #>lines_ordered
+	tax
+	pla
+	rts
+	
+@word_tmp:
+	.byte 0
 
 reorder_lines:
 	ldx #3
