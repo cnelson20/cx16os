@@ -105,7 +105,9 @@ main:
 	lda #1
 	rts
 	:
+	sta lines_ordered_bank
 	
+	jsr res_extmem_bank
 	sta extmem_banks + 0
 	inc A
 	sta extmem_banks + 1
@@ -2142,6 +2144,8 @@ default_filename:
 	
 extmem_banks:
 	.res 256, 0
+lines_ordered_bank:
+	.byte 0
 
 line_count:
 	.word 0
@@ -2159,9 +2163,11 @@ first_line:
 	.res 4, 0
 
 .SEGMENT "BSS"
+; BSS start = $A200 + the ed binary filesize
 
 line_copy:
 	.res 256
 
+; max lines = (1D00 - binary size) / 4
 lines_ordered:
 	
