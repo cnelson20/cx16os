@@ -23,6 +23,8 @@
 | $9D30 | [`chdir`](#9d30-chdir) | .AX | .A | .Y |
 | $9D33-$9D51 | [`Extmem routines`](extmem.md) | | | |
 | $9D5D | [`wait_process`](#9d51-wait_process) | .A, | .A | .XY |
+| $9D60 | [`fgetc`](#9d60-fgetc) | .A, | .A, .X | .Y | 
+| $9D63 | [`fputc`](#9d63-fputc) | .A, .X | .Y | .X | 
 
 ## Function Reference
 
