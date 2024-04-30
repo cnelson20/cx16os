@@ -9,13 +9,14 @@ Routines to expand a program's data access beyond its allocated $2000 bytes
 | $9D36 | [`set_extmem_bank`](#set_extmem_bank) | .A | .A | .X |
 | $9D39 | [`set_extmem_rptr`](#set_extmem_rptr) | .A | .A | |
 | $9D3C | [`set_extmem_wptr`](#set_extmem_wptr) | .A | .A | |
-| $9D39 | [`readf_byte_extmem_y`](#readf_byte_extmem_y) | .Y | .A | |
-| $9D3C | [`readf_word_extmem_y`](#readf_word_extmem_y) | .Y | .AX | |
-| $9D3F | [`vread_byte_extmem_y`](#vread_byte_extmem_y) | .X, .Y | .A | |
-| $9D42 | [`writef_byte_extmem_y`](#writef_byte_extmem_y) | .A, .Y | | .A |
-| $9D48 | [`writef_word_extmem_y`](#writef_word_extmem_y) | .AX, .Y | | .AX |
-| $9D36 | [`vwrite_byte_extmem_y`](#vwrite_byte_extmem_y) | .A, .X, .Y | | .A |
-| $9D4B | [`memmove_extmem`](#memmove_extmem) | r0, r1, r2.L, r3.L, .AX | .A | .XY |
+| $9D3F | [`readf_byte_extmem_y`](#readf_byte_extmem_y) | .Y | .A | |
+| $9D42 | [`readf_word_extmem_y`](#readf_word_extmem_y) | .Y | .AX | |
+| $9D45 | [`vread_byte_extmem_y`](#vread_byte_extmem_y) | .X, .Y | .A | |
+| $9D48 | [`writef_byte_extmem_y`](#writef_byte_extmem_y) | .A, .Y | | |
+| $9D4B | [`writef_word_extmem_y`](#writef_word_extmem_y) | .AX, .Y | | |
+| $9D4E | [`vwrite_byte_extmem_y`](#vwrite_byte_extmem_y) | .A, .X, .Y | | |
+| $9D51 | [`memmove_extmem`](#memmove_extmem) | r0, r1, r2.L, r3.L, .AX | .A | .XY |
+| $9D54 | [`fill_extmem`](#fill_extmem) | r0, r1, .A | | .XY |
 
 ### res_extmem_bank
 Get a bank to use other extmem routines with  
@@ -50,18 +51,18 @@ Reads 2 bytes into .AX from mem addr `(rptr) + Y` on the previously set bank
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank)  
 
 Reads into .A from mem addr `(X) + Y` on the previous set bank  
-Tramples .A, .XY are preserved  
+Preserves .AXY  
 
 ### writef_byte_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_wptr](#set_extmem_wptr)  
 Does the equivalent of `STA (wptr), Y` to memory of the previously set bank  
-Preserves .X & .Y but tramples .A  
+Preserves .AXY  
 
 ### writef_word_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_wptr](#set_extmem_wptr)
 
 Writes 2 bytes from .AX to mem addr `(wptr) + Y` on the previously set bank  
-Tramples .AX, .Y will be incremented by 2 after the call  
+Preserves .AX, .Y will be incremented by 2 after the call  
 
 ### vwrite_byte_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank)  
@@ -73,3 +74,9 @@ Tramples .A, .XY are preserved
 Moves .AX bytes from r3.r1 to r2.r0 (bank r3.L, addr r1 to bank r2.L, addr r0)  
 To indicate copies to/from prog space, r2/r3 should be 0  
 Returns 0 if both banks are accessable by the current program and copy happened, non-zero otherwise  
+
+### fill_extmem
+Fills r1 bytes starting at r0 with value in .A (on bank preset by [set_extmem_bank](#set_extmem_bank))  
+No return values  
+
+
