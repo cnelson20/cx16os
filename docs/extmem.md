@@ -51,7 +51,7 @@ Reads 2 bytes into .AX from mem addr `(rptr) + Y` on the previously set bank
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank)  
 
 Reads into .A from mem addr `(X) + Y` on the previous set bank  
-Preserves .AXY  
+Preserves .XY 
 
 ### writef_byte_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_wptr](#set_extmem_wptr)  
@@ -68,7 +68,7 @@ Preserves .AX, .Y will be incremented by 2 after the call
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank)  
 
 Writes .A to mem addr `(X) + Y` on the previous set bank  
-Tramples .A, .XY are preserved  
+Preserves .AXY
 
 ### memmove_extmem
 Moves .AX bytes from r3.r1 to r2.r0 (bank r3.L, addr r1 to bank r2.L, addr r0)  
