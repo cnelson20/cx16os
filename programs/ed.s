@@ -90,6 +90,8 @@ ERRNO_UNK_CMD := $02
 ERRNO_INVALID_ADDR := $03
 ERRNO_NO_CUR_FILENAME := $04
 ERRNO_CANNOT_OPEN_FILE := $05
+ERRNO_ERR_READ_FILE := $06
+ERRNO_WARN_BUFF_MOD := $07
 
 NUL = $00
 CUR = $01
@@ -127,7 +129,12 @@ loop:
 	lda input_mode
 	bne @handle_input_mode
 @parse_commands:
+	stz last_error
 	jsr parse_user_cmd
+	lda last_error
+	beq :+
+	jmp loop
+	:
 	lda input_cmd
 	bne :+
 	lda #ERRNO_UNK_CMD
@@ -278,7 +285,7 @@ parse_user_cmd:
 	sta input_begin_lineno
 	stz input_begin_lineno + 1
 	:
-	lda input_end_set
+	lda input_end_explicit_set
 	bne :+
 	
 	lda #1
@@ -422,6 +429,18 @@ storeax_linenos:
 	bcc @valid_lineno
 	beq @valid_lineno
 @invalid_lineno:
+	lda parse_cmd_first_num
+	beq :+
+	lda #1
+	sta input_begin_set
+	bra :++
+	:
+	lda #1
+	sta input_end_explicit_set
+	:
+	lda #1
+	sta input_end_set
+	
 	lda #ERRNO_INVALID_ADDR
 	sta last_error
 	rts
@@ -535,6 +554,9 @@ handle_new_line_text:
 	ldy #3
 	lda ptr0 ; holds len of data
 	jsr writef_byte_extmem_y
+	dey ; y = 2
+	lda #$FF ; in case data is empty, store $FF as next bank
+	jsr writef_byte_extmem_y
 	
 	; now copy data ;
 	lda ptr1
@@ -626,12 +648,21 @@ get_input_strlen:
 	rts
 
 stitch_input_lines:
+	lda input_mode_line_count
+	ora input_mode_line_count + 1
+	bne :+
+	rts ; if no lines were entered, just don't do anything
+	:
+	
 	lda input_mode
 	cmp #'c'
-	bne :+
-	; not implemented yet ;
-	rts 
-	:
+	bne @not_change
+	
+	jsr delete_lines
+	
+	dec_word input_begin_lineno
+	lda input_mode
+@not_change:
 	cmp #'i'
 	bne @not_insert
 	
@@ -652,25 +683,11 @@ stitch_input_lines:
 	; this line is not the first line of the buffer ;	
 	
 	; line nums are 1-based in ed, need to translate into an offset ;
-	sec
 	lda input_begin_lineno
-	sbc #1
+	ldx input_begin_lineno + 1
+	jsr get_lines_ordered_offset_not_decremented
 	sta ptr0
-	lda input_begin_lineno + 1
-	sbc #0
-	sta ptr0 + 1
-	
-	asl ptr0
-	rol ptr0 + 1
-	asl ptr0
-	rol ptr0 + 1 ; r0 = (lineno - 1) * 4  = offset into lines_ordered
-	
-	lda ptr0
-	adc #<lines_ordered
-	sta ptr0
-	lda ptr0 + 1
-	adc #>lines_ordered
-	sta ptr0 + 1
+	stx ptr0 + 1
 	
 	ldy #0
 	lda (ptr0), Y
@@ -810,21 +827,32 @@ do_user_cmd:
 	; but if arg mode = null, don't care ;
 	lda cmd_list_default_lines
 	cmp #NUL
-	beq :++
+	beq @dont_check_linenos
+	
 	lda input_end_lineno + 1
 	cmp line_count + 1
-	bcc :++ ; if <, continue
-	bne :+ ; if >, return
+	bcc @end_line_good ; if <, continue
+	bne @invalid_err ; if >, return
 	; high bytes are equal
 	lda input_end_lineno
 	cmp line_count
-	bcc :++
-	beq :++ ; continue if < or = (<=)
-	:
+	bcc @end_line_good
+	beq @end_line_good ; continue if < or = (<=)
+@invalid_err:
 	lda #ERRNO_INVALID_ADDR
 	sta last_error
 	rts
-	:
+@end_line_good:
+	; if end line < begin, error
+	lda input_end_lineno + 1
+	cmp input_begin_lineno + 1
+	bcc @invalid_err
+	bne :+
+	lda input_end_lineno
+	cmp input_begin_lineno
+	bcc @invalid_err
+	:	
+@dont_check_linenos:
 	
 	lda print_cmd_info_flag
 	beq :+
@@ -876,10 +904,10 @@ cmd_list_default_lines:
 ; functions have the prototype: void fxn(.A cmd);
 cmd_list_fxns:
 	; a, c, d, e, E, f, g, G
-	.word enter_input_mode, not_implemented, delete_lines, not_implemented
-	.word not_implemented, not_implemented, not_implemented, not_implemented
+	.word enter_input_mode, enter_input_mode, delete_lines, read_buf_file
+	.word read_buf_file, set_print_default_filename, not_implemented, not_implemented
 	; h, i, j, l, m, n, p, q
-	.word print_last_error, enter_input_mode, not_implemented, not_implemented
+	.word print_last_error, enter_input_mode, not_implemented, print_lines
 	.word not_implemented, print_lines, print_lines, exit_ed
 	; Q, r, t, v, V, w, W, x
 	.word exit_ed, read_buf_file, not_implemented, not_implemented
@@ -888,6 +916,8 @@ cmd_list_fxns:
 	.word not_implemented, toggle_obtuse, print_line_nums
 	
 not_implemented:
+	lda #ERRNO_UNK_CMD
+	sta last_error
 	rts
 
 print_last_error:
@@ -905,12 +935,45 @@ toggle_obtuse:
 	sta print_cmd_info_flag
 	rts
 
+set_print_default_filename:
+	lda input
+	beq @print_default_filename
+@set_default_filename:
+	ldy #0
+	:
+	lda input, Y
+	beq :+
+	sta default_filename, Y
+	iny
+	cpy #$FF
+	bcc :-
+	:
+	lda #0
+	sta default_filename, Y
+	rts	
+	
+@print_default_filename:
+	lda default_filename
+	bne :+
+	lda #ERRNO_NO_CUR_FILENAME
+	sta last_error
+	rts
+	:
+	lda #<default_filename
+	ldx #>default_filename
+	jsr PRINT_STR
+	
+	lda #$d
+	jmp CHROUT
+
 exit_ed:
 	cmp #'Q'
 	beq :+
 	lda edits_made
 	beq :+ ; if no edits made and 'q', go ahead and exit
 	; if edits have been made, then mark it so repeat exits
+	lda #ERRNO_WARN_BUFF_MOD
+	sta last_error
 	stz edits_made
 	rts
 	:
@@ -919,6 +982,17 @@ exit_ed:
 	rts
 
 enter_input_mode:
+	cmp #'a'
+	beq :+
+	lda input_begin_lineno
+	ora input_begin_lineno + 1
+	bne :+
+	; if i or c, error if begin = 0 ;
+	lda #ERRNO_INVALID_ADDR
+	sta last_error
+	rts
+	:
+
 	stz input_mode_line_count
 	stz input_mode_line_count + 1
 	
@@ -930,6 +1004,7 @@ enter_input_mode:
 	stz input_mode_end_chain + 1
 	stz input_mode_end_chain + 2
 	
+	lda input_cmd
 	sta input_mode
 	rts
 
@@ -986,26 +1061,15 @@ print_lines:
 	rts
 	:
 	
-	dec_word input_begin_lineno
-	
 	lda input_begin_lineno
+	ldx input_begin_lineno + 1
+	dec_ax
 	sta ptr0
-	sta ptr1
-	lda input_begin_lineno + 1
-	sta ptr0 + 1
-	sta ptr1 + 1
+	stx ptr0 + 1
 	
-	asl ptr1
-	rol ptr1 + 1
-	asl ptr1
-	rol ptr1 + 1
-	clc
-	lda #<lines_ordered
-	adc ptr1
+	jsr get_lines_ordered_offset_alr_decremented
 	sta ptr1
-	lda #>lines_ordered
-	adc ptr1 + 1
-	sta ptr1 + 1
+	stx ptr1 + 1
 	
 @print_lines_loop:
 	; if ptr0 >= input_end_lineno, exit
@@ -1028,7 +1092,7 @@ print_lines:
 	
 	lda ptr0
 	clc
-	adc #0
+	adc #1
 	pha
 	lda ptr0 + 1
 	adc #0
@@ -1112,7 +1176,7 @@ print_lines:
 
 delete_lines:
 	lda input_begin_lineno
-	ora input_begin_lineno
+	ora input_begin_lineno + 1
 	bne :+
 	lda #ERRNO_INVALID_ADDR
 	sta last_error
@@ -1125,8 +1189,6 @@ delete_lines:
 	sta ptr0
 	stx ptr0 + 1
 	
-	lda ptr0
-	ldx ptr0 + 1
 	jsr get_lines_ordered_offset_alr_decremented
 	sta ptr1
 	stx ptr1 + 1
@@ -1176,7 +1238,7 @@ delete_lines:
 	
 	jmp @delete_loop
 
-@end:
+@end:	
 	lda input_begin_lineno
 	cmp #1
 	bne @not_first_line
@@ -1222,8 +1284,8 @@ delete_lines:
 	jmp @reorder
 	
 @not_first_line:
-	lda ptr0
-	ldx ptr0 + 1
+	lda input_begin_lineno
+	ldx input_begin_lineno + 1
 	dec_ax
 	jsr get_lines_ordered_offset_not_decremented ; need to decrement again to get line + 1
 	sta ptr1
@@ -1330,16 +1392,29 @@ get_io_filename:
 	rts
 
 read_buf_file:
+	cmp #'e'
+	bne :+
+	lda edits_made
+	beq :+
+	lda #ERRNO_WARN_BUFF_MOD
+	sta last_error
+	stz edits_made
+	rts
+	:
+
 	jsr get_io_filename
-	lda last_error
+	ldy last_error
 	beq @open_file
 	rts
 @open_file:
 	ldy #0
 	jsr open_file
-	bne @open_success
 	cmp #$FF
-	bne @open_success
+	beq :+
+	cpy #0
+	bne :+
+	jmp @open_success
+	:
 	; open failed ;
 	lda #ERRNO_CANNOT_OPEN_FILE
 	sta last_error
@@ -1348,23 +1423,226 @@ read_buf_file:
 	sta ptr0
 	
 	; read data ;
+	stz input_mode_start_chain
+	stz input_mode_start_chain + 1
 	
+	stz input_mode_line_count
+	stz input_mode_line_count + 1
 	
-@end:
+@read_next_line:
+	stz ptr1 ; bytes in the line so far
+
+	lda #<input
+	sta r0
+	lda #>input
+	sta r0 + 1
+	
+	inc_word input_mode_line_count	
+@read_next_line_loop:	
+	lda #1
+	sta r1
+	stz r1 + 1
+	
+	lda ptr0
+	jsr read_file
+	cpy #0
+	beq :+
+	jmp @read_error
+	:
+	cmp #0
+	bne :+
+	; no more data if no bytes read, exit ;
+	stz @read_buf_file_have_more_bytes
+	jmp @end_of_line
+	:
+	
+	lda #1
+	sta @read_buf_file_have_more_bytes
+	
+	; if we've reached the maximum line length, overflow to the next line ;
+	lda ptr1
+	inc A
+	sta ptr1
+	cmp #MAX_LINE_LENGTH
+	bcs @end_of_line
+	
+	cmp #1
+	bne :+
+	lda (r0)
+	cmp #$a
+	bne :+
+	dec ptr1 ; ignore this \n
+	jmp @read_next_line_loop
+	:
+	
+	lda (r0)
+	cmp #$d
+	beq @end_of_line
+	
+	inc_word r0
+	jmp @read_next_line_loop
+	
+@end_of_line:
+	lda ptr0
+	pha ; push ptr0
+	
+	ldx ptr1
+	lda @read_buf_file_have_more_bytes
+	beq :+
+	lda (r0) ; last byte read into input
+	cmp #$d
+	bne :+
+	dex
+	:
+	stz input, X
+	txa
+	pha ; push ptr4
+	
+	ldx #0
+	clc
+	adc #4
+	bcc :+
+	inx
+	:
+	jsr find_extmem_space
+	sta ptr2
+	stx ptr2 + 1
+	sty ptr3
+	
+	pla ; restore ptr0 and ptr4
+	sta ptr4
+	pla
+	sta ptr0
+	
+	lda #<ptr2
+	jsr set_extmem_wptr
+	lda ptr3
+	jsr set_extmem_bank
+	ldy #3
+	lda ptr4
+	jsr writef_byte_extmem_y
+	dey ; y = 2
+	lda #$FF
+	jsr writef_byte_extmem_y ; marks mem as in use
+	
+	; now copy data ;
+	clc ; offset of 4
+	lda ptr2
+	adc #4
+	sta r0
+	lda ptr2 + 1
+	adc #0
+	sta r0 + 1
+	lda ptr3
+	sta r2	
+	
+	lda #<input
+	sta r1
+	lda #>input
+	sta r1 + 1
+	stz r3
+	
+	lda ptr4
+	ldx #0
+	jsr memmove_extmem
+
+	; check if this is the first in the chain ;
+	lda input_mode_start_chain
+	ora input_mode_start_chain + 1
+	bne @not_first_line
+@is_first_line:
+	; if it is, then set input_mode_start_chain ;
+	lda ptr2
+	sta input_mode_start_chain
+	lda ptr2 + 1
+	sta input_mode_start_chain + 1
+	lda ptr3
+	sta input_mode_start_chain + 2
+	
+	bra @update_end_chain
+@not_first_line:
+	; if it's not, update input_mode_end_chain ;
+	lda input_mode_end_chain
+	sta ptr4
+	lda input_mode_end_chain + 1
+	sta ptr4 + 1
+	lda #<ptr4
+	jsr set_extmem_wptr
+	lda input_mode_end_chain + 2
+	jsr set_extmem_bank
+	
+	ldy #2
+	:
+	lda ptr2, Y
+	jsr writef_byte_extmem_y
+	dey
+	bpl :-
+@update_end_chain:
+	; set end chain to this ;
+	lda ptr2
+	sta input_mode_end_chain
+	lda ptr2 + 1
+	sta input_mode_end_chain + 1
+	lda ptr3
+	sta input_mode_end_chain + 2
+	
+	lda @read_buf_file_have_more_bytes
+	beq @end_of_text
+	jmp @read_next_line
+	
+@end_of_text:
 	lda ptr0
 	jsr close_file
+	; stitch lines back together ;
+	
+	lda input_cmd
+	cmp #'r'
+	beq @keep_existing_buff
+	; delete current lines ;
+	phy_word input_begin_lineno
+	phy_word input_end_lineno
+	lda #1
+	sta input_begin_lineno
+	stz input_begin_lineno + 1
+	
+	lda line_count
+	sta input_end_lineno
+	lda line_count + 1
+	sta input_end_lineno + 1
+	jsr delete_lines
+	
+	ply_word input_end_lineno
+	ply_word input_begin_lineno
+@keep_existing_buff:
+	lda #'a'
+	sta input_mode
+	jsr stitch_input_lines	
+	stz input_mode
+	jsr reorder_lines
+	
+	lda #1
+	sta edits_made
+	
+	; can we use stitch routine from append/insert ? ;
 	
 	rts
+	
+@read_error:
+	lda ptr0
+	jsr close_file
+	lda #ERRNO_ERR_READ_FILE
+	sta last_error
+	rts
+
+@read_buf_file_have_more_bytes:
+	.byte 0
 	
 write_buf_file:
 	jsr get_io_filename
-	pha
-	lda last_error ; if error, return
+	ldy last_error ; if error, return
 	beq @open_file
-	pla
 	rts
 @open_file:
-	pla
 	; now we can open file for writing ;
 	
 	; check whether to append or overwrite ;
@@ -1380,7 +1658,6 @@ write_buf_file:
 @open_success:
 	sta ptr0 ; store fileno in ptr0
 	
-	stp
 	lda input_begin_lineno
 	ldx input_begin_lineno + 1
 	dec_ax
@@ -1431,9 +1708,24 @@ write_buf_file:
 	ldy #3
 	lda (ptr2), Y
 	tax
+	
+	lda ptr1 
+	ldy ptr1
+	inc A
+	bne :+
+	iny
+	:
+	; .AY = ptr1 + 1
+	cmp input_end_lineno
+	bne :+
+	cmp input_end_lineno + 1
+	beq @last_line_dont_add_cr
+	:
+	
 	lda #$d
 	sta line_copy, X
 	inx
+@last_line_dont_add_cr:
 	stz line_copy, X
 	
 	stx r1
@@ -1576,6 +1868,7 @@ print_error:
 
 errno_pointers:
 	.word $FFFF, errno_str_invalid_format, errno_str_unk_cmd, errno_str_invalid_addr, errno_str_no_cur_filename, errno_str_cannot_open_file
+	.word errno_str_read_file_error, errno_str_warn_buff_mod
 	
 errno_str_invalid_format:
 	.asciiz "Invalid format"
@@ -1587,10 +1880,13 @@ errno_str_no_cur_filename:
 	.asciiz "No current filename"
 errno_str_cannot_open_file:
 	.asciiz "Cannot open file"
-
+errno_str_read_file_error:
+	.asciiz "Error reading from file"
+errno_str_warn_buff_mod:
+	.asciiz "Warning: buffer modified"
 
 ; get next avail extmem space ;
-; args: .AX -> data len ; (0 = 256)
+; args: .AX -> data len ;
 ; returns .AX -> extmem addr Y -> bank
 find_extmem_space:
 	phy_word sptr8
@@ -1695,6 +1991,10 @@ space_left_extmem_ptr:
 	bcs @end ; good enough
 	
 	ldy #3
+	jsr readf_byte_extmem_y
+	cmp #0
+	bne @end
+	dey ; y = 2
 	jsr readf_byte_extmem_y
 	cmp #0
 	bne @end
@@ -1814,6 +2114,8 @@ input_end_lineno:
 input_begin_set:
 	.byte 0
 input_end_set:
+	.byte 0
+input_end_explicit_set:
 	.byte 0
 	
 input_cmd:

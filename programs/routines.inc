@@ -46,3 +46,5 @@ memmove_extmem := $9D51
 fill_extmem := $9D54
 
 wait_process := $9D5D
+fgetc := $9D60
+fputc := $9D63
