@@ -219,11 +219,11 @@ readf_word_extmem_y:
 
 ;
 ; Write (wptr), Y to extmem
-; preserves .X, .Y, NOT .A
+; preserves .X, .Y, .A
 ;
 .export writef_byte_extmem_y
 writef_byte_extmem_y:
-	pha 
+	sta KZE1
 	phx
 	ldx STORE_PROG_EXTMEM_WPTR
 	lda $00, X
@@ -234,23 +234,26 @@ writef_byte_extmem_y:
 	lda STORE_PROG_EXTMEM_BANK
 	sta RAM_BANK
 	plx
-	pla
+	
+	lda KZE1
 	
 	sta (KZE0), Y
 	
 	lda current_program_id
 	sta RAM_BANK
+	
+	lda KZE1
 	rts 
 
 ;
 ; Write two bytes to (wptr), Y
 ; .Y will be incremented by 2 after call
-; Does not preserve .AX
+; Preserves .AX
 ;
 .export writef_word_extmem_y
 writef_word_extmem_y:
-	pha
-	phx
+	sta KZE1
+	stx KZE1 + 1
 	ldx STORE_PROG_EXTMEM_WPTR
 	lda $00, X
 	sta KZE0
@@ -259,17 +262,19 @@ writef_word_extmem_y:
 	
 	lda STORE_PROG_EXTMEM_BANK
 	sta RAM_BANK
-	plx
-	pla
 	
-	lda (KZE0), Y
-	txa
-	iny 
-	lda (KZE0), Y
+	lda KZE1
+	sta (KZE0), Y
 	iny
+	lda KZE1 + 1
+	sta (KZE0), Y
+	iny
+	tax ; .X now restored
 	
 	lda current_program_id
 	sta RAM_BANK
+	
+	lda KZE1
 	rts
 
 ;
@@ -303,7 +308,7 @@ vread_byte_extmem_y:
 ; vwrite_byte_extmem_y
 ;
 ; Writes .A to mem addr (X) + Y
-; .preserves .XY
+; .preserves .AXY
 ;
 .export vwrite_byte_extmem_y
 vwrite_byte_extmem_y:
@@ -325,6 +330,7 @@ vwrite_byte_extmem_y:
 	sta RAM_BANK
 	
 	ply
+	lda KZE1
 	rts
 
 ;
@@ -411,5 +417,48 @@ memmove_extmem:
 	lda current_program_id
 	sta RAM_BANK
 	lda #0
+	rts
+
+;
+; extmem_fill
+;
+; Sets [r0, r0 + r1] in the previously set bank to .A
+;
+.export fill_extmem
+fill_extmem:
+	sta KZE2
+	
+	lda r1
+	ora r1 + 1
+	bne :+
+	rts ; if we don't need to copy any bytes, just exit
+	:
+	
+	lda STORE_PROG_EXTMEM_BANK
+	sta RAM_BANK
+	
+	ldsta_word r0, KZE0
+	ldsta_word r1, KZE1
+	inc KZE1 + 1
+	
+	ldy #0
+	ldx r1
+	lda KZE2	
+@loop:
+	sta (KZE0), Y
+	
+	iny
+	bne :+
+	inc KZE0 + 1
+	:
+	dex
+	bne :+
+	dec KZE1 + 1
+	beq @end
+	:
+	bra @loop
+@end:	
+	lda current_program_id
+	sta RAM_BANK
 	rts
 	

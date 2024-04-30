@@ -18,7 +18,7 @@
 
 .import res_extmem_bank, set_extmem_bank, set_extmem_rptr, set_extmem_wptr
 .import readf_byte_extmem_y, readf_word_extmem_y, vread_byte_extmem_y
-.import writef_byte_extmem_y, writef_word_extmem_y, vwrite_byte_extmem_y, memmove_extmem
+.import writef_byte_extmem_y, writef_word_extmem_y, vwrite_byte_extmem_y, memmove_extmem, fill_extmem
 
 .import surrender_process_time	
 .import irq_already_triggered
@@ -61,7 +61,7 @@ call_table:
 	jmp writef_word_extmem_y ; $9D4B
 	jmp vwrite_byte_extmem_y ; $9D4E
 	jmp memmove_extmem ; $9D51
-	jmp $FFFF ; $9D54
+	jmp fill_extmem ; $9D54
 	jmp $FFFF ; $9D57
 	jmp $FFFF ; $9D5A
 	jmp wait_process ; $9D5D
