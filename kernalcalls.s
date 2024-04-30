@@ -65,6 +65,8 @@ call_table:
 	jmp $FFFF ; $9D57
 	jmp $FFFF ; $9D5A
 	jmp wait_process ; $9D5D
+	jmp fgetc ; $9D60
+	jmp fputc ; $9D63
 .export call_table_end
 call_table_end:
 
