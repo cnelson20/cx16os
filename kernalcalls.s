@@ -16,7 +16,7 @@
 .import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, open_dir_listing_ext
 .import get_pwd_ext, chdir_ext
 
-.import res_extmem_bank, set_extmem_bank, set_extmem_rptr, set_extmem_wptr
+.import res_extmem_bank, set_extmem_rbank, set_extmem_wbank, set_extmem_rptr, set_extmem_wptr
 .import readf_byte_extmem_y, readf_word_extmem_y, vread_byte_extmem_y
 .import writef_byte_extmem_y, writef_word_extmem_y, vwrite_byte_extmem_y, memmove_extmem, fill_extmem
 
@@ -51,7 +51,7 @@ call_table:
 	jmp get_pwd_ext ; $9D2D
 	jmp chdir_ext ; $9D30
 	jmp res_extmem_bank ; $9D33
-	jmp set_extmem_bank ; $9D36
+	jmp set_extmem_rbank ; $9D36
 	jmp set_extmem_rptr ; $9D39
 	jmp set_extmem_wptr ; $9D3C
 	jmp readf_byte_extmem_y ; $9D3F
@@ -62,7 +62,7 @@ call_table:
 	jmp vwrite_byte_extmem_y ; $9D4E
 	jmp memmove_extmem ; $9D51
 	jmp fill_extmem ; $9D54
-	jmp $FFFF ; $9D57
+	jmp set_extmem_wbank ; $9D57
 	jmp $FFFF ; $9D5A
 	jmp wait_process ; $9D5D
 	jmp fgetc ; $9D60
@@ -146,11 +146,6 @@ fputc:
 	
 	; can just print normally to a file ;
 	jsr CHROUT
-	cmp #$d
-	bne :+
-	lda #$a
-	jsr CHROUT
-	:
 	pha
 	jsr CLRCHN
 	pla

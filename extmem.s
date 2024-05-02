@@ -83,17 +83,17 @@ clear_process_extmem_banks:
 	rts
 
 ;
-; Set a process' extmem bank (in .A)
+; Set a process' extmem read bank (in .A)
 ; Returns 0 on success, !0 on error
 ; preserves .Y
 ;
-.export set_extmem_bank
-set_extmem_bank:
+.export set_extmem_rbank
+set_extmem_rbank:
 	cmp #0
 	bne :+
 	
 	lda current_program_id
-	sta STORE_PROG_EXTMEM_BANK
+	sta STORE_PROG_EXTMEM_RBANK
 	rts
 	
 	:
@@ -109,7 +109,38 @@ set_extmem_bank:
 	rts
 	:
 	pla
-	sta STORE_PROG_EXTMEM_BANK
+	sta STORE_PROG_EXTMEM_RBANK
+	lda #0
+	rts
+	
+;
+; Set a process' extmem write bank (in .A)
+; Returns 0 on success, !0 on error
+; preserves .Y
+;
+.export set_extmem_wbank
+set_extmem_wbank:
+	cmp #0
+	bne :+
+	
+	lda current_program_id
+	sta STORE_PROG_EXTMEM_WBANK
+	rts
+	
+	:
+	pha
+	and #$FE ; %1111 1110
+	tax
+	lda current_program_id
+	cmp process_table, X
+	beq :+
+	; not this program's bank, error
+	pla
+	lda #1 ; return non-zero
+	rts
+	:
+	pla
+	sta STORE_PROG_EXTMEM_WBANK
 	lda #0
 	rts
 
@@ -177,7 +208,7 @@ readf_byte_extmem_y:
 	lda $01, X
 	sta KZE0 + 1
 	
-	lda STORE_PROG_EXTMEM_BANK
+	lda STORE_PROG_EXTMEM_RBANK
 	sta RAM_BANK
 	
 	lda (KZE0), Y
@@ -200,7 +231,7 @@ readf_word_extmem_y:
 	lda $01, X
 	sta KZE0 + 1
 	
-	lda STORE_PROG_EXTMEM_BANK
+	lda STORE_PROG_EXTMEM_RBANK
 	sta RAM_BANK
 	
 	lda (KZE0), Y
@@ -231,7 +262,7 @@ writef_byte_extmem_y:
 	lda $01, X
 	sta KZE0 + 1
 	
-	lda STORE_PROG_EXTMEM_BANK
+	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
 	plx
 	
@@ -260,7 +291,7 @@ writef_word_extmem_y:
 	lda $01, X
 	sta KZE0 + 1
 	
-	lda STORE_PROG_EXTMEM_BANK
+	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
 	
 	lda KZE1
@@ -290,7 +321,7 @@ vread_byte_extmem_y:
 	lda $01, X
 	sta KZE0 + 1
 	
-	lda STORE_PROG_EXTMEM_BANK
+	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
 	
 	lda (KZE0), Y
@@ -320,7 +351,7 @@ vwrite_byte_extmem_y:
 	lda $01, X
 	sta KZE1	
 	
-	lda STORE_PROG_EXTMEM_BANK
+	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
 	
 	lda KZE1
@@ -434,7 +465,7 @@ fill_extmem:
 	rts ; if we don't need to copy any bytes, just exit
 	:
 	
-	lda STORE_PROG_EXTMEM_BANK
+	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
 	
 	ldsta_word r0, KZE0

@@ -779,7 +779,9 @@ setup_process_info:
 	sta STORE_PROG_ADDR + 1
 	
 	lda RAM_BANK
-	sta STORE_PROG_EXTMEM_BANK
+	sta STORE_PROG_EXTMEM_RBANK
+	sta STORE_PROG_EXTMEM_WBANK
+	
 	lda #<r4
 	sta STORE_PROG_EXTMEM_WPTR
 	lda #<r5
