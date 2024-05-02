@@ -63,6 +63,7 @@ r0 := $02
 r1 := $04
 r2 := $06
 r3 := $08
+r4 := $0A
 
 ptr0 := $30
 ptr1 := $32
@@ -76,6 +77,11 @@ ptr7 := $3E
 sptr8 := $40
 sptr9 := $42
 sptr10 := $44
+sptr11 := $46
+sptr12 := $48
+sptr13 := $4A
+sptr14 := $4C
+sptr15 := $4E
 
 MAX_LINE_LENGTH := ( 256 - 4 )
 
@@ -237,9 +243,6 @@ parse_user_cmd:
 	stz input_end_lineno
 	stz input_end_lineno + 1
 	
-	stz input_cmd_args_int
-	stz input_cmd_args_int + 1
-	
 	stz input_cmd
 
 	lda #1
@@ -349,6 +352,10 @@ parse_cmd_first_num:
 	.byte 0
 	
 parse_cmd_args:
+	lda #$FF
+	sta input_cmd_args_int ; set to $FFFF
+	sta input_cmd_args_int + 1
+	
 	inx
 	
 	lda input, X
@@ -548,7 +555,7 @@ handle_new_line_text:
 	; store data in extmem ;
 	; next word, next bank byte, data size byte, data
 	lda ptr2
-	jsr set_extmem_bank
+	jsr set_extmem_wbank
 	lda #<ptr1
 	jsr set_extmem_wptr
 	
@@ -600,7 +607,7 @@ handle_new_line_text:
 	beq :+ ; no end of chain to link onto
 	
 	lda input_mode_end_chain + 2
-	jsr set_extmem_bank
+	jsr set_extmem_wbank
 	
 	lda input_mode_end_chain
 	sta ptr3
@@ -684,22 +691,27 @@ stitch_input_lines:
 	:
 	; this line is not the first line of the buffer ;	
 	
-	; line nums are 1-based in ed, need to translate into an offset ;
+	; line nums are 1-based in ed, need to translate into an ptr into lines_ordered in extmem ;
 	lda input_begin_lineno
 	ldx input_begin_lineno + 1
 	jsr get_lines_ordered_offset_not_decremented
 	sta ptr0
 	stx ptr0 + 1
 	
+	lda lines_ordered_bank
+	sta set_extmem_rbank
+	lda #<ptr0
+	jsr set_extmem_rptr
+	
 	ldy #0
-	lda (ptr0), Y
+	jsr readf_byte_extmem_y
 	sta ptr1
 	iny
-	lda (ptr0), Y
+	jsr readf_byte_extmem_y
 	sta ptr1 + 1
 	iny
-	lda (ptr0), Y
-	jsr set_extmem_bank
+	jsr readf_byte_extmem_y
+	jsr set_extmem_wbank
 	
 	; before -> next = start of chain
 	lda #<ptr1
@@ -717,7 +729,7 @@ stitch_input_lines:
 	lda input_mode_end_chain + 1
 	sta ptr1 + 1
 	lda input_mode_end_chain + 2
-	jsr set_extmem_bank
+	jsr set_extmem_wbank
 	; wptr is alr set as ptr1 ;
 	
 	; compare begin_line with line_count
@@ -741,15 +753,15 @@ stitch_input_lines:
 @not_last_line:
 	; otherwise fill it correctly ;
 	ldy #4
-	lda (ptr0), Y
+	jsr readf_byte_extmem_y
 	ldy #0
 	jsr writef_byte_extmem_y
 	ldy #5
-	lda (ptr0), Y
+	jsr readf_byte_extmem_y
 	ldy #1
 	jsr writef_byte_extmem_y
 	ldy #6
-	lda (ptr0), Y
+	jsr readf_byte_extmem_y
 	ldy #2
 	jsr writef_byte_extmem_y
 
@@ -770,7 +782,7 @@ stitch_input_lines:
 	beq @only_lines
 	
 	lda input_mode_end_chain + 2
-	jsr set_extmem_bank
+	jsr set_extmem_wbank
 	
 	; add rest of buff to end of new input ;
 	lda input_mode_end_chain
@@ -910,7 +922,7 @@ cmd_list_fxns:
 	.word read_buf_file, set_print_default_filename, not_implemented, not_implemented
 	; h, i, j, l, m, n, p, q
 	.word print_last_error, enter_input_mode, not_implemented, print_lines
-	.word not_implemented, print_lines, print_lines, exit_ed
+	.word move_lines, print_lines, print_lines, exit_ed
 	; Q, r, t, v, V, w, W, x
 	.word exit_ed, read_buf_file, not_implemented, not_implemented
 	.word not_implemented, write_buf_file, not_implemented, not_implemented
@@ -1123,21 +1135,26 @@ print_lines:
 	sta r0 + 1
 	stz r2
 	
+	lda lines_ordered_bank
+	jsr set_extmem_rbank
+	lda #<ptr1
+	jsr set_extmem_rptr
+	
 	ldy #0
 	clc
-	lda (ptr1), Y
+	jsr readf_byte_extmem_y
 	adc #4
 	sta r1
 	iny
-	lda (ptr1), Y
+	jsr readf_byte_extmem_y
 	adc #0
 	sta r1 + 1
 	iny
-	lda (ptr1), Y
+	jsr readf_byte_extmem_y
 	sta r3	
 
 	iny
-	lda (ptr1), Y
+	jsr readf_byte_extmem_y
 	pha
 	ldx #0
 	jsr memmove_extmem
@@ -1176,6 +1193,358 @@ print_lines:
 @end:
 	rts
 
+move_lines:
+	; 4 of these vars can fit into ptr2 - ptr7
+@addr_line_before := ptr2 ; (ptr2.L - ptr3.L)
+@addr_line_after := ptr3 + 1 ; (ptr3.H - ptr3.H)
+@first_moved_line := ptr5 ; (ptr5.L - ptr6.L)
+@last_moved_line := ptr6 + 1 ; (ptr6.H - ptr7.H)	
+	
+	lda input_begin_lineno
+	ora input_begin_lineno + 1
+	bne :+
+	lda #ERRNO_INVALID_ADDR
+	sta last_error
+	rts
+	:
+	
+	; make sure dest addr exists and that dest < begin OR end < dest
+	lda input_cmd_args_int
+	and input_cmd_args_int + 1
+	cmp #$FF ; if input_cmd_args_int = $FFFF, exit because not set
+	bne :+
+	lda #ERRNO_INVALID_FORMAT
+	sta last_error
+	rts
+	:
+	jmp @no_invalid_addr_exit
+@invalid_addr_exit:
+	lda #ERRNO_INVALID_ADDR
+	sta last_error
+	rts
+@no_invalid_addr_exit:
+	lda input_cmd_args_int + 1
+	cmp input_begin_lineno + 1
+	bcc @dest_addr_good
+	bne @check_end_leq_dest ; if >
+	lda input_cmd_args_int
+	cmp input_begin_lineno
+	bcc @dest_addr_good
+	
+@check_end_leq_dest:
+	lda input_end_lineno + 1
+	cmp input_cmd_args_int + 1
+	bcc @dest_addr_good
+	bne @invalid_addr_exit ; if > 
+	lda input_end_lineno
+	cmp input_cmd_args_int
+	bcs @invalid_addr_exit
+
+@dest_addr_good:
+	lda #<ptr0
+	jsr set_extmem_rptr
+	lda lines_ordered_bank
+	jsr set_extmem_rbank
+	
+	lda input_begin_lineno
+	ldx input_begin_lineno + 1
+	dec_ax
+	cmp #0
+	bne @not_moving_first_line
+	cpx #0
+	bne @not_moving_first_line
+	
+	stz @addr_line_before
+	stz @addr_line_before + 1
+	stz @addr_line_before + 2
+	bra @get_line_after_addr
+	
+@not_moving_first_line:
+	jsr get_lines_ordered_offset_not_decremented
+	sta ptr0
+	stx ptr0 + 1
+	
+	ldy #2
+	:
+	jsr readf_byte_extmem_y
+	sta @addr_line_before, Y
+	dey
+	bpl :-
+	
+@get_line_after_addr:
+	lda input_end_lineno
+	ldx input_end_lineno + 1
+	cmp line_count
+	bne :+
+	cpx line_count + 1
+	bne :+
+	; zero @addr_line_after
+	stz @addr_line_after
+	stz @addr_line_after + 1
+	stz @addr_line_after + 2
+	jmp @get_first_moved_line_addr
+	:
+	jsr get_lines_ordered_offset_alr_decremented ; get offset of end + 1
+	sta ptr0
+	stx ptr0 + 1
+	
+	ldy #2
+	:
+	jsr readf_byte_extmem_y
+	sta @addr_line_after, Y
+	dey
+	bpl :-
+	
+@get_first_moved_line_addr:
+	; store to @first_moved_line
+	lda input_begin_lineno
+	ldx input_begin_lineno + 1
+	jsr get_lines_ordered_offset_not_decremented
+	sta ptr0
+	stx ptr0 + 1
+	
+	ldy #2
+	:
+	jsr readf_byte_extmem_y
+	sta @first_moved_line, Y
+	dey 
+	bpl :-
+
+@get_last_moved_line_addr:
+	; do same for end_lineno to @last_moved_line
+	lda input_end_lineno
+	ldx input_end_lineno + 1
+	jsr get_lines_ordered_offset_not_decremented
+	sta ptr0
+	stx ptr0 + 1
+	
+	ldy #2
+	:
+	jsr readf_byte_extmem_y
+	sta @last_moved_line, Y
+	dey 
+	bpl :-
+
+@get_move_line:
+	lda input_cmd_args_int
+	ora input_cmd_args_int + 1
+	bne :+
+	stz @move_line
+	stz @move_line + 1
+	stz @move_line + 2
+	bra @get_move_line_after
+	:
+	lda input_cmd_args_int
+	ldx input_cmd_args_int + 1
+	jsr get_lines_ordered_offset_not_decremented
+	sta ptr0
+	stx ptr0 + 1
+	ldy #2
+	:
+	jsr readf_byte_extmem_y
+	sta @move_line, Y
+	dey 
+	bpl :-
+	
+@get_move_line_after:
+	lda input_cmd_args_int
+	ldx input_cmd_args_int + 1
+	cmp line_count
+	bne :+
+	cpx line_count + 1
+	bne :+
+	stz @move_line_after
+	stz @move_line_after + 1
+	stz @move_line_after + 2
+	bra @change_pointers
+	:
+	jsr get_lines_ordered_offset_alr_decremented ; get offset for dest + 1
+	sta ptr0 
+	stx ptr0 + 1
+	
+	ldy #2
+	:
+	jsr readf_byte_extmem_y
+	sta @move_line_after, Y
+	dey
+	bpl :-
+	
+@change_pointers:
+	; now we can do the moving around ;
+	; For a,b m c
+	; (a - 1) -> next = b + 1
+	; c -> next = a
+	; b -> next = (c + 1)
+	; addr_line_before -> next = addr_line_after
+	; move_line -> next = first_moved_line
+	; last_moved_line -> next = move_line_after
+	lda #<ptr1
+	jsr set_extmem_wptr
+
+@first_pointer_move:
+	; addr_line_before -> next = addr_line_after
+	; If we're moving the first line, we will have a new first line ;	
+	lda @addr_line_before
+	ora @addr_line_before + 1
+	bne @not_moving_first_line_pointer
+	
+	; if we're moving the first line to the start of the file, no move is actually needed ;
+	; 1,x m 0
+	lda input_cmd_args_int 
+	ora input_cmd_args_int + 1
+	bne :+
+	rts
+	:
+	lda @addr_line_after
+	sta first_line
+	lda @addr_line_after + 1
+	sta first_line + 1
+	lda @addr_line_after + 2
+	sta first_line + 2
+	bra @second_pointer_move
+	
+@not_moving_first_line_pointer:
+	lda @addr_line_before
+	sta ptr1
+	lda @addr_line_before + 1
+	sta ptr1 + 1
+	
+	lda @addr_line_before + 2
+	jsr set_extmem_wbank
+	
+	ldy #2
+	lda @addr_line_after
+	ora @addr_line_after + 1
+	beq @new_last_line
+	
+	:
+	lda @addr_line_after, Y
+	jsr writef_byte_extmem_y
+	dey
+	bpl :-
+	
+	bra @second_pointer_move
+
+@new_last_line:
+	lda #0
+	:
+	jsr writef_byte_extmem_y
+	dey
+	bpl :-
+
+@second_pointer_move:
+	; move_line -> next = first_moved_line
+	lda @move_line
+	ora @move_line
+	beq @sec_move_new_first_line
+	
+	lda @move_line
+	sta ptr1
+	lda @move_line + 1
+	sta ptr1 + 1
+	lda @move_line + 2
+	jsr set_extmem_wbank
+	ldy #2
+	:
+	lda @first_moved_line, Y
+	jsr writef_byte_extmem_y
+	dey
+	bpl :-
+	bra @third_pointer_move	
+	
+@sec_move_new_first_line:
+	ldy #2
+	:
+	lda @first_moved_line, Y
+	sta first_line, Y
+	dey
+	bpl :-
+	bra @third_pointer_move
+	
+@third_pointer_move:
+	; last_moved_line -> next = move_line_after
+	lda @last_moved_line
+	sta ptr1
+	lda @last_moved_line + 1
+	sta ptr1 + 1
+	lda @last_moved_line + 2
+	jsr set_extmem_wbank
+	
+	ldy #2
+	lda @move_line_after
+	ora @move_line_after + 1
+	beq @third_move_new_last_line
+	
+	:
+	lda @move_line_after, Y
+	jsr writef_byte_extmem_y
+	dey
+	bpl :-
+	bra @end
+	
+@third_move_new_last_line:
+	lda #0
+	:
+	jsr writef_byte_extmem_y
+	dey
+	bpl :-
+	bra @end
+	
+@end:
+	; Test if end_lineno < dest
+	lda input_end_lineno + 1
+	cmp input_cmd_args_int + 1
+	bcc @end_less_dest
+	bne @end_greater_dest
+	; high bytes are equal
+	lda input_end_lineno
+	cmp input_cmd_args_int
+	bcs @end_greater_dest
+	
+@end_less_dest:
+	lda input_cmd_args_int
+	sta curr_lineno
+	lda input_cmd_args_int + 1
+	sta curr_lineno + 1
+	
+	bra @reorder
+@end_greater_dest:
+	; dest < end_lineno ;
+	; this means dest < begin ;
+	; so curr_lineno = dest + (end - begin) + 1
+	
+	sec
+	lda input_end_lineno
+	sbc input_begin_lineno
+	sta curr_lineno
+	lda input_end_lineno + 1
+	sta input_begin_lineno + 1
+	sta curr_lineno + 1
+	
+	clc
+	lda input_cmd_args_int
+	adc curr_lineno
+	sta input_cmd_args_int
+	lda input_cmd_args_int + 1
+	adc curr_lineno + 1
+	
+	inc curr_lineno
+	bne :+
+	inc A
+	:
+	sta input_cmd_args_int + 1
+	
+@reorder:
+	jsr reorder_lines
+	lda #1
+	sta edits_made
+	rts
+@move_line:
+	.res 3
+@move_line_after:
+	.res 3	
+
+
 delete_lines:
 	lda input_begin_lineno
 	ora input_begin_lineno + 1
@@ -1205,19 +1574,24 @@ delete_lines:
 	bcs @end
 	
 @delete_line:
+	lda #<ptr1
+	jsr set_extmem_rptr
+	lda lines_ordered_bank
+	jsr set_extmem_rbank
+
 	ldy #0
-	lda (ptr1), Y
+	jsr readf_byte_extmem_y
 	sta r0
 	iny ; y = 1
-	lda (ptr1), Y
+	jsr readf_byte_extmem_y
 	sta r0 + 1
 	
 	iny ; y = 2
-	lda (ptr1), Y
-	jsr set_extmem_bank
+	jsr readf_byte_extmem_y
+	jsr set_extmem_wbank
 	
 	iny ; y = 3
-	lda (ptr1), Y ; data size
+	jsr readf_byte_extmem_y ; data size
 	clc
 	adc #3
 	ora #$3F
@@ -1273,9 +1647,15 @@ delete_lines:
 	jsr get_lines_ordered_offset_alr_decremented
 	sta ptr1
 	stx ptr1 + 1
+	
+	lda lines_ordered_bank
+	jsr set_extmem_rbank
+	lda #<ptr1
+	jsr set_extmem_rptr
+	
 	ldy #3
 	:
-	lda (ptr1), Y
+	jsr readf_byte_extmem_y
 	sta first_line, Y
 	dey
 	bpl :-
@@ -1293,15 +1673,20 @@ delete_lines:
 	sta ptr1
 	stx ptr1 + 1
 	
+	lda lines_ordered_bank
+	jsr set_extmem_rbank
+	lda #<ptr1
+	jsr set_extmem_rptr
+	
 	ldy #0
-	lda (ptr1), Y
+	jsr readf_byte_extmem_y
 	sta ptr3
 	iny ; y = 1
-	lda (ptr1), Y
+	jsr readf_byte_extmem_y
 	sta ptr3 + 1
 	iny
-	lda (ptr1), Y
-	jsr set_extmem_bank
+	jsr readf_byte_extmem_y
+	jsr set_extmem_wbank
 	
 	lda #<ptr3
 	jsr set_extmem_wptr
@@ -1335,9 +1720,14 @@ delete_lines:
 	sta ptr2
 	stx ptr2 + 1
 	
+	lda lines_ordered_bank
+	jsr set_extmem_rbank
+	lda #<ptr2
+	jsr set_extmem_rptr
+	
 	ldy #2
 	:
-	lda (ptr2), Y
+	jsr readf_byte_extmem_y
 	jsr writef_byte_extmem_y
 	dey
 	bpl :-
@@ -1439,7 +1829,6 @@ read_buf_file:
 	lda #>input
 	sta r0 + 1
 	
-	inc_word input_mode_line_count	
 @read_next_line_loop:	
 	lda #1
 	sta r1
@@ -1485,6 +1874,15 @@ read_buf_file:
 	jmp @read_next_line_loop
 	
 @end_of_line:
+	lda ptr1
+	ora @read_buf_file_have_more_bytes
+	bne :+
+	; if line is not empty or eof is not reached, continue
+	jmp @end_of_text
+	:
+	
+	inc_word input_mode_line_count
+	
 	lda ptr0
 	pha ; push ptr0
 	
@@ -1519,7 +1917,7 @@ read_buf_file:
 	lda #<ptr2
 	jsr set_extmem_wptr
 	lda ptr3
-	jsr set_extmem_bank
+	jsr set_extmem_wbank
 	ldy #3
 	lda ptr4
 	jsr writef_byte_extmem_y
@@ -1571,7 +1969,7 @@ read_buf_file:
 	lda #<ptr4
 	jsr set_extmem_wptr
 	lda input_mode_end_chain + 2
-	jsr set_extmem_bank
+	jsr set_extmem_wbank
 	
 	ldy #2
 	:
@@ -1601,6 +1999,10 @@ read_buf_file:
 	cmp #'r'
 	beq @keep_existing_buff
 	; delete current lines ;
+	lda line_count
+	ora line_count + 1
+	beq @keep_existing_buff
+	
 	phy_word input_begin_lineno
 	phy_word input_end_lineno
 	lda #1
@@ -1616,6 +2018,7 @@ read_buf_file:
 	ply_word input_end_lineno
 	ply_word input_begin_lineno
 @keep_existing_buff:
+	; we use stitch routine from append/insert ;
 	lda #'a'
 	sta input_mode
 	jsr stitch_input_lines	
@@ -1623,10 +2026,7 @@ read_buf_file:
 	jsr reorder_lines
 	
 	lda #1
-	sta edits_made
-	
-	; can we use stitch routine from append/insert ? ;
-	
+	sta edits_made	
 	rts
 	
 @read_error:
@@ -1688,27 +2088,32 @@ write_buf_file:
 	sta r0 + 1
 	stz r2
 	
+	lda lines_ordered_bank
+	jsr set_extmem_rbank
+	lda #<ptr2
+	jsr set_extmem_rptr
+	
 	ldy #0
 	clc
-	lda (ptr2), Y
+	jsr readf_byte_extmem_y
 	adc #4
 	sta r1
 	iny ; y = 1
-	lda (ptr2), Y
+	jsr readf_byte_extmem_y
 	adc #0
 	sta r1 + 1
 	
 	iny ; y = 2
-	lda (ptr2), Y
+	jsr readf_byte_extmem_y
 	sta r3
 	iny ; y = 3
-	lda (ptr2), Y
+	jsr readf_byte_extmem_y
 	ldx #0
 	
 	jsr memmove_extmem
 	
 	ldy #3
-	lda (ptr2), Y
+	jsr readf_byte_extmem_y
 	tax
 	
 	lda ptr1 
@@ -1979,7 +2384,7 @@ space_left_extmem_ptr:
 	stx ptr1 + 1 ; ptr1 is our working pointer
 	
 	tya
-	jsr set_extmem_bank
+	jsr set_extmem_rbank
 	lda #<ptr1
 	jsr set_extmem_rptr
 
@@ -2047,6 +2452,8 @@ get_lines_ordered_offset_alr_decremented:
 	.byte 0
 
 reorder_lines:
+	;stp
+	
 	ldx #3
 	:
 	lda first_line, X
@@ -2058,6 +2465,11 @@ reorder_lines:
 	sta ptr2
 	lda #>lines_ordered
 	sta ptr2 + 1
+	
+	lda lines_ordered_bank
+	jsr set_extmem_wbank
+	lda #<ptr2
+	jsr set_extmem_wptr
 	
 	stz line_count
 	stz line_count + 1
@@ -2076,17 +2488,17 @@ reorder_lines:
 	
 	lda ptr0
 	sta r1
-	sta (ptr2), Y
+	jsr writef_byte_extmem_y
 	incptrY ptr2
 	
 	lda ptr0 + 1
 	sta r1 + 1
-	sta (ptr2), Y
+	jsr writef_byte_extmem_y
 	incptrY ptr2
 	
 	lda ptr0 + 2
 	sta r3
-	sta (ptr2), Y
+	jsr writef_byte_extmem_y
 	incptrY ptr2
 	
 	lda #4
@@ -2098,7 +2510,7 @@ reorder_lines:
 	
 	; get data len ;
 	lda ptr0 + 3
-	sta (ptr2), Y
+	jsr writef_byte_extmem_y
 	incptrY ptr2
 	
 	inc_word line_count
@@ -2169,5 +2581,5 @@ line_copy:
 	.res 256
 
 ; max lines = (1D00 - binary size) / 4
-lines_ordered:
+lines_ordered := $A000
 	
