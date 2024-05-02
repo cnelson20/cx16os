@@ -296,6 +296,7 @@ get_dir_filename_ext:
 	inc A
 	:
 	pha ; store n
+	ldx #0
 	jsr memcpy_ext
 	; make sure string is null term'd
 	pla ; pull n
@@ -307,6 +308,7 @@ get_dir_filename_ext:
 	ldsta_word KZES5, KZE1
 	ldsta_word KZES4, KZE0
 	lda KZES6
+	ldx #0
 	jsr memcpy_ext
 	
 	pla_word KZES6
@@ -373,6 +375,53 @@ setup_process_file_table_int:
 	rts
 
 ;
+; wait_dos_channel
+;
+; waits for dos channel to open up
+;
+wait_dos_channel:
+	pha	; preserve .A, RAM_BANK, and atomic_action_st
+	lda RAM_BANK
+	pha
+	lda atomic_action_st
+	pha 
+	
+	:
+	lda #1
+	sta atomic_action_st
+	sta RAM_BANK
+	lda file_table_count + 15
+	beq :+
+	; if not open, wait for it to be
+	stz atomic_action_st
+	wai
+	bra :-
+	:
+	lda #1
+	sta file_table_count + 15
+	
+	pla
+	sta atomic_action_st
+	pla 
+	sta RAM_BANK
+	pla
+	rts
+
+free_dos_channel:
+	pha
+	lda RAM_BANK
+	pha
+	
+	lda #1
+	sta RAM_BANK
+	stz file_table_count + 15
+	
+	pla
+	sta RAM_BANK
+	pla
+	rts
+
+;
 ; open_file_kernal_ext
 ; 
 ; .A = $FF on failure, or a fd on success
@@ -392,7 +441,8 @@ open_file_kernal_ext:
 	sta KZE3
 	inc A
 	sta KZE2
-	lda #MAX_FILELEN
+	lda #<MAX_FILELEN
+	ldx #0
 	jsr memcpy_banks_ext
 	
 	ldax_addr PV_TMP_FILENAME
@@ -813,11 +863,9 @@ read_stdin:
 ;
 .export write_file_ext
 write_file_ext:
-	lda RAM_BANK
-	sta KZE2 + 1
-	inc A
-	sta RAM_BANK
 	tay
+	inc RAM_BANK
+	
 	lda PV_OPEN_TABLE, Y
 	dec RAM_BANK
 	
@@ -832,8 +880,6 @@ write_file_ext:
 	cmp #1
 	beq write_stdout
 	
-	
-	
 @write_to_file:
 	lda #1
 	sta atomic_action_st ; needs to be uninterrupted
@@ -845,7 +891,7 @@ write_file_ext:
 	jmp @write_file_exit
 	
 @write_file_loop:
-	lda KZE2 + 1 ; restore RAM bank every loop
+	lda current_program_id ; restore RAM bank every loop
 	sta RAM_BANK
 	
 	lda KZE1 + 1
@@ -904,7 +950,7 @@ write_file_ext:
 	ply
 	stz atomic_action_st
 	
-	lda KZE2
+	lda current_program_id
 	sta RAM_BANK
 	
 	lda #0
@@ -952,9 +998,56 @@ open_dir_listing_ext:
 	cpx #$FF
 	beq @open_error
 	
+	; need to wait for channel 15 to open up ;
+	jsr wait_dos_channel
+	
 	lda #1
 	sta atomic_action_st
-
+	
+	; cd to process' pwd ;
+	pha_byte KZE0
+	pha_byte KZE1
+	
+	inc RAM_BANK
+	
+	lda #'C'
+	sta PV_PWD - 3
+	lda #'D'
+	sta PV_PWD - 2
+	lda #':'
+	sta PV_PWD - 1
+	
+	ldax_addr (PV_PWD - 3)
+	pha
+	phx
+	jsr strlen_ext
+	ply
+	plx
+	jsr SETNAM
+	
+	pla_byte KZE1
+	pla_byte KZE0
+	
+	lda #15
+	ldx #8
+	tay
+	jsr SETLFS
+	
+	jsr OPEN
+	dec RAM_BANK ; doesn't affect carry bit
+	php 
+	
+	jsr free_dos_channel
+	
+	plp
+	bcs @open_error
+	
+	; in the future: maybe check status ;	
+	lda #15
+	jsr CLOSE
+	
+	; now get dir listing ;
+	
 	lda #1
 	ldx #<@s
 	ldy #>@s
@@ -972,6 +1065,7 @@ open_dir_listing_ext:
 	ldx #0
 	rts
 @open_error:
+	stz atomic_action_st
 	lda #$FF
 	ldx #$FF
 	rts
@@ -1018,6 +1112,7 @@ get_pwd_ext:
 	
 	pla
 	pha
+	ldx #0
 	jsr memcpy_banks_ext
 	
 	lda current_program_id
@@ -1054,20 +1149,9 @@ chdir_ext:
 	sta PV_TMP_FILENAME + 2
 	
 	; need to wait for dos channel to open up ;	
-	@wait_dos_open:
+	jsr wait_dos_channel
 	lda #1
 	sta atomic_action_st
-	sta RAM_BANK
-	
-	lda file_table_count + 15
-	beq :+
-	stz atomic_action_st
-	wai
-	bra @wait_dos_open
-	:
-	; we can do our stuff now ;
-	lda #1
-	sta file_table_count + 15
 	
 	lda current_program_id
 	inc A
@@ -1106,6 +1190,7 @@ chdir_ext:
 	sta KZE2
 	; load 128 - 3 bytes 
 	lda #128 - 3
+	ldx #0
 	jsr memcpy_banks_ext
 	
 	; now cd to new directory ;
@@ -1152,6 +1237,9 @@ chdir_ext:
 	lda current_program_id
 	inc A
 	sta KZE2
+	
+	lda #<MAX_FILELEN
+	ldx #0
 	jsr memcpy_banks_ext
 	
 	; some ending code ;

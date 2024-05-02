@@ -16,6 +16,11 @@
 .import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, open_dir_listing_ext
 .import get_pwd_ext, chdir_ext
 
+.import res_extmem_bank, set_extmem_rbank, set_extmem_wbank, set_extmem_rptr, set_extmem_wptr
+.import readf_byte_extmem_y, readf_word_extmem_y, vread_byte_extmem_y
+.import writef_byte_extmem_y, writef_word_extmem_y, vwrite_byte_extmem_y, memmove_extmem, fill_extmem
+
+.import surrender_process_time	
 .import irq_already_triggered
 .import atomic_action_st
 .import process_table
@@ -24,6 +29,7 @@
 .import active_process_stack
 .import active_process_sp
 .import current_program_id
+
 
 .export call_table
 call_table:
@@ -44,6 +50,23 @@ call_table:
 	jmp open_dir_listing_ext ; $9D2A
 	jmp get_pwd_ext ; $9D2D
 	jmp chdir_ext ; $9D30
+	jmp res_extmem_bank ; $9D33
+	jmp set_extmem_rbank ; $9D36
+	jmp set_extmem_rptr ; $9D39
+	jmp set_extmem_wptr ; $9D3C
+	jmp readf_byte_extmem_y ; $9D3F
+	jmp readf_word_extmem_y ; $9D42
+	jmp vread_byte_extmem_y ; $9D45
+	jmp writef_byte_extmem_y ; $9D48
+	jmp writef_word_extmem_y ; $9D4B
+	jmp vwrite_byte_extmem_y ; $9D4E
+	jmp memmove_extmem ; $9D51
+	jmp fill_extmem ; $9D54
+	jmp set_extmem_wbank ; $9D57
+	jmp $FFFF ; $9D5A
+	jmp wait_process ; $9D5D
+	jmp fgetc ; $9D60
+	jmp fputc ; $9D63
 .export call_table_end
 call_table_end:
 
@@ -123,11 +146,6 @@ fputc:
 	
 	; can just print normally to a file ;
 	jsr CHROUT
-	cmp #$d
-	bne :+
-	lda #$a
-	jsr CHROUT
-	:
 	pha
 	jsr CLRCHN
 	pla
@@ -148,6 +166,16 @@ fputc:
 ; filters certain invalid chars, then calls CHROUT 
 ;
 putc_v:
+	; need to handle quote mode ;
+	cmp #$22 ; "
+	bne :+
+	pha
+	lda #$80
+	jsr CHROUT
+	pla
+	jmp CHROUT
+	:
+
 	pha
 	and #$7F
 	cmp #$20
@@ -354,38 +382,34 @@ hex_num_to_string:
 kill_process:
 	jmp kill_process_kernal
 
+; 
+; waits until process in .A is completed
 ;
-; open_file_kernal_ext	
-;
-; opens file with name in .AX
-; read_mode ('r', 'w', etc.) in .Y
-;
-; returns fd in .A on success, else 0
-; .X contains error if fail
-;
+wait_process:
+	sta KZE0
+	
+	; save priority and set to zero ;
+	ldx current_program_id
+	lda process_priority_table, X
+	sta KZE1	
+	lda #1
+	sta process_priority_table, X
+	
+@wait_loop:
+	lda KZE0
+	jsr get_process_info
+	cmp #0
+	beq @end
+	
+	jsr surrender_process_time
+	jmp @wait_loop
+@end:
+	stx KZE0
+	
+	lda KZE1 ; restore priority
+	ldx current_program_id
+	sta process_priority_table, X
+	
+	lda KZE0
+	rts
 
-;
-; close_file
-;
-; closes file with fd .A
-;	
-
-;
-; read_file
-;
-; reads r1 bytes from file .A into r0
-;
-; .A = fd 
-; r0 = buff
-; r1 = bytes to read
-;
-
-;
-; write_file
-;
-; writes r1 bytes to file .A from r0
-;
-; .A = fd
-; r0 = buff
-; r1 = bytes to read
-;

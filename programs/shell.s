@@ -104,14 +104,6 @@ char_entered:
 	
 	jsr CHROUT
 	
-	cmp #$22
-	bne not_quote_entered
-	lda #$22
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-not_quote_entered:
-	
 	lda #UNDERSCORE
 	jsr CHROUT
 	lda #LEFT_CURSOR
@@ -383,11 +375,9 @@ narg_not_0_amp:
 	jmp new_line
 wait_child:	
 	lda child_id
-	jsr get_process_info
-	cmp #0
-	bne wait_child
+	jsr wait_process
 	
-	stx last_return_val
+	sta last_return_val
 	jmp new_line
 	
 exec_error:

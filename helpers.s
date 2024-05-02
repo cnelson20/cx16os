@@ -53,6 +53,7 @@ strncpy_ext:
 	tya
 	:
 	
+	ldx #0
 	jmp memcpy_ext
 	
 ;
@@ -356,38 +357,78 @@ get_process_name_kernal_ext:
 ;
 ; memcpy_ext
 ;
-; copies .A bytes from KZE1 to KZE0 
+; copies .AX bytes from KZE1 to KZE0 
 ; ignores banks
 ;
 .export memcpy_ext
 memcpy_ext:
+	stx KZE2 + 1 ; using + 1 makes this more consistent with memcpy_banks_ext
 	tay
 	cpy #0
-	bne @loop
+	bne :+
+	cpx #0
+	bne :+
 	rts
+	:
+	clc
+	lda KZE1
+	adc KZE2 + 1
+	sta KZE1
+	clc
+	lda KZE0
+	adc KZE2 + 1
+	sta KZE0
+	
 @loop:
+	cpy #0
+	bne :+
+	dec KZE1
+	dec KZE0
+	:
 	dey
 	lda (KZE1), Y
 	sta (KZE0), Y
 	
 	cpy #0
 	bne @loop
+	lda KZE2 + 1
+	beq :+
+	dec KZE2 + 1
+	jmp @loop
+	:
 	rts
 
 ;
 ; memcpy_banks_ext
 ;
-; copies .A bytes from KZE1 to KZE0
+; copies .AX bytes from KZE1 to KZE0
 ; KZE1 is in bank KZE3.L, KZE0 in KZE2.L
 ;
 .export memcpy_banks_ext
 memcpy_banks_ext:
+	stx KZE2 + 1
 	tay
+	cpy #0
+	bne :+
+	cpx #0
+	bne :+
+	rts
+	:
+	clc
+	lda KZE1
+	adc KZE2 + 1
+	sta KZE1
+	clc
+	lda KZE0
+	adc KZE2 + 1
+	sta KZE0
+	
 @loop:
 	cpy #0
-	bne @not_done
-	rts ; done
-@not_done:
+	bne :+
+	dec KZE1
+	dec KZE0
+	:
 	dey
 	ldx KZE3
 	stx RAM_BANK
@@ -395,8 +436,15 @@ memcpy_banks_ext:
 	ldx KZE2
 	stx RAM_BANK
 	sta (KZE0), Y
-
-	bra @loop
+	
+	cpy #0
+	bne @loop
+	lda KZE2 + 1
+	beq :+
+	dec KZE2 + 1
+	jmp @loop
+	:
+	rts
 
 ;
 ; rev_str

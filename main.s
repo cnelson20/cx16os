@@ -7,6 +7,7 @@
 .import strlen_int, strncpy_int
 .import setup_kernal_file_table, setup_process_file_table_int
 .import get_dir_filename_int
+.import clear_process_extmem_banks
 .import hex_num_to_string_kernal
 
 .import file_table_count
@@ -290,8 +291,12 @@ program_return_handler:
 .export kill_process_kernal
 kill_process_kernal:
 	; process bank already in .A
+	ldx #1
+	stx atomic_action_st
 	ldx #RETURN_KILL
-	jmp program_exit
+	jsr program_exit
+	stz atomic_action_st
+	rts
 
 ;
 ; exits the process in bank .A with return code .X
@@ -326,7 +331,8 @@ program_exit:
 	lda active_process_stack, X
 	tay
 	lda process_table, Y ; see if prog is still alive
-	beq @stack_loop ; if not alive, keep going
+	cmp #PID_IN_USE
+	bne @stack_loop ; if not alive, keep going
 @exit_stack_loop:
 
 @clear_prog_data:
@@ -371,6 +377,8 @@ program_exit:
 	pla ; restore RAM_BANK
 	sta RAM_BANK
 	
+	lda KZP0
+	jsr clear_process_extmem_banks
 	
 @check_process_switch:	
 	cpx current_program_id
@@ -397,7 +405,8 @@ manage_process_time:
 	
 	; program's time is up ;
 	; switch control to next program ;
-switch_next_program:	
+switch_next_program:
+	stz atomic_action_st
 	lda current_program_id
 	jsr find_next_process
 	
@@ -420,11 +429,23 @@ switch_next_program:
 	lda @new_program_id
 	sta current_program_id	
 	
-	; crash is currently below this line ;
-	
 	jmp restore_new_process
 @new_program_id:
 	.byte 0
+	
+;
+; surrender_process_time
+; sets current process to have 1 frame remaining
+;
+.export surrender_process_time
+surrender_process_time:
+	pha
+	lda #1
+	sta schedule_timer
+	wai
+	pla
+	rts
+	
 ;
 ; save info about current process
 ;
@@ -446,6 +467,14 @@ save_current_process:
 	sta STORE_RAM_ZP_SET2, X
 	inx 
 	cpx #ZP_SET2_SIZE
+	bcc :-
+	
+	ldx #0
+	:
+	lda ZP_KZE_START, X
+	sta STORE_RAM_ZP_KZE, X
+	inx
+	cpx #ZP_KZE_SIZE
 	bcc :-
 	
 	ldx #$80
@@ -480,6 +509,14 @@ restore_new_process:
 	cpx #ZP_SET2_SIZE
 	bcc :-
 	
+	ldx #0
+	:
+	lda STORE_RAM_ZP_KZE, X
+	sta ZP_KZE_START, X
+	inx
+	cpx #ZP_KZE_SIZE
+	bcc :-
+	
 	ldx #$80
 	:
 	lda STORE_PROG_STACK, X
@@ -503,10 +540,8 @@ is_valid_process:
 	lda process_table, X 
 	plx
 
-	cmp #0
-	beq @fail
-	cmp #$FF
-	beq @fail
+	cmp #1
+	bne @fail
 	
 	lda #1
 	rts
@@ -544,6 +579,7 @@ find_next_process:
 ; preserves .Y
 ; returns in .A
 ;
+.export find_new_process_bank
 find_new_process_bank:
 	lda #$10
 	tax
@@ -568,7 +604,7 @@ find_new_process_bank:
 ;
 set_process_bank_used:
 	tax
-	lda #1
+	lda #PID_IN_USE
 	sta process_table, X
 	lda #10
 	sta process_priority_table, X
@@ -741,6 +777,15 @@ setup_process_info:
 	sta STORE_PROG_ADDR
 	lda #>$A200
 	sta STORE_PROG_ADDR + 1
+	
+	lda RAM_BANK
+	sta STORE_PROG_EXTMEM_RBANK
+	sta STORE_PROG_EXTMEM_WBANK
+	
+	lda #<r4
+	sta STORE_PROG_EXTMEM_WPTR
+	lda #<r5
+	sta STORE_PROG_EXTMEM_RPTR
 	
 	lda #%00000000
 	sta STORE_REG_STATUS

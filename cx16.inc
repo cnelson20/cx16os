@@ -34,6 +34,8 @@ r2 := $06
 r3 := $08
 r4 := $0A
 r5 := $0C
+r6 := $0E
+r7 := $10
 
 call_table_mem_start := $9D00
 
