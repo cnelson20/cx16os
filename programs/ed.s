@@ -2019,8 +2019,6 @@ read_buf_file:
 	ply_word input_begin_lineno
 @keep_existing_buff:
 	; we use stitch routine from append/insert ;
-	lda #'a'
-	sta input_mode
 	jsr stitch_input_lines	
 	stz input_mode
 	jsr reorder_lines
