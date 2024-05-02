@@ -699,7 +699,7 @@ stitch_input_lines:
 	stx ptr0 + 1
 	
 	lda lines_ordered_bank
-	sta set_extmem_rbank
+	jsr set_extmem_rbank
 	lda #<ptr0
 	jsr set_extmem_rptr
 	
@@ -741,7 +741,7 @@ stitch_input_lines:
 	bne @not_last_line
 	
 	; if this is last line, null this out
-	ldy #2
+	ldy #1
 	:
 	lda #0
 	jsr writef_byte_extmem_y
@@ -2019,8 +2019,6 @@ read_buf_file:
 	ply_word input_begin_lineno
 @keep_existing_buff:
 	; we use stitch routine from append/insert ;
-	lda #'a'
-	sta input_mode
 	jsr stitch_input_lines	
 	stz input_mode
 	jsr reorder_lines
