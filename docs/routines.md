@@ -18,7 +18,7 @@
 | $9D21 | [`close_file`](#9d21-close_file) | .A | | .X, .Y |
 | $9D24 | [`read_file`](#9d24-read_file) | .A, r0, r1 | .AX, .Y | |
 | $9D27 | [`write_file`](#9d27-write_file) | .A, r0, r1 | .AX, .Y | |
-| $9D2A | [`open_dir_listing`](#9d2a-open_dir_listing) | | .A, .X | .Y |
+| $9D2A | [`load_dir_listing_extmem`](#9d2a-load_dir_listing_extmem) | | .A, .X | .Y |
 | $9D2D | [`get_pwd`](#9d2d-get_pwd) | r0, r1 | | .A, .X, .Y |
 | $9D30 | [`chdir`](#9d30-chdir) | .AX | .A | .Y |
 | $9D33-$9D5A | [`Extmem routines`](extmem.md) | | | |
@@ -158,12 +158,11 @@ Return values:
 - .AX = bytes written
 ---
 
-### $9D2A: open_dir_listing
-- Opens a file entry with the current dir listing
+### $9D2A: load_dir_listing_extmem
+- Loads the current directory listing into extmem bank .A at addr $A000
 
 Return values:
-- .A = $FF if the channel already in use, otherwise .A = a new fd
-- .X = 0 on success, otherwise an error code
+- .AX = a ptr to the last byte of the directory listing + 1, or $FFFF on failure
 
 ---
 
