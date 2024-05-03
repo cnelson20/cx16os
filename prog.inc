@@ -48,6 +48,7 @@ PV_TMP_FILENAME := PV_TMP_FILENAME_PREFIX + 2
 ;
 ; Kernal variables
 ;
+KERNAL_FILENUM = 2
 
 sys_max_filelen = 128
 MAX_FILELEN = sys_max_filelen

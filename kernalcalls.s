@@ -13,7 +13,7 @@
 .import kill_process_kernal
 .import is_valid_process
 
-.import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, open_dir_listing_ext
+.import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, load_dir_listing_extmem_ext
 .import get_pwd_ext, chdir_ext
 
 .import res_extmem_bank, set_extmem_rbank, set_extmem_wbank, set_extmem_rptr, set_extmem_wptr
@@ -47,7 +47,7 @@ call_table:
 	jmp close_file_kernal ; $9D21
 	jmp read_file_ext ; $9D24
 	jmp write_file_ext ; $9D27
-	jmp open_dir_listing_ext ; $9D2A
+	jmp load_dir_listing_extmem_ext ; $9D2A
 	jmp get_pwd_ext ; $9D2D
 	jmp chdir_ext ; $9D30
 	jmp res_extmem_bank ; $9D33
@@ -122,6 +122,9 @@ putc:
 ;
 .export fputc
 fputc:
+	cpx #PV_OPEN_TABLE_SIZE
+	bcs @exit_nsuch_file
+	
 	pha
 	inc RAM_BANK
 	lda PV_OPEN_TABLE, X
@@ -144,11 +147,12 @@ fputc:
 	pla
 	bcs @chkout_error
 	
-	; can just print normally to a file ;
+	; can now just print normally to a file ;
 	jsr CHROUT
 	pha
 	jsr CLRCHN
 	pla
+
 	stz atomic_action_st
 	ldy #0
 	rts

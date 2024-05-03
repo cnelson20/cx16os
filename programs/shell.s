@@ -368,6 +368,10 @@ narg_not_0_amp:
 	jsr exec
 	cmp #0
 	beq exec_error
+	
+	stz new_stdin_fileno
+	stz new_stdout_fileno
+	
 	sta child_id
 
 	lda do_wait_child

@@ -6,6 +6,9 @@ r0H = $03
 r1L = $04
 r1H = $05
 
+r1 := $04
+r3 := $08
+
 ptr0 = $30
 ptr0L = $30
 ptr0H = $31
@@ -14,24 +17,29 @@ init:
 	lda #2
 	sta first_run
 	
-	jsr open_dir_listing	
-	sta fd
-	cmp #$FF
-	beq file_error
-
-file_print_loop:
-	lda #<buff
-	sta r0L
-	lda #>buff
-	sta r0H
+	jsr res_extmem_bank
+	sta extmem_bank
 	
+	jsr load_dir_listing_extmem
+	cpx #$FF
+	beq file_error
+	
+	sta end_listing_addr
+	stx end_listing_addr + 1
+	
+	lda #<$A000
+	ldx #>$A000
+	sta r3
+	stx r3 + 1
+	
+	; causes all future redirects to crash ;	
+file_print_loop:
 	lda #128
 	sta r1L
 	lda #0
 	sta r1H
 	
-	lda fd
-	jsr read_file
+	jsr read_listing_into_buf
 	sta bytes_read
 	
 	cpy #0
@@ -59,9 +67,7 @@ file_print_loop:
 	lda read_again
 	bne file_print_loop
 	
-file_out_bytes:
-	lda fd
-	jsr close_file
+file_out_bytes:	
 	rts
 	
 file_error_read:
@@ -69,10 +75,7 @@ file_error_read:
 	tax
 file_error:
 	stx err_num
-	
-	lda fd
-	beq @dont_need_close
-	jsr close_file
+
 @dont_need_close:
 	
 	lda #<error_msg
@@ -134,7 +137,7 @@ next_dir_char:
 @ignore_first_2_bytes_line:
 	rts
 	
-@not_new_line:	
+@not_new_line:
 	lda dir_char
 	beq @end_of_line
 	jsr CHROUT
@@ -193,13 +196,48 @@ calc_num_size:
 @calc_size:
 	.byte 0
 
+read_listing_into_buf:
+	lda extmem_bank
+	jsr set_extmem_rbank
+	lda #<r3
+	jsr set_extmem_rptr
+	
+	ldx #0
+@loop:
+	lda r3 + 1
+	cmp end_listing_addr + 1
+	bcc  :+
+	bne @out_bytes
+	lda r3
+	cmp end_listing_addr
+	bcs @out_bytes
+	:
+	
+	ldy #0
+	jsr readf_byte_extmem_y
+	sta buff, X
+	
+	inc r3
+	bne :+
+	inc r3 + 1
+	:
+	inx
+	cpx r1
+	bcc @loop
+@out_bytes:
+	txa
+	ldx #0
+	rts
+
+
+end_listing_addr:
+	.word 0
+
 bin_line_num:
 	.byte 0
 bin_line_num_hi:
 	.byte 0
-	
-fd:
-	.byte 0
+
 err_num:
 	.byte 0
 bytes_read:
@@ -207,8 +245,10 @@ bytes_read:
 read_again:
 	.byte 0
 	
-	
+extmem_bank:
+	.byte 0	
 error_msg:
 	.asciiz "Error opening directory listing, code #:"
+
+.SEGMENT "BSS"
 buff:
-	.res 128

@@ -25,7 +25,7 @@ open_file := $9D1E
 close_file := $9D21
 read_file := $9D24
 write_file := $9D27
-open_dir_listing := $9D2A
+load_dir_listing_extmem := $9D2A
 get_pwd := $9D2D
 chdir := $9D30
 
