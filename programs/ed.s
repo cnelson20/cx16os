@@ -98,6 +98,7 @@ ERRNO_NO_CUR_FILENAME := $04
 ERRNO_CANNOT_OPEN_FILE := $05
 ERRNO_ERR_READ_FILE := $06
 ERRNO_WARN_BUFF_MOD := $07
+ERRNO_CANNOT_EXEC_PROG := $08
 
 NUL = $00
 CUR = $01
@@ -1752,6 +1753,12 @@ get_io_filename:
 	beq @use_default_filename ; if arg = "", use the default filename
 	
 	; if arg provided, use user-provided filename ;
+	; if first char is !, we are running a program for this ;
+	; first char in .A ;
+	cmp #'!'
+	bne :+
+	jmp shell_cmd_determine_mode
+	:
 	
 	; if default_filename is unset, set it to this filename ;
 	lda default_filename
@@ -1782,6 +1789,102 @@ get_io_filename:
 	lda #<default_filename
 	ldx #>default_filename
 	rts
+
+shell_cmd_determine_mode:
+	lda input_cmd
+	cmp #'W'
+	beq @cannot_shell_cmd_append_mode
+	cmp #'w'
+	bne shell_cmd_read ; reading
+	; writing	
+@cannot_shell_cmd_append_mode:
+	lda #ERRNO_INVALID_FORMAT
+	sta last_error
+	rts
+	
+shell_cmd_read:
+	stp
+	ldy #'W' ; this will be stdout of exec'd program
+	lda #<@temp_read_filename
+	ldx #>@temp_read_filename
+	jsr open_file
+	cmp #$FF
+	bne :+
+	; open failed ;
+	lda #ERRNO_CANNOT_OPEN_FILE
+	sta last_error
+	rts
+	:
+	stz ptr0
+	sta ptr0 + 1
+	
+	jsr exec_shell_cmd
+	
+	; exec prog ;
+	lda #<@temp_read_filename
+	ldx #>@temp_read_filename
+	rts
+@temp_read_filename:
+	.asciiz "tmpR"
+
+exec_shell_cmd:
+	; ptr0.L holds stdin for prog
+	; ptr0.H holds stdout
+	
+	lda #1
+	sta ptr1
+	ldy #0
+@zero_spaces_loop:
+	lda input + 1, Y
+	beq @zero_end_spaces_loop
+	cmp #$20
+	bne :+ ; not a space
+	inc ptr1
+	lda #0
+	sta input + 1, Y
+	:
+	iny
+	cpy #$7F
+	bcc @zero_spaces_loop
+@zero_end_spaces_loop:
+	lda #0
+	sta input + 1, Y
+	
+	lda #1
+	sta r0 ; make new process active
+	
+	lda ptr0
+	sta r2
+	lda ptr0 + 1
+	sta r2 + 1
+	
+	ldy ptr1
+	lda #<(input + 1)
+	ldx #>(input + 1)
+	jsr exec
+	cmp #0
+	bne @exec_success
+	
+	lda ptr0
+	cmp #2
+	bcc :+
+	jsr close_file
+	:
+	lda ptr0 + 1
+	cmp #2
+	bcc :+
+	jsr close_file
+	: ; close files ;
+	
+	lda #ERRNO_CANNOT_EXEC_PROG
+	sta last_error
+	rts
+	
+@exec_success:
+	sta ptr2
+	jsr wait_process
+	rts
+
 
 read_buf_file:
 	cmp #'e'
@@ -2273,7 +2376,7 @@ print_error:
 
 errno_pointers:
 	.word $FFFF, errno_str_invalid_format, errno_str_unk_cmd, errno_str_invalid_addr, errno_str_no_cur_filename, errno_str_cannot_open_file
-	.word errno_str_read_file_error, errno_str_warn_buff_mod
+	.word errno_str_read_file_error, errno_str_warn_buff_mod, errno_str_cannot_exec_prog
 	
 errno_str_invalid_format:
 	.asciiz "Invalid format"
@@ -2289,7 +2392,9 @@ errno_str_read_file_error:
 	.asciiz "Error reading from file"
 errno_str_warn_buff_mod:
 	.asciiz "Warning: buffer modified"
-
+errno_str_cannot_exec_prog:
+	.asciiz "Error executing program"
+	
 ; get next avail extmem space ;
 ; args: .AX -> data len ;
 ; returns .AX -> extmem addr Y -> bank

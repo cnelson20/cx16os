@@ -10,6 +10,7 @@
 .import clear_process_extmem_banks
 .import hex_num_to_string_kernal
 
+.import check_channel_status, load_process_entry_pt
 .import file_table_count
 
 .SEGMENT "STARTUP"
@@ -658,7 +659,7 @@ load_new_process:
 	ldy #>new_prog_args
 	jsr SETNAM
 	
-	lda #$FF ; logical number / doesn't matter
+	lda #0 ; logical number / doesn't matter
 	ldx #8 ; device 8 (sd card / floppy)
 	ldy #2 ; load without two-byte header
 	jsr SETLFS
@@ -670,7 +671,6 @@ load_new_process:
 	lda #0
 	ldx #<$A200
 	ldy #>$A200
-	
 	jsr LOAD
 	
 	stz atomic_action_st
@@ -715,6 +715,18 @@ user_prog_args_addr:
 	.word 0
 new_prog_args:
 	.res MAX_FILELEN, 0
+
+load_process_into_bank:
+	cnsta_word $A200, KZE0
+	cnsta_word $1E00, KZE1
+	lda #KERNAL_FILENUM
+	
+	jsr load_process_entry_pt
+	
+	lda #KERNAL_FILENUM
+	jsr CLOSE
+	
+	rts
 
 ;
 ; setup process info in its bank

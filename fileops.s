@@ -20,8 +20,6 @@ FILE_TABLE_COUNT_SIZE = 14
 FILE_TABLE_COUNT_OFFSET = 16
 file_table_count_end := file_table_count + FILE_TABLE_COUNT_OFFSET
 
-KERNAL_FILENUM = 2
-
 path_offset:
 	.literal "bin/"
 	.byte 0
@@ -478,6 +476,8 @@ open_file_kernal_ext:
 	cmp #$FF
 	bne :+
 	; couldn't find filenum
+	; .A = FF
+	ldx #$FF
 	rts
 	:
 	
@@ -503,36 +503,15 @@ open_file_kernal_ext:
 	jsr OPEN
 	bcs @open_failure_early
 	
-	; CHECK channel 15 to get status ;
-	lda #0
-	tax
-	tay ; .XY = 0
-	jsr SETNAM
-	
-	lda #15
-	ldx #8
-	tay 
-	jsr SETLFS
-	jsr OPEN ; commenting out OPEN fixes problem too
-	
-	ldx #15
-	jsr CHKIN
-	jsr GETIN
-	
-	pha
-	lda #15
-	jsr CLOSE
-	jsr CLRCHN ; if not commented, user file gets closed
-	pla
-	
+	jsr check_channel_status
 	stz atomic_action_st
-	
-	cmp #$30
-	beq @success ; either '0' or '1' means success
-	cmp #$31
+	cmp #0
 	beq @success
+	jmp @open_failure
+	
 @open_failure:
-	sta KZE1
+	ldx #3
+	stx KZE1
 
 	jmp @open_failure_merge
 	
@@ -561,6 +540,8 @@ open_file_kernal_ext:
 	lda current_program_id
 	sta RAM_BANK
 	
+	stz atomic_action_st
+	
 	ldx KZE1
 	lda #$FF ; FF = error
 	rts
@@ -573,6 +554,41 @@ open_file_kernal_ext:
 	pla ; pull process file no ( to return )
 	ldx #0
 	
+	rts
+
+	; CHECK channel 15 to get status ;
+.export check_channel_status
+check_channel_status:
+	lda #0
+	tax
+	tay ; .XY = 0
+	jsr SETNAM
+	
+	lda #15
+	ldx #8
+	tay 
+	jsr SETLFS
+	jsr OPEN
+	
+	ldx #15
+	jsr CHKIN
+	jsr GETIN
+	
+	pha
+	lda #15
+	jsr CLOSE
+	jsr CLRCHN ; if not commented, user file gets closed
+	pla
+	
+	cmp #$30
+	beq @success ; either '0' or '1' means success
+	cmp #$31
+	beq @success
+	
+	lda #1
+	rts
+@success:
+	lda #0
 	rts
 
 ;
@@ -709,7 +725,9 @@ read_file_ext:
 	bne :+
 	jmp read_stdin
 	:
-	
+
+.export load_process_entry_pt	
+load_process_entry_pt:
 	; this is a file we can read from disk ;
 	sta KZE3
 	
@@ -720,6 +738,9 @@ read_file_ext:
 	jsr CHKIN
 	bcs read_error_chkin
 @read_loop:	
+	lda RAM_BANK
+	pha ; MACPTR can change ram, bank need to restore after call
+	
 	lda KZE1 + 1 ; is bytes remaining > 255
 	beq :+
 	lda #255 ; load up to 255 bytes
@@ -731,11 +752,13 @@ read_file_ext:
 	ldy KZE0 + 1
 	clc
 	jsr MACPTR
-	; bytes read in .XY
+	pla ; pull RAM bank off stack ;
+	sta RAM_BANK
+	
+	; bytes read in .XY, carry = !success
 	bcs read_slow ; if MACPTR returns with carry set, try read_slow
 	
-	lda current_program_id
-	sta RAM_BANK
+	
 	
 	txa
 	sty KZE2
@@ -987,25 +1010,19 @@ write_stdout:
 ;
 ; returns a fd to the dir listing
 ;
-.export open_dir_listing_ext
-open_dir_listing_ext:
-	jsr find_file_pres
-	sta KZE0
-	stx KZE1
-	
-	cmp #$FF
-	beq @open_error
-	cpx #$FF
-	beq @open_error
-	
+.export load_dir_listing_extmem_ext
+load_dir_listing_extmem_ext:
 	; need to wait for channel 15 to open up ;
+	sta KZE1
+	
 	jsr wait_dos_channel
 	
 	lda #1
 	sta atomic_action_st
 	
 	; cd to process' pwd ;
-	pha_byte KZE0
+	lda RAM_BANK
+	pha ; this will go into KZE0
 	pha_byte KZE1
 	
 	inc RAM_BANK
@@ -1026,49 +1043,73 @@ open_dir_listing_ext:
 	jsr SETNAM
 	
 	pla_byte KZE1
-	pla_byte KZE0
+	pla_byte KZE0 ; restore RAM_BANK in KZE0
 	
 	lda #15
 	ldx #8
-	tay
+	ldy #15
 	jsr SETLFS
 	
 	jsr OPEN
 	dec RAM_BANK ; doesn't affect carry bit
-	php 
-	
-	jsr free_dos_channel
-	
-	plp
-	bcs @open_error
+	; doesn't affect carry
+	bcs @cd_open_error
 	
 	; in the future: maybe check status ;	
 	lda #15
 	jsr CLOSE
 	
+	jsr free_dos_channel
+	
 	; now get dir listing ;
+	lda KZE1
+	sta RAM_BANK
 	
 	lda #1
 	ldx #<@s
 	ldy #>@s
 	jsr SETNAM
 	
-	lda KZE0
+	lda #0
 	ldx #8
-	ldy #0 
+	ldy #0
 	jsr SETLFS
-	jsr OPEN
-	bcs @open_error
+	
+	lda #0
+	ldx #<$A000
+	ldy #>$A000
+	jsr LOAD
+	
 	stz atomic_action_st
 	
-	lda KZE1 ; process filenum
-	ldx #0
+	bcs @open_error
+	
+	phx
+	phy
+	
+	lda KZE0
+	sta RAM_BANK	
+	
+	plx
+	pla
 	rts
 @open_error:
-	stz atomic_action_st
+	lda KZE0
+	sta RAM_BANK
+	
 	lda #$FF
-	ldx #$FF
+	tax
 	rts
+	
+@cd_open_error:
+	jsr free_dos_channel
+	stz atomic_action_st
+	lda #15
+	jsr CLOSE
+	lda #$FF
+	tax
+	rts
+	
 @s:
 	.byte "$", 0
 

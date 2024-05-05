@@ -71,15 +71,49 @@ clear_process_extmem_banks:
 	
 	ldx #0
 @clear_loop:
-	cmp process_table, X
-	bne :+
-	stz process_table, X
-	:
+	txa
+	jsr free_extmem_bank
 
 	inx
 	bne @clear_loop
 	
 	plx
+	rts
+
+; check whether a process can access a bank ;
+; preserves .X
+check_process_owns_bank:
+	phx
+	and #$FE ; %1111 1110
+	tax
+	lda current_program_id
+	cmp process_table, X
+	bne @no
+@yes:
+	plx
+	lda #0
+	rts
+@no:
+	plx
+	lda #1
+	rts
+
+;
+; Release a process' extmem bank (in .A)
+;
+; preserves .AXY
+;
+free_extmem_bank:
+	pha
+	jsr check_process_owns_bank
+	bne :+
+	pla ; preserve X
+	phx
+	stz process_table, X
+	plx
+	rts
+	:
+	pla
 	rts
 
 ;
@@ -98,10 +132,7 @@ set_extmem_rbank:
 	
 	:
 	pha
-	and #$FE ; %1111 1110
-	tax
-	lda current_program_id
-	cmp process_table, X
+	jsr check_process_owns_bank
 	beq :+
 	; not this program's bank, error
 	pla
@@ -129,10 +160,7 @@ set_extmem_wbank:
 	
 	:
 	pha
-	and #$FE ; %1111 1110
-	tax
-	lda current_program_id
-	cmp process_table, X
+	jsr check_process_owns_bank
 	beq :+
 	; not this program's bank, error
 	pla
@@ -386,10 +414,7 @@ memmove_extmem:
 	sta KZE2
 	bra @check_bank_src
 	:
-	and #$FE ; %1111 1110
-	tax 
-	lda current_program_id
-	cmp process_table, X	
+	jsr check_process_owns_bank
 	beq :+ ; if matches, good
 	; else we return
 	lda #1 ; non-zero
@@ -404,10 +429,7 @@ memmove_extmem:
 	sta KZE3
 	bra @check_banks_match
 	:
-	and #$FE ; %1111 1110
-	tax 
-	lda current_program_id
-	cmp process_table, X
+	jsr check_process_owns_bank
 	beq :+ ; again, match = good
 	; we return on failure
 	lda #1
