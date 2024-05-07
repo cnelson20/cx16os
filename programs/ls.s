@@ -67,7 +67,7 @@ file_print_loop:
 	lda read_again
 	bne file_print_loop
 	
-file_out_bytes:	
+file_out_bytes:
 	rts
 	
 file_error_read:

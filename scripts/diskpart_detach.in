@@ -1,0 +1,3 @@
+select vdisk file=C:\x16image.vhdx
+detach vdisk
+exit

@@ -49,3 +49,4 @@ set_extmem_wbank := $9D57
 wait_process := $9D5D
 fgetc := $9D60
 fputc := $9D63
+unlink := $9D66

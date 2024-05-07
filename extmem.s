@@ -69,11 +69,12 @@ res_extmem_bank:
 clear_process_extmem_banks:
 	phx
 	
-	ldx #0
+	ldx #$10
 @clear_loop:
 	txa
 	jsr free_extmem_bank
-
+	
+	inx
 	inx
 	bne @clear_loop
 	

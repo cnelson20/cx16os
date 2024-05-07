@@ -15,6 +15,7 @@
 
 .import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, load_dir_listing_extmem_ext
 .import get_pwd_ext, chdir_ext
+.import unlink_ext
 
 .import res_extmem_bank, set_extmem_rbank, set_extmem_wbank, set_extmem_rptr, set_extmem_wptr
 .import readf_byte_extmem_y, readf_word_extmem_y, vread_byte_extmem_y
@@ -67,6 +68,8 @@ call_table:
 	jmp wait_process ; $9D5D
 	jmp fgetc ; $9D60
 	jmp fputc ; $9D63
+	jmp unlink_ext ; $9D66
+	.res 3, $FF
 .export call_table_end
 call_table_end:
 

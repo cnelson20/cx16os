@@ -374,7 +374,18 @@ program_exit:
 	:
 	dey
 	bpl @close_process_files
-		
+	
+	lda #1
+	sta RAM_BANK
+	
+	lda current_program_id
+	cmp file_table_count + 15
+	bne :+
+	lda #15
+	jsr CLOSE
+	stz file_table_count + 15
+	:
+	
 	pla ; restore RAM_BANK
 	sta RAM_BANK
 	
@@ -986,7 +997,7 @@ setup_kernal:
 setup_kernal_processes:
 	; zero out tables except process_table itself
 	cnsta_word (process_table + PROCESS_TABLE_SIZE), r0
-	cnsta_word (END_PROCESS_TABLES - PROCESS_TABLE_SIZE - other_process_tables), r1	
+	cnsta_word (END_PROCESS_TABLES - other_process_tables), r1	
 	lda #0
 	jsr memory_fill
 	

@@ -395,7 +395,7 @@ wait_dos_channel:
 	wai
 	bra :-
 	:
-	lda #1
+	lda current_program_id
 	sta file_table_count + 15
 	
 	pla
@@ -412,7 +412,11 @@ free_dos_channel:
 	
 	lda #1
 	sta RAM_BANK
+	lda current_program_id
+	cmp file_table_count + 15
+	bne :+
 	stz file_table_count + 15
+	:
 	
 	pla
 	sta RAM_BANK
@@ -1166,37 +1170,19 @@ get_pwd_ext:
 	rts
 
 ;
-; changes process' pwd
-; dir to cd to in .AX
+; cd_process_pwd
 ;
-.export chdir_ext
-chdir_ext:
-	phy_word KZES4
+cd_process_pwd:
+	jsr wait_dos_channel
 	
-	sta KZES4
-	stx KZES4 + 1
-	
-	; cd to process' current pwd ;
 	inc RAM_BANK
 	
 	lda #'C'
 	sta PV_PWD - 3
-	sta PV_TMP_FILENAME
 	lda #'D'
 	sta PV_PWD - 2
-	sta PV_TMP_FILENAME + 1
 	lda #':'
 	sta PV_PWD - 1
-	sta PV_TMP_FILENAME + 2
-	
-	; need to wait for dos channel to open up ;	
-	jsr wait_dos_channel
-	lda #1
-	sta atomic_action_st
-	
-	lda current_program_id
-	inc A
-	sta RAM_BANK
 	
 	ldax_addr (PV_PWD - 3)
 	pha
@@ -1212,16 +1198,58 @@ chdir_ext:
 	jsr SETLFS
 	
 	jsr OPEN
+	
+	dec RAM_BANK
+	
 	bcc :+
-	jmp @open_error ; bcs
+	jmp @cd_error ; bcs
 	:
 	
 	lda #15
 	jsr CLOSE
 	
-	stz atomic_action_st
+	jsr free_dos_channel
 	
-	; copy memory around ;
+	lda #0
+	rts
+	
+@cd_error:
+	jsr free_dos_channel
+	lda #1
+	rts
+
+;
+; changes process' pwd
+; dir to cd to in .AX
+;
+.export chdir_ext
+chdir_ext:
+	phy_word KZES4
+	
+	sta KZES4
+	stx KZES4 + 1
+	
+	lda #1
+	sta atomic_action_st
+	
+	; cd to process' current pwd ;
+	jsr cd_process_pwd
+	cmp #0
+	beq :+
+	jmp @pre_cd_error
+	:
+	
+	inc RAM_BANK
+	
+	lda #'C'
+	sta PV_TMP_FILENAME
+	lda #'D'
+	sta PV_TMP_FILENAME + 1
+	lda #':'
+	sta PV_TMP_FILENAME + 2
+	
+	; need to wait for dos channel to open up ;	
+	jsr wait_dos_channel
 	
 	cnsta_word (PV_TMP_FILENAME + 3), KZE0
 	ldsta_word KZES4, KZE1
@@ -1235,9 +1263,6 @@ chdir_ext:
 	jsr memcpy_banks_ext
 	
 	; now cd to new directory ;
-	
-	lda #1 ; file stuff again 
-	sta atomic_action_st
 	
 	lda current_program_id
 	inc A
@@ -1297,10 +1322,107 @@ chdir_ext:
 	rts
 	
 @open_error:
+	jsr free_dos_channel
+@pre_cd_error:
 	stz atomic_action_st
 	ply_word KZES4
 	lda current_program_id
 	sta RAM_BANK
+	lda #1
+	rts
+
+.export unlink_ext
+unlink_ext:
+	ldy RAM_BANK
+	phy
+	phy_word KZES4
+	
+	sta KZES4
+	stx KZES4 + 1
+	
+	inc RAM_BANK
+	
+	lda #'S'
+	sta PV_TMP_FILENAME
+	lda #':'
+	sta PV_TMP_FILENAME + 1
+	
+	dec RAM_BANK
+	
+	lda KZES4
+	ldx KZES4 + 1
+	jsr strlen_ext
+	
+	inc A
+	pha
+	
+	lda #<(PV_TMP_FILENAME + 2)
+	sta KZE0
+	lda #>(PV_TMP_FILENAME + 2)
+	sta KZE0 + 1
+	
+	lda current_program_id
+	sta KZE3
+	inc A
+	sta KZE2
+	
+	lda KZES4
+	sta KZE1
+	lda KZES4 + 1
+	sta KZE1 + 1
+	
+	ldx #0
+	pla
+	jsr memcpy_banks_ext
+	
+	; need to wait for dos channel to open up ;	
+	jsr wait_dos_channel
+	lda #1
+	sta atomic_action_st
+	
+	lda current_program_id
+	inc A
+	sta RAM_BANK
+	
+	ldax_addr PV_TMP_FILENAME
+	pha
+	phx
+	jsr strlen_ext
+	ply
+	plx
+	jsr SETNAM
+	
+	lda #15
+	ldx #8
+	tay
+	jsr SETLFS
+	
+	jsr OPEN
+	bcc :+
+	jmp @open_error ; bcs
+	:
+	
+	lda #15
+	jsr CLOSE
+	
+	jsr free_dos_channel	
+	stz atomic_action_st
+	
+	ply_word KZES4
+	pla
+	sta RAM_BANK
+	
+	lda #0
+	rts
+
+@open_error:
+	jsr free_dos_channel
+	stz atomic_action_st
+	
+	ply_word KZES4
+	pla
+	sta RAM_BANK
+	
 	lda #1
 	rts
 

@@ -838,6 +838,11 @@ do_user_cmd:
 	jsr use_def_endno
 	:
 	
+	lda curr_lineno
+	ldy curr_lineno + 1
+	lda line_count
+	ldy line_count + 1
+	
 	; if end line > line count, error ;
 	; but if arg mode = null, don't care ;
 	lda cmd_list_default_lines
@@ -1803,7 +1808,7 @@ shell_cmd_determine_mode:
 	rts
 	
 shell_cmd_read:
-	stp
+	;stp
 	ldy #'W' ; this will be stdout of exec'd program
 	lda #<@temp_read_filename
 	ldx #>@temp_read_filename
@@ -2075,6 +2080,9 @@ read_buf_file:
 	jsr set_extmem_wbank
 	
 	ldy #2
+	lda ptr3
+	jsr writef_byte_extmem_y
+	dey
 	:
 	lda ptr2, Y
 	jsr writef_byte_extmem_y
@@ -2457,6 +2465,8 @@ find_extmem_space:
 	phy 
 	jsr res_extmem_bank
 	ply
+	
+	pha
 	sta extmem_banks, Y
 	iny
 	inc A
@@ -2464,6 +2474,10 @@ find_extmem_space:
 	lda #0
 	iny
 	sta extmem_banks, Y
+	
+	pla ; first newly reserved bank will be first one we use
+	sta sptr9
+	jmp @loop
 	
 @found:
 	lda sptr8
@@ -2555,8 +2569,6 @@ get_lines_ordered_offset_alr_decremented:
 	.byte 0
 
 reorder_lines:
-	;stp
-	
 	ldx #3
 	:
 	lda first_line, X

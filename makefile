@@ -16,9 +16,9 @@ os.prg: $(SOURCES) $(INCS)
 programs: FORCE
 	make -C programs/
 
-FORCE: ;
+FORCE:
 
-copy: cx16os.img
+copy:
 	cp blank_sd.img cx16os.img
 
 clean:
@@ -29,7 +29,18 @@ build: os.prg programs
 	cp words.txt mnt/
 
 sd: build copy
+ifeq ($(OS),Windows_NT)
+	-rm /cygdrive/c/x16image.vhdx
+	diskpart < scripts/diskpart_mount.in
+	mkdir /cygdrive/v/OS/
+	cp mnt/* -r /cygdrive/v/OS/
+	diskpart < scripts/diskpart_detach.in
+	qemu-img convert -f vhdx "C:\x16image.vhdx" -O raw cx16os.img
+else
 	./scripts/mount_sd.sh cx16os.img mnt_dir/
 	-sudo mkdir mnt_dir/OS/
 	sudo cp mnt/* -r mnt_dir/OS/
 	./scripts/close_sd.sh mnt_dir/
+endif
+
+	

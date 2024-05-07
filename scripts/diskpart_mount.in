@@ -1,0 +1,6 @@
+create vdisk file=c:\x16image.vhdx maximum=50 type=fixed
+attach vdisk
+create partition primary
+format FS=FAT32 quick label=vhdx
+assign letter=v
+exit
