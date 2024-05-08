@@ -1225,6 +1225,9 @@ cd_process_pwd:
 .export chdir_ext
 chdir_ext:
 	phy_word KZES4
+	phy_word KZES5
+	stz KZES5
+	stz KZES5 + 1
 	
 	sta KZES4
 	stx KZES4 + 1
@@ -1236,7 +1239,7 @@ chdir_ext:
 	jsr cd_process_pwd
 	cmp #0
 	beq :+
-	jmp @pre_cd_error
+	jmp @cd_error
 	:
 	
 	inc RAM_BANK
@@ -1247,46 +1250,14 @@ chdir_ext:
 	sta PV_TMP_FILENAME + 1
 	lda #':'
 	sta PV_TMP_FILENAME + 2
+	stz PV_TMP_FILENAME + 3
 	
-	; need to wait for dos channel to open up ;	
-	jsr wait_dos_channel
+	jsr do_dos_cmd
 	
-	cnsta_word (PV_TMP_FILENAME + 3), KZE0
-	ldsta_word KZES4, KZE1
-	lda current_program_id
-	sta KZE3
-	inc A
-	sta KZE2
-	; load 128 - 3 bytes 
-	lda #128 - 3
-	ldx #0
-	jsr memcpy_banks_ext
+	dec RAM_BANK
 	
-	; now cd to new directory ;
-	
-	lda current_program_id
-	inc A
-	sta RAM_BANK
-	
-	ldax_addr PV_TMP_FILENAME
-	pha
-	phx
-	jsr strlen_ext
-	ply
-	plx
-	jsr SETNAM
-	
-	lda #15
-	ldx #8
-	tay
-	jsr SETLFS
-	
-	jsr OPEN
-	bcs @open_error
-	
-	lda #15
-	jsr CLOSE
-	
+	cmp #0
+	bne @cd_error
 	; now need to fetch new dir ;
 	
 	lda #1
@@ -1314,71 +1285,113 @@ chdir_ext:
 	sta RAM_BANK
 	stz file_table_count + 15	
 	
+	ply_word KZES5
 	ply_word KZES4
 	lda current_program_id
 	sta RAM_BANK
 	
 	lda #0
 	rts
-	
-@open_error:
-	jsr free_dos_channel
-@pre_cd_error:
+@cd_error:
 	stz atomic_action_st
+	
 	ply_word KZES4
-	lda current_program_id
-	sta RAM_BANK
 	lda #1
 	rts
 
-.export unlink_ext
-unlink_ext:
-	ldy RAM_BANK
-	phy
-	phy_word KZES4
+; appends KZES4 & KZES5 to the cmd in PV_TMP_FILENAME and opens channel 15 ;	
+do_dos_cmd:
+	lda current_program_id
+	inc A
+	sta RAM_BANK
+	; calc addr to copy to ;
+	lda #<PV_TMP_FILENAME
+	ldx #>PV_TMP_FILENAME
 	
-	sta KZES4
-	stx KZES4 + 1
+	jsr strlen_ext
 	
-	inc RAM_BANK
+	clc
+	adc #<PV_TMP_FILENAME
+	pha
+	lda #>PV_TMP_FILENAME
+	adc #0
+	pha ; push copy address to stack
 	
-	lda #'S'
-	sta PV_TMP_FILENAME
-	lda #':'
-	sta PV_TMP_FILENAME + 1
-	
-	dec RAM_BANK
+	; need to calc number of bytes to copy ;
+	lda current_program_id
+	sta RAM_BANK
 	
 	lda KZES4
 	ldx KZES4 + 1
 	jsr strlen_ext
-	
 	inc A
 	pha
 	
-	lda #<(PV_TMP_FILENAME + 2)
-	sta KZE0
-	lda #>(PV_TMP_FILENAME + 2)
-	sta KZE0 + 1
-	
+	ldsta_word KZES4, KZE1
 	lda current_program_id
 	sta KZE3
 	inc A
 	sta KZE2
-	
-	lda KZES4
-	sta KZE1
-	lda KZES4 + 1
-	sta KZE1 + 1
-	
-	ldx #0
+	; load strlen bytes 
 	pla
+	ldx #0
+	
+	ply_word KZE0
 	jsr memcpy_banks_ext
 	
+	; if KZES5 <> 0, need to have this too ;
+	lda KZES5
+	ora KZES5 + 1
+	bne :+
+	jmp @no_second_arg
+	:
+
+	lda current_program_id
+	inc A
+	sta RAM_BANK
+	
+	lda #<PV_TMP_FILENAME
+	ldx #>PV_TMP_FILENAME
+	jsr strlen_ext
+	tax
+	lda #'='
+	sta PV_TMP_FILENAME, X
+	inx
+	stz PV_TMP_FILENAME, X
+	
+	txa
+	clc
+	adc #<PV_TMP_FILENAME
+	pha
+	lda #>PV_TMP_FILENAME
+	adc #0
+	pha ; push address to copy to once more
+	
+	lda current_program_id
+	sta RAM_BANK
+	
+	lda KZES5
+	ldx KZES5 + 1
+	jsr strlen_ext
+	inc A
+	pha
+	
+	ldsta_word KZES5, KZE1
+	lda current_program_id
+	sta KZE3
+	inc A
+	sta KZE2
+	; load strlen bytes, again 
+	pla
+	ldx #0
+	
+	ply_word KZE0
+	jsr memcpy_banks_ext
+	
+@no_second_arg:
 	; need to wait for dos channel to open up ;	
 	jsr wait_dos_channel
-	lda #1
-	sta atomic_action_st
+	; now we can do command ;
 	
 	lda current_program_id
 	inc A
@@ -1398,31 +1411,144 @@ unlink_ext:
 	jsr SETLFS
 	
 	jsr OPEN
-	bcc :+
-	jmp @open_error ; bcs
-	:
+	php 
+	
+	jsr free_dos_channel
+	
+	plp
+	bcs dos_cmd_open_error
 	
 	lda #15
 	jsr CLOSE
 	
-	jsr free_dos_channel	
-	stz atomic_action_st
+	lda #0
+	rts	
 	
+dos_cmd_open_error:
+	lda #1
+	rts
+
+;
+; deletes file with filename in .AX
+;
+.export unlink_ext
+unlink_ext:
+	phy_word KZES4
+	phy_word KZES5
+	stz KZES5
+	stz KZES5 + 1
+	
+	sta KZES4
+	stx KZES4 + 1
+	
+	lda #1
+	sta atomic_action_st
+	
+	; cd to process' current pwd ;
+	jsr cd_process_pwd
+	cmp #0
+	beq :+
+	jmp @cd_error
+	:
+	
+	inc RAM_BANK
+	
+	lda #'S'
+	sta PV_TMP_FILENAME
+	lda #':'
+	sta PV_TMP_FILENAME + 1
+	stz PV_TMP_FILENAME + 2
+	
+	jsr do_dos_cmd
+	
+	ldy current_program_id
+	sty RAM_BANK
+	stz atomic_action_st
+	ply_word KZES5
 	ply_word KZES4
-	pla
-	sta RAM_BANK
+	
+	cmp #0
+	bne @scratch_error
+		
+	lda #0
+	rts
+@cd_error:
+	ldy current_program_id
+	sty RAM_BANK
+	stz atomic_action_st
+	ply_word KZES5
+	ply_word KZES4
+@scratch_error:
+	lda #1
+	rts
+
+;
+; renames file with filename r1 to r0
+;
+.export rename_ext
+rename_ext:
+	ldy #'R'
+	bra copy_rename_file
+
+.export copy_file_ext
+copy_file_ext:
+	ldy #'C'
+	bra copy_rename_file
+
+copy_rename_file:
+	sty KZE0
+	phy_word KZES4
+	phy_word KZES5
+	
+	ldy KZE0
+	
+	ldsta_word r0, KZES4
+	ldsta_word r1, KZES5
+	
+	lda #1
+	sta atomic_action_st
+	
+	phy ; preserve copy / rename (C vs R)
+	
+	; cd to process' current pwd ;
+	jsr cd_process_pwd
+	ply ; pull back off stack copy / rename
+	
+	cmp #0
+	beq :+
+	jmp @cd_error
+	:	
+	
+	inc RAM_BANK
+	
+	tya ; .Y holds copy / rename
+	sta PV_TMP_FILENAME
+	lda #':'
+	sta PV_TMP_FILENAME + 1
+	stz PV_TMP_FILENAME + 2
+	
+	jsr do_dos_cmd
+	
+	ldy current_program_id
+	sty RAM_BANK
+	stz atomic_action_st
+	ply_word KZES5
+	ply_word KZES4
+	
+	cmp #0
+	bne @rename_error
 	
 	lda #0
 	rts
-
-@open_error:
-	jsr free_dos_channel
+	
+@cd_error:	
+	ldy current_program_id
+	sty RAM_BANK
 	stz atomic_action_st
-	
+	ply_word KZES5
 	ply_word KZES4
-	pla
-	sta RAM_BANK
-	
+@rename_error:
 	lda #1
 	rts
+
 
