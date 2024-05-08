@@ -25,6 +25,9 @@
 | $9D5D | [`wait_process`](#9d51-wait_process) | .A, | .A | .XY |
 | $9D60 | [`fgetc`](#9d60-fgetc) | .A, | .A, .X | .Y | 
 | $9D63 | [`fputc`](#9d63-fputc) | .A, .X | .Y | .X | 
+| $9D66 | [`unlink`](#9d66-unlink) | .AX | .A | .Y | 
+| $9D69 | [`rename`](#9d69-rename) | r0, r1 | .A | .XY | 
+| $9D6C | [`copy_file`](#9d6c-copy_file) | r0, r1 | .A | .XY | 
 
 ## Function Reference
 
@@ -186,11 +189,35 @@ Return values:
 
 ---
 
-### $9D51: wait_process
+### $9D5D: wait_process
 - Halts process execution until the process in .A exits
 - Lowers process priority until routine is over (existing priority is restored)
 
 Return values:
 - Returns process return value in .A
+
+---
+
+### $9D66: unlink
+- Deletes file with filename pointed to by .AX
+
+Return values:
+- Returns 0 on success, non-zero on failure
+
+---
+
+### $9D69: rename
+- Renames file with filename pointed to by r1 to r0
+
+Return values:
+- Returns 0 on success, non-zero on failure
+
+---
+
+### $9D6C: copy_file
+- Copies file with filename pointed to by r1 to r0
+
+Return values:
+- Returns 0 on success, non-zero on failure
 
 ---
