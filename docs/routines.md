@@ -28,8 +28,8 @@
 | $9D66 | [`unlink`](#9d66-unlink) | .AX | .A | .Y | 
 | $9D69 | [`rename`](#9d69-rename) | r0, r1 | .A | .XY | 
 | $9D6C | [`copy_file`](#9d6c-copy_file) | r0, r1 | .A | .XY | 
-| $9D66 | [`mkdir`](#9d66-unlink) | .AX | .A | .Y |
-| $9D66 | [`rmdir`](#9d66-unlink) | .AX | .A | .Y |
+| $9D6F | [`mkdir`](#9d6f-mkdir) | .AX | .A | .Y |
+| $9D72 | [`rmdir`](#9d72-rmdir) | .AX | .A | .Y |
 
 ## Function Reference
 
