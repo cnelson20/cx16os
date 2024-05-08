@@ -25,7 +25,7 @@
 | $9D5D | [`wait_process`](#9d51-wait_process) | .A, | .A | .XY |
 | $9D60 | [`fgetc`](#9d60-fgetc) | .A, | .A, .X | .Y | 
 | $9D63 | [`fputc`](#9d63-fputc) | .A, .X | .Y | .X | 
-| $9D66 | [`unlink`](#9d66-rename) | .AX | .A | .Y | 
+| $9D66 | [`unlink`](#9d66-unlink) | .AX | .A | .Y | 
 | $9D69 | [`rename`](#9d69-rename) | r0, r1 | .A | .XY | 
 | $9D6C | [`copy_file`](#9d6c-copy_file) | r0, r1 | .A | .XY | 
 
