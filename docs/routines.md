@@ -223,3 +223,20 @@ Return values:
 - Returns 0 on success, non-zero on failure
 
 ---
+
+### $9D6F: mkdir
+- Creates a new directory with name in .AX
+
+Return values:
+- Returns 0 on success, non-zero on failure
+
+---
+
+### $9D72: rmdir
+- Deletes an empty directory whose name is pointed to by .AX
+- Fails on an non-empty directory
+
+Return values:
+- Returns 0 on success, non-zero on failure
+
+---
