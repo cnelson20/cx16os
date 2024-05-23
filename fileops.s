@@ -1433,6 +1433,32 @@ dos_cmd_open_error:
 ;
 .export unlink_ext
 unlink_ext:
+	ldy #'S'
+	sty KZE0
+	stz KZE0 + 1
+	bra single_arg_dos_cmd
+
+;
+; creates a directory with name pointed to by .AX
+;
+.export mkdir_ext
+mkdir_ext:
+	ldy #'M'
+	sty KZE0
+	bra mkdir_rmdir_ld
+;
+; removed the directory with name pointed to by .AX
+;
+.export rmdir_ext
+rmdir_ext:
+	ldy #'R'
+	sty KZE0
+mkdir_rmdir_ld:
+	ldy #'D'
+	sty KZE0 + 1
+	bra single_arg_dos_cmd
+	
+single_arg_dos_cmd:
 	phy_word KZES4
 	phy_word KZES5
 	stz KZES5
@@ -1441,11 +1467,17 @@ unlink_ext:
 	sta KZES4
 	stx KZES4 + 1
 	
+	; push S/MD/RD cmd to stack ;
+	phy_word KZE0
+	
 	lda #1
 	sta atomic_action_st
 	
 	; cd to process' current pwd ;
 	jsr cd_process_pwd
+	
+	ply_word KZE0
+	
 	cmp #0
 	beq :+
 	jmp @cd_error
@@ -1453,11 +1485,19 @@ unlink_ext:
 	
 	inc RAM_BANK
 	
-	lda #'S'
+	lda KZE0
 	sta PV_TMP_FILENAME
+	ldx #1
+	; add second char in cmd to string
+	lda KZE0 + 1
+	beq :+
+	sta	PV_TMP_FILENAME, X
+	inx
+	:
 	lda #':'
-	sta PV_TMP_FILENAME + 1
-	stz PV_TMP_FILENAME + 2
+	sta PV_TMP_FILENAME, X
+	inx
+	stz PV_TMP_FILENAME, X
 	
 	jsr do_dos_cmd
 	

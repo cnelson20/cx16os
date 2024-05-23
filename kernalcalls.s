@@ -14,7 +14,7 @@
 .import is_valid_process
 
 .import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, load_dir_listing_extmem_ext
-.import get_pwd_ext, chdir_ext, unlink_ext, rename_ext, copy_file_ext
+.import get_pwd_ext, chdir_ext, unlink_ext, rename_ext, copy_file_ext, mkdir_ext, rmdir_ext
 
 .import res_extmem_bank, set_extmem_rbank, set_extmem_wbank, set_extmem_rptr, set_extmem_wptr
 .import readf_byte_extmem_y, readf_word_extmem_y, vread_byte_extmem_y
@@ -70,6 +70,8 @@ call_table:
 	jmp unlink_ext ; $9D66
 	jmp rename_ext ; $9D69
 	jmp copy_file_ext ; $9D6C
+	jmp mkdir_ext
+	jmp rmdir_ext
 	.res 3, $FF
 .export call_table_end
 call_table_end:

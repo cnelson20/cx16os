@@ -23,6 +23,9 @@
 SWAP_FGBG_COLORS = 1
 
 init:
+	clc
+	xce
+	
 	stz ROM_BANK
 	stz current_program_id
 	
@@ -51,7 +54,10 @@ init:
 	jsr CHROUT
 	ldax_addr load_error_msg
 	jsr print_str_ext
-	clc 
+	
+	sec
+	xce
+	clc
 	jmp enter_basic
 	
 	:
@@ -66,6 +72,7 @@ shell_name:
 
 setup_interrupts:
 	sei
+	
 	lda $0314
 	sta default_irq_handler
 	lda $0315
@@ -82,9 +89,9 @@ setup_interrupts:
 	sta default_nmi_handler + 1
 	
 	lda #<custom_nmi_handler
-	sta $0318
+	sta $033c
 	lda #>custom_nmi_handler
-	sta $0319
+	sta $033d
 	
 	lda #1
 	sta irq_already_triggered
@@ -102,9 +109,9 @@ reset_interrupts:
 	lda default_irq_handler
 	sta $0315
 	lda default_nmi_handler
-	sta $0318
-	lda default_nmi_handler
-	sta $0319
+	sta $033c
+	lda default_nmi_handler + 1
+	sta $033d
 	
 	cli
 	rts
@@ -147,29 +154,39 @@ custom_irq_handler:
 	tsx
 	txa
 	clc 
-	adc #6
+	adc #$1C
 	sta STORE_PROG_SP
 	
+	; store program counter and update it to return to irq_re_caller
 	tsx 
-	lda $106, X 
+	lda $11B, X 
 	sta STORE_PROG_ADDR + 1
 	lda #>irq_re_caller
-	sta $106, X
+	sta $11B, X
 	
-	lda $105, X
+	lda $11A, X
 	sta STORE_PROG_ADDR
 	lda #<irq_re_caller
-	sta $105, X
+	sta $11A, X
 	
-	lda $104, X
+	lda $119, X
 	sta STORE_REG_STATUS
 	
-	lda $103, X
+	; store program's registers
+	lda $117, X
 	sta STORE_REG_A
-	lda $102, X
+	lda $118, X
+	sta STORE_REG_A + 1
+	
+	lda $10B, X
 	sta STORE_REG_X
-	lda $101, X
+	lda $10C, X
+	sta STORE_REG_X + 1
+	
+	lda $109, X
 	sta STORE_REG_Y
+	lda $10A, X
+	sta STORE_REG_Y + 1
 		
 	lda $9F27 
 	sta vera_status
@@ -218,12 +235,12 @@ default_nmi_handler:
 
 .export custom_nmi_handler
 custom_nmi_handler:
+	; .A , .XY are 16-bits
 	sta STORE_REG_A
 	stx STORE_REG_X
 	sty STORE_REG_Y
 	
-	pla ; rom bank ?
-	pla ; idk as well
+	sep #$30
 	
 	lda RAM_BANK
 	sta STORE_PROG_RAMBANK
@@ -234,6 +251,8 @@ custom_nmi_handler:
 	lda #1
 	sta nmi_queued ; set toggle for next interrupt to trigger nmi
 	
+	lda STORE_REG_A + 1
+	xba
 	lda STORE_REG_A
 	ldx STORE_REG_X 
 	ldy STORE_REG_Y
@@ -267,12 +286,31 @@ custom_nmi_handler:
 	sta irq_already_triggered
 	
 	rti
-	
+
+nmi_queued_re_caller:
+	bcs :+
+	clc
+	xce
+	clc
+	bra :++
+	:
+	clc
+	xce
+	sec
+	:
+	jmp (STORE_PROG_ADDR)
+
 nmi_re_caller:
+	; disable emulation mode
+	clc
+	xce
+	
 	ldx active_process_sp
 	cpx #$FF - 1
 	bne :+
 	; if last program, exit to basic using normal nmi handler ;
+	sec
+	xce
 	jmp (default_nmi_handler)
 	
 	:
@@ -680,8 +718,8 @@ load_new_process:
 	sta RAM_BANK
 	
 	lda #0
-	ldx #<$A200
-	ldy #>$A200
+	ldx #<PROG_LOAD_ADDRESS
+	ldy #>PROG_LOAD_ADDRESS
 	jsr LOAD
 	
 	stz atomic_action_st
@@ -726,18 +764,6 @@ user_prog_args_addr:
 	.word 0
 new_prog_args:
 	.res MAX_FILELEN, 0
-
-load_process_into_bank:
-	cnsta_word $A200, KZE0
-	cnsta_word $1E00, KZE1
-	lda #KERNAL_FILENUM
-	
-	jsr load_process_entry_pt
-	
-	lda #KERNAL_FILENUM
-	jsr CLOSE
-	
-	rts
 
 ;
 ; setup process info in its bank
@@ -796,9 +822,9 @@ setup_process_info:
 	dey
 	bpl :-
 	
-	lda #<$A200
+	lda #<PROG_LOAD_ADDRESS
 	sta STORE_PROG_ADDR
-	lda #>$A200
+	lda #>PROG_LOAD_ADDRESS
 	sta STORE_PROG_ADDR + 1
 	
 	lda RAM_BANK
@@ -810,11 +836,13 @@ setup_process_info:
 	lda #<r5
 	sta STORE_PROG_EXTMEM_RPTR
 	
-	lda #%00000000
+	lda #%00110000 ; all flags zero except M and X (8-bit registers)
 	sta STORE_REG_STATUS
 	
 	lda #$FD
 	sta STORE_PROG_SP
+	lda #1
+	sta STORE_PROG_SP + 1
 	
 	lda #< ( program_return_handler - 1)
 	sta STORE_PROG_STACK + $FE 
@@ -906,8 +934,13 @@ return_control_program:
 switch_control_bank:
 	sta RAM_BANK
 	
+	rep #$10 ; make X 16 bits
 	ldx STORE_PROG_SP
 	txs
+	sep #$10 ; make X 8 bits
+	
+	lda #$00
+	pha
 	
 	lda STORE_PROG_ADDR + 1
 	pha 
@@ -918,6 +951,8 @@ switch_control_bank:
 	lda STORE_REG_STATUS
 	pha
 	
+	lda STORE_REG_A + 1
+	xba
 	lda STORE_REG_A
 	pha
 	ldx STORE_REG_X
@@ -947,12 +982,14 @@ run_first_prog:
 	lda STORE_PROG_STACK + $FF
 	sta $0100 + $FF
 	
+	rep #$10 ; make X 16 bits
 	ldx STORE_PROG_SP
 	txs
+	sep #$10 ; make X 8 bits
 	
 	lda STORE_REG_STATUS
 	pha
-	plp	
+	plp
 	
 	stz irq_already_triggered
 	jmp (STORE_PROG_ADDR)
