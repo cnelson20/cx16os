@@ -22,7 +22,7 @@
 | $9D2D | [`get_pwd`](#9d2d-get_pwd) | r0, r1 | | .A, .X, .Y |
 | $9D30 | [`chdir`](#9d30-chdir) | .AX | .A | .Y |
 | $9D33-$9D5A | [`Extmem routines`](extmem.md) | | | |
-| $9D5D | [`wait_process`](#9d51-wait_process) | .A, | .A | .XY |
+| $9D5D | [`wait_process`](#9d5d-wait_process) | .A, | .A | .XY |
 | $9D60 | [`fgetc`](#9d60-fgetc) | .A, | .A, .X | .Y | 
 | $9D63 | [`fputc`](#9d63-fputc) | .A, .X | .Y | .X | 
 | $9D66 | [`unlink`](#9d66-unlink) | .AX | .A | .Y | 
@@ -197,6 +197,23 @@ Return values:
 
 Return values:
 - Returns process return value in .A
+
+---
+
+### $9D60: fgetc
+- Gets the next byte of the fd in .X
+
+Return values:
+- Returns next byte of file in .A
+- .X = 0 on success, != 0 on failure to read (possibly EOF)
+
+---
+
+### $9D63: fputc
+- Writes .A to the fd in .X
+
+Return values:
+- .Y = 0 on success, != 0 on a failure to write to file
 
 ---
 
