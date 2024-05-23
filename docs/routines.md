@@ -18,7 +18,7 @@
 | $9D21 | [`close_file`](#9d21-close_file) | .A | | .X, .Y |
 | $9D24 | [`read_file`](#9d24-read_file) | .A, r0, r1 | .AX, .Y | |
 | $9D27 | [`write_file`](#9d27-write_file) | .A, r0, r1 | .AX, .Y | |
-| $9D2A | [`load_dir_listing_extmem`](#9d2a-load_dir_listing_extmem) | | .A, .X | .Y |
+| $9D2A | [`load_dir_listing_extmem`](#9d2a-load_dir_listing_extmem) | | .AX | .Y |
 | $9D2D | [`get_pwd`](#9d2d-get_pwd) | r0, r1 | | .A, .X, .Y |
 | $9D30 | [`chdir`](#9d30-chdir) | .AX | .A | .Y |
 | $9D33-$9D5A | [`Extmem routines`](extmem.md) | | | |
@@ -218,6 +218,23 @@ Return values:
 
 ### $9D6C: copy_file
 - Copies file with filename pointed to by r1 to r0
+
+Return values:
+- Returns 0 on success, non-zero on failure
+
+---
+
+### $9D6F: mkdir
+- Creates a new directory with name in .AX
+
+Return values:
+- Returns 0 on success, non-zero on failure
+
+---
+
+### $9D72: rmdir
+- Deletes an empty directory whose name is pointed to by .AX
+- Fails on an non-empty directory
 
 Return values:
 - Returns 0 on success, non-zero on failure
