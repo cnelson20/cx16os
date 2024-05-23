@@ -63,3 +63,6 @@ fputc := $9D63
 unlink := $9D66
 rename := $9D69
 copy_file := $9D6C
+mkdir := $9D6F
+rmdir := $9D72
+

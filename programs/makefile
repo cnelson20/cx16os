@@ -1,7 +1,7 @@
 CC = cl65
 FLAGS =-t none -C cl65_progs.cfg
 
-all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp
+all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir
 
 bindir: ../mnt/bin
 	
@@ -14,6 +14,14 @@ ed: ed.s
 
 shell: shell.s
 	$(CC) $(FLAGS) -o $@ shell.s
+	cp $@ ../mnt/bin
+
+mkdir: mkdir.s routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
+	cp $@ ../mnt/bin
+
+rmdir: rmdir.s routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
 	cp $@ ../mnt/bin
 
 cp: cp.s routines.inc

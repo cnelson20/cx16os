@@ -42,7 +42,7 @@ found_end_word:
 	lda ptr0
 	ldx ptr0 + 1
 	
-	jsr unlink	
+	jsr mkdir
 	cmp #0
 	bne file_error
 	
@@ -75,10 +75,10 @@ argc:
 	.byte 0
 	
 error_msg_p1:
-	.asciiz "Error deleting file '"
+	.asciiz "Error creating directory '"
 
 error_msg_p2:
 	.byte "'", $d, 0
 
 no_args_str:
-	.byte "rm: missing operand", $d, 0
+	.byte "mkdir: missing operand", $d, 0
