@@ -1,5 +1,6 @@
 .include "prog.inc"
 .include "cx16.inc"
+.include "macs.inc"
 .include "ascii_charmap.inc"
 
 .SEGMENT "CODE"
@@ -29,6 +30,7 @@
 .import active_process_stack
 .import active_process_sp
 .import current_program_id
+.import file_table_count
 
 
 .export call_table
@@ -268,17 +270,42 @@ fgetc:
 	; reading from stdin
 	jmp GETIN
 	:
+	lda #1
+	sta RAM_BANK
+	lda file_table_count, X
+	pha
+	lda current_program_id
+	sta RAM_BANK
+	pla
+	cmp #1 ; normal status
+	bne @eof
 	
 	lda #1
 	sta atomic_action_st
 	
+	stx KZE0
 	jsr CHKIN
 	bcs @chkout_error
 	
 	jsr GETIN
 	pha
+	jsr READST
+	and #$40
+	beq :+
+	
+	lda #1
+	sta RAM_BANK
+	lda #$42
+	ldx KZE0
+	sta file_table_count, X
+	lda current_program_id
+	sta RAM_BANK
+	
+	:
 	jsr CLRCHN
 	pla
+	stz atomic_action_st
+	
 	ldx #0
 	rts
 	
@@ -286,6 +313,7 @@ fgetc:
 	lda #0
 	; .X = $FF already
 	rts
+@eof:
 @chkout_error:
 	stz atomic_action_st
 	tax

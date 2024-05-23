@@ -143,6 +143,16 @@ custom_irq_handler:
 	lda #1
 	sta irq_already_triggered
 	
+	lda $9F27 
+	sta vera_status
+	and #$01
+	bne :+
+	jmp (default_irq_handler)
+	:
+	lda $9F27 
+	sta vera_status
+	
+	
 	lda RAM_BANK
 	
 	ldx current_program_id
@@ -187,9 +197,6 @@ custom_irq_handler:
 	sta STORE_REG_Y
 	lda $10A, X
 	sta STORE_REG_Y + 1
-		
-	lda $9F27 
-	sta vera_status
 	
 	lda @curr_ram_bank_in_use
 	sta RAM_BANK
@@ -205,7 +212,9 @@ irq_re_caller:
 	jmp nmi_re_caller
 	:
 
-	lda RAM_BANK
+	lda STORE_PROG_RAMBANK
+	beq :+
+	cmp #1
 	beq :+
 	and #%11111110
 	cmp current_program_id
@@ -213,6 +222,8 @@ irq_re_caller:
 	lda STORE_PROG_ADDR + 1
 	cmp #$A0 ; process running in code space 
 	bcc :+
+	cmp #$C0
+	bcs :+
 	; process trampled into another bank, need to kill
 	lda current_program_id
 	ldx #RETURN_PAGE_BREAK
