@@ -709,6 +709,7 @@ close_file_kernal:
 ;
 .export read_file_ext
 read_file_ext:
+	sei
 	inc RAM_BANK
 	tay
 	lda PV_OPEN_TABLE, Y
@@ -762,8 +763,6 @@ load_process_entry_pt:
 	; bytes read in .XY, carry = !success
 	bcs read_slow ; if MACPTR returns with carry set, try read_slow
 	
-	
-	
 	txa
 	sty KZE2
 	ora KZE2
@@ -805,12 +804,14 @@ load_process_entry_pt:
 	tya
 	ldy #$00
 	
+	cli
 	rts
 read_error_chkin:
 	stz atomic_action_st
 	tay
 	lda #0
 	tax
+	cli
 	rts
 	
 read_slow:
@@ -849,6 +850,7 @@ read_slow:
 	tax
 	tya
 	ldy #$00
+	cli
 	rts
 	
 read_stdin:

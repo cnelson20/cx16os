@@ -34,7 +34,7 @@ init:
 	
 	stz new_stdin_fileno
 	stz new_stdout_fileno
-
+	
 new_line:
 	; close these files in case got through
 	lda new_stdin_fileno

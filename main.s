@@ -70,18 +70,20 @@ load_error_msg:
 shell_name:
 	.literal "bin/shell", 0
 
+IRQ_816_VECTOR := $0338
+
 setup_interrupts:
 	sei
 	
-	lda $0314
-	sta default_irq_handler
-	lda $0315
-	sta default_irq_handler + 1
+	lda IRQ_816_VECTOR
+	sta default_816_irq_handler
+	lda IRQ_816_VECTOR + 1
+	sta default_816_irq_handler + 1
 	
-	lda #<custom_irq_handler
-	sta $0314
-	lda #>custom_irq_handler
-	sta $0315
+	lda #<custom_irq_816_handler
+	sta IRQ_816_VECTOR
+	lda #>custom_irq_816_handler
+	sta IRQ_816_VECTOR + 1
 	
 	lda $0318
 	sta default_nmi_handler
@@ -104,9 +106,9 @@ setup_interrupts:
 reset_interrupts:
 	sei 
 	
-	lda default_irq_handler
+	lda default_816_irq_handler
 	sta $0314
-	lda default_irq_handler
+	lda default_816_irq_handler
 	sta $0315
 	lda default_nmi_handler
 	sta $033c
@@ -116,8 +118,8 @@ reset_interrupts:
 	cli
 	rts
 
-.export default_irq_handler
-default_irq_handler:
+.export default_816_irq_handler
+default_816_irq_handler:
 	.word 0
 .export irq_already_triggered
 irq_already_triggered:
@@ -130,28 +132,33 @@ atomic_action_st:
 nmi_queued:
 	.byte 0
 
-.export custom_irq_handler
-custom_irq_handler:
+jump_default_handler:
+	plp
+	jmp (default_816_irq_handler)
+
+.export custom_irq_816_handler
+custom_irq_816_handler:
+	php
+	sep #$30
+	
+	;jmp jump_default_handler
+	
 	;
 	; if program is going through irq process, don't restart the irq
 	; if not, rewrite stack to run system code
 	;
 	lda irq_already_triggered
-	beq :+
-	jmp (default_irq_handler)
-	:
+	bne jump_default_handler
 	lda #1
 	sta irq_already_triggered
 	
 	lda $9F27 
 	sta vera_status
 	and #$01
-	bne :+
-	jmp (default_irq_handler)
-	:
+	beq jump_default_handler
+	
 	lda $9F27 
 	sta vera_status
-	
 	
 	lda RAM_BANK
 	
@@ -162,46 +169,50 @@ custom_irq_handler:
 	sta @curr_ram_bank_in_use
 	
 	tsx
+	inx
 	txa
 	clc 
-	adc #$1C
+	adc #$14
 	sta STORE_PROG_SP
 	
 	; store program counter and update it to return to irq_re_caller
+	; lo byte at $12 + SP, hi byte at $13 + SP
 	tsx 
-	lda $11B, X 
+	inx
+	lda $113, X 
 	sta STORE_PROG_ADDR + 1
 	lda #>irq_re_caller
-	sta $11B, X
+	sta $113, X
 	
-	lda $11A, X
+	lda $112, X
 	sta STORE_PROG_ADDR
 	lda #<irq_re_caller
-	sta $11A, X
+	sta $112, X
 	
-	lda $119, X
+	; P/STATUS register is saved at $11 + current sp
+	lda $111, X
 	sta STORE_REG_STATUS
 	
 	; store program's registers
-	lda $117, X
+	lda $10F, X
 	sta STORE_REG_A
-	lda $118, X
+	lda $110, X
 	sta STORE_REG_A + 1
 	
-	lda $10B, X
+	lda $103, X
 	sta STORE_REG_X
-	lda $10C, X
+	lda $104, X
 	sta STORE_REG_X + 1
 	
-	lda $109, X
+	lda $101, X
 	sta STORE_REG_Y
-	lda $10A, X
+	lda $102, X
 	sta STORE_REG_Y + 1
 	
 	lda @curr_ram_bank_in_use
 	sta RAM_BANK
 	
-	jmp (default_irq_handler)
+	jmp jump_default_handler
 @curr_ram_bank_in_use:
 	.byte 0
 
