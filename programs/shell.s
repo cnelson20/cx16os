@@ -502,6 +502,16 @@ check_special_cmds:
 	lda #1
 	rts
 	:
+
+	lda #<string_exit
+	ldx #>string_exit
+	jsr cmd_cmp
+	bne :+
+
+	lda #0
+	jmp exit_shell
+
+	:
 	
 	lda #0
 	rts
@@ -525,6 +535,15 @@ cmd_cmp:
 @ex:	
 	rts
 
+exit_shell:
+	sta ptr0
+	lda #>$01FD
+	xba
+	lda #<$01FD
+	tcs
+	lda ptr0
+	rts
+
 ;
 ; Error & intro messages
 ;
@@ -546,6 +565,8 @@ open_error_p2:
 ; special cmd strings
 string_cd:
 	.asciiz "cd"
+string_exit:
+	.asciiz "exit"
 
 ; program vars 
 
