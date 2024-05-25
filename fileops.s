@@ -557,7 +557,6 @@ open_file_kernal_ext:
 	pla ; pull sys file no
 	pla ; pull process file no ( to return )
 	ldx #0
-	
 	rts
 
 	; CHECK channel 15 to get status ;
@@ -709,7 +708,6 @@ close_file_kernal:
 ;
 .export read_file_ext
 read_file_ext:
-	sei
 	inc RAM_BANK
 	tay
 	lda PV_OPEN_TABLE, Y
@@ -736,8 +734,7 @@ load_process_entry_pt:
 	; this is a file we can read from disk ;
 	sta KZE3
 	
-	lda #1
-	sta atomic_action_st
+	set_atomic_st
 	
 	ldx KZE3
 	jsr CHKIN
@@ -792,7 +789,7 @@ load_process_entry_pt:
 	
 @end_read_loop:	
 	jsr CLRCHN
-	stz atomic_action_st
+	clear_atomic_st
 	
 	sec
 	lda KZE0
@@ -804,14 +801,12 @@ load_process_entry_pt:
 	tya
 	ldy #$00
 	
-	cli
 	rts
 read_error_chkin:
-	stz atomic_action_st
+	clear_atomic_st
 	tay
 	lda #0
 	tax
-	cli
 	rts
 	
 read_slow:
@@ -839,7 +834,7 @@ read_slow:
 	
 @no_more_bytes:
 	jsr CLRCHN
-	stz atomic_action_st
+	clear_atomic_st
 	
 	sec
 	lda KZE0
@@ -850,7 +845,6 @@ read_slow:
 	tax
 	tya
 	ldy #$00
-	cli
 	rts
 	
 read_stdin:
@@ -910,8 +904,7 @@ write_file_ext:
 	beq write_stdout
 	
 @write_to_file:
-	lda #1
-	sta atomic_action_st ; needs to be uninterrupted
+	set_atomic_st ; needs to be uninterrupted
 
 	ldx KZE2
 	jsr CHKOUT
@@ -928,7 +921,7 @@ write_file_ext:
 	bne :+ ; there are more bytes to read
 	; return ;
 	jsr CLRCHN
-	stz atomic_action_st
+	clear_atomic_st
 	lda r1
 	ldx r1 + 1
 	ldy #0
@@ -977,7 +970,7 @@ write_file_ext:
 	phy
 	jsr CLRCHN
 	ply
-	stz atomic_action_st
+	clear_atomic_st
 	
 	lda current_program_id
 	sta RAM_BANK
@@ -1023,8 +1016,7 @@ load_dir_listing_extmem_ext:
 	
 	jsr wait_dos_channel
 	
-	lda #1
-	sta atomic_action_st
+	set_atomic_st
 	
 	; cd to process' pwd ;
 	lda RAM_BANK
@@ -1086,7 +1078,7 @@ load_dir_listing_extmem_ext:
 	ldy #>$A000
 	jsr LOAD
 	
-	stz atomic_action_st
+	clear_atomic_st
 	
 	bcs @open_error
 	
@@ -1108,10 +1100,10 @@ load_dir_listing_extmem_ext:
 	rts
 	
 @cd_open_error:
-	jsr free_dos_channel
-	stz atomic_action_st
 	lda #15
 	jsr CLOSE
+	jsr free_dos_channel
+	clear_atomic_st
 	lda #$FF
 	tax
 	rts
@@ -1234,8 +1226,7 @@ chdir_ext:
 	sta KZES4
 	stx KZES4 + 1
 	
-	lda #1
-	sta atomic_action_st
+	set_atomic_st
 	
 	; cd to process' current pwd ;
 	jsr cd_process_pwd
@@ -1267,7 +1258,7 @@ chdir_ext:
 	sta KZE3
 	jsr update_internal_pwd
 	
-	stz atomic_action_st
+	clear_atomic_st
 	
 	; copy kernal pwd to process pwd
 	cnsta_word PV_PWD, KZE0
@@ -1295,7 +1286,7 @@ chdir_ext:
 	lda #0
 	rts
 @cd_error:
-	stz atomic_action_st
+	clear_atomic_st
 	
 	ply_word KZES4
 	lda #1
@@ -1472,8 +1463,7 @@ single_arg_dos_cmd:
 	; push S/MD/RD cmd to stack ;
 	phy_word KZE0
 	
-	lda #1
-	sta atomic_action_st
+	set_atomic_st
 	
 	; cd to process' current pwd ;
 	jsr cd_process_pwd
@@ -1505,7 +1495,7 @@ single_arg_dos_cmd:
 	
 	ldy current_program_id
 	sty RAM_BANK
-	stz atomic_action_st
+	clear_atomic_st
 	ply_word KZES5
 	ply_word KZES4
 	
@@ -1517,7 +1507,7 @@ single_arg_dos_cmd:
 @cd_error:
 	ldy current_program_id
 	sty RAM_BANK
-	stz atomic_action_st
+	clear_atomic_st
 	ply_word KZES5
 	ply_word KZES4
 @scratch_error:
@@ -1547,8 +1537,7 @@ copy_rename_file:
 	ldsta_word r0, KZES4
 	ldsta_word r1, KZES5
 	
-	lda #1
-	sta atomic_action_st
+	set_atomic_st
 	
 	phy ; preserve copy / rename (C vs R)
 	
@@ -1573,7 +1562,7 @@ copy_rename_file:
 	
 	ldy current_program_id
 	sty RAM_BANK
-	stz atomic_action_st
+	clear_atomic_st
 	ply_word KZES5
 	ply_word KZES4
 	
@@ -1586,7 +1575,7 @@ copy_rename_file:
 @cd_error:	
 	ldy current_program_id
 	sty RAM_BANK
-	stz atomic_action_st
+	clear_atomic_st
 	ply_word KZES5
 	ply_word KZES4
 @rename_error:

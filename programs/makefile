@@ -1,20 +1,33 @@
 CC = cl65
 FLAGS =-t none -C cl65_progs.cfg
 
-all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir cat_slow
+all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir cat_slow testprog
 
 bindir: ../mnt/bin
 	
 ../mnt/bin:	
 	-mkdir ../mnt/bin
 
-ed: ed.s
-	$(CC) $(FLAGS) -o $@ ed.s
-	cp $@ ../mnt/bin
+#
+# shell - shell for the os
+#
 
 shell: shell.s
 	$(CC) $(FLAGS) -o $@ shell.s
 	cp $@ ../mnt/bin
+
+#
+# ed - based off the program of the same name
+#
+
+ed: ed.s
+	$(CC) $(FLAGS) -o $@ ed.s
+	cp $@ ../mnt/bin
+
+#
+# Rest of the commands
+# Named after linux commands
+#
 
 mkdir: mkdir.s routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
@@ -24,10 +37,6 @@ rmdir: rmdir.s routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
 	cp $@ ../mnt/bin
 	
-cat_slow: cat_slow.s routines.inc
-	$(CC) $(FLAGS) -o $@ $@.s
-	cp $@ ../mnt/bin
-
 cp: cp.s routines.inc
 	$(CC) $(FLAGS) -o $@ cp.s
 	cp $@ ../mnt/bin
@@ -42,6 +51,10 @@ rm: rm.s routines.inc
 
 cat: cat.s routines.inc
 	$(CC) $(FLAGS) -o $@ cat.s
+	cp $@ ../mnt/bin
+
+cat_slow: cat_slow.s routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
 	cp $@ ../mnt/bin
 
 echo: echo.s routines.inc

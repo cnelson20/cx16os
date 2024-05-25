@@ -1,4 +1,4 @@
-.setcpu "65c02"
+.setcpu "65816"
 
 ;
 ; System routines

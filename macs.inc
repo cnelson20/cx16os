@@ -91,3 +91,12 @@
 	lda addr
 	ldx addr + 1
 .endmacro
+
+.macro set_atomic_st
+	lda #1
+	sta atomic_action_st
+.endmacro
+
+.macro clear_atomic_st
+	stz atomic_action_st
+.endmacro

@@ -55,15 +55,17 @@ init:
 	ldax_addr load_error_msg
 	jsr print_str_ext
 	
-	sec
-	xce
-	clc
-	jmp enter_basic
+	jmp return_to_basic
 	
 	:
 	jmp run_first_prog
 	rts
-	; shouldn't get here ;
+
+return_to_basic:
+	sec
+	xce
+	clc
+	jmp enter_basic
 
 load_error_msg:
 	.literal $d, "COULD NOT FIND BIN/SHELL TO START OS", 0
@@ -142,24 +144,31 @@ custom_irq_816_handler:
 	sep #$30
 	
 	;jmp jump_default_handler
+
+	;
+	; Check for new frame flag on vera
+	;
+	lda $9F27 
+	and #$01
+	beq jump_default_handler
 	
+	; Decrement time process has left to run
+	jsr dec_process_time
+
 	;
 	; if program is going through irq process, don't restart the irq
 	; if not, rewrite stack to run system code
 	;
 	lda irq_already_triggered
+	ora atomic_action_st
 	bne jump_default_handler
 	lda #1
 	sta irq_already_triggered
-	
+
+	; store vera status
 	lda $9F27 
 	sta vera_status
-	and #$01
-	beq jump_default_handler
-	
-	lda $9F27 
-	sta vera_status
-	
+
 	lda RAM_BANK
 	
 	ldx current_program_id
@@ -188,7 +197,7 @@ custom_irq_816_handler:
 	sta STORE_PROG_ADDR
 	lda #<irq_re_caller
 	sta $112, X
-	
+
 	; P/STATUS register is saved at $11 + current sp
 	lda $111, X
 	sta STORE_REG_STATUS
@@ -236,6 +245,7 @@ irq_re_caller:
 	cmp #$C0
 	bcs :+
 	; process trampled into another bank, need to kill
+	stp
 	lda current_program_id
 	ldx #RETURN_PAGE_BREAK
 	jmp program_exit
@@ -347,6 +357,11 @@ program_return_handler:
 	sta irq_already_triggered ; no sheningans during this
 	
 	lda current_program_id
+	cmp #$10 ; shell prog
+	bne :+
+	jmp return_to_basic
+
+	:
 	jmp program_exit
 	
 .export kill_process_kernal
@@ -461,20 +476,20 @@ program_exit:
 	lda KZP0
 	ldx #1
 	rts
-	
-manage_process_time:
+
+dec_process_time:
+	lda schedule_timer
+	beq :+
 	dec schedule_timer
+	:
+	rts
+
+manage_process_time:
+	lda schedule_timer
 	beq @process_time_up
 @process_has_time:
 	jmp return_control_program
-@process_time_up:
-	lda atomic_action_st
-	beq :+
-	lda #1
-	sta schedule_timer
-	bra @process_has_time
-	:
-	
+@process_time_up:	
 	; program's time is up ;
 	; switch control to next program ;
 switch_next_program:
