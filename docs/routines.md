@@ -18,7 +18,7 @@
 | $9D21 | [`close_file`](#9d21-close_file) | .A | | .X, .Y |
 | $9D24 | [`read_file`](#9d24-read_file) | .A, r0, r1 | .AX, .Y | |
 | $9D27 | [`write_file`](#9d27-write_file) | .A, r0, r1 | .AX, .Y | |
-| $9D2A | [`load_dir_listing_extmem`](#9d2a-load_dir_listing_extmem) | | .AX | .Y |
+| $9D2A | [`load_dir_listing_extmem`](#9d2a-load_dir_listing_extmem) | .A | .AX | .Y |
 | $9D2D | [`get_pwd`](#9d2d-get_pwd) | r0, r1 | | .A, .X, .Y |
 | $9D30 | [`chdir`](#9d30-chdir) | .AX | .A | .Y |
 | $9D33-$9D5A | [`Extmem routines`](extmem.md) | | | |
