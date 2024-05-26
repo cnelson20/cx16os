@@ -226,6 +226,8 @@ custom_irq_816_handler:
 	.byte 0
 
 irq_re_caller:
+	sep #$30
+	
 	lda nmi_queued
 	beq :+
 	stz nmi_queued
@@ -267,15 +269,31 @@ default_nmi_handler:
 
 .export custom_nmi_handler
 custom_nmi_handler:
+	stp
+	pha
+	php
+
+	sep #$30
+	lda RAM_BANK
+	pha
+	lda current_program_id
+	sta RAM_BANK
+	pla ; pull RAM_BANK back off stack
+	sta STORE_PROG_RAMBANK
+
+	pla ; pull status reg off stack
+	pha
+	sta STORE_REG_STATUS
+
+	plp
+	pla
+
 	; .A , .XY are 16-bits
 	sta STORE_REG_A
 	stx STORE_REG_X
 	sty STORE_REG_Y
 	
 	sep #$30
-	
-	lda RAM_BANK
-	sta STORE_PROG_RAMBANK
 	
 	lda irq_already_triggered
 	beq :+
@@ -352,6 +370,7 @@ nmi_re_caller:
 	jmp return_control_program
 
 program_return_handler:
+	sep #$30
 	tax ; process return value in .A
 	lda #1
 	sta irq_already_triggered ; no sheningans during this
@@ -988,17 +1007,21 @@ switch_control_bank:
 	lda STORE_REG_STATUS
 	pha
 	
-	lda STORE_REG_A + 1
-	xba
+	rep #$10
+	.a16
+	.i16
 	lda STORE_REG_A
-	pha
 	ldx STORE_REG_X
 	ldy STORE_REG_Y
 	
+	pha
+
 	lda STORE_PROG_RAMBANK
 	sta RAM_BANK
 	
 	pla
+	.i8
+	.a8
 	stz irq_already_triggered
 	rti
 

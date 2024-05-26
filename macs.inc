@@ -100,3 +100,12 @@
 .macro clear_atomic_st
 	stz atomic_action_st
 .endmacro
+
+.macro save_p_816_8bitmode
+	php
+	sep #$30
+.endmacro
+
+.macro restore_p_816
+	plp
+.endmacro

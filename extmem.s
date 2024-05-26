@@ -14,6 +14,7 @@
 ;
 .export res_extmem_bank
 res_extmem_bank:
+	save_p_816_8bitmode
 	lda #1
 	sta atomic_action_st
 	
@@ -59,6 +60,8 @@ res_extmem_bank:
 	
 	lda KZE0
 	stz atomic_action_st
+
+	restore_p_816
 	rts
 
 ;
@@ -124,11 +127,13 @@ free_extmem_bank:
 ;
 .export set_extmem_rbank
 set_extmem_rbank:
+	save_p_816_8bitmode
 	cmp #0
 	bne :+
 	
 	lda current_program_id
 	sta STORE_PROG_EXTMEM_RBANK
+	restore_p_816
 	rts
 	
 	:
@@ -143,6 +148,7 @@ set_extmem_rbank:
 	pla
 	sta STORE_PROG_EXTMEM_RBANK
 	lda #0
+	restore_p_816
 	rts
 	
 ;
@@ -152,11 +158,13 @@ set_extmem_rbank:
 ;
 .export set_extmem_wbank
 set_extmem_wbank:
+	save_p_816_8bitmode
 	cmp #0
 	bne :+
 	
 	lda current_program_id
 	sta STORE_PROG_EXTMEM_WBANK
+	restore_p_816
 	rts
 	
 	:
@@ -166,11 +174,13 @@ set_extmem_wbank:
 	; not this program's bank, error
 	pla
 	lda #1 ; return non-zero
+	restore_p_816
 	rts
 	:
 	pla
 	sta STORE_PROG_EXTMEM_WBANK
 	lda #0
+	restore_p_816
 	rts
 
 ;
@@ -179,12 +189,14 @@ set_extmem_wbank:
 ;
 .export set_extmem_rptr
 set_extmem_rptr:
+	save_p_816_8bitmode
 	cmp #$02
 	bcc :+
 	cmp #$20
 	bcs :+
 	; first zp set ;
 	sta STORE_PROG_EXTMEM_RPTR
+	restore_p_816
 	rts
 	:
 	cmp #$30
@@ -193,10 +205,12 @@ set_extmem_rptr:
 	bcs :+
 	; second zp set ;
 	sta STORE_PROG_EXTMEM_RPTR
+	restore_p_816
 	rts
 	:
 	; not valid zp space, fail ;
 	lda #0
+	restore_p_816
 	rts
 
 ;
@@ -204,12 +218,14 @@ set_extmem_rptr:
 ;
 .export set_extmem_wptr
 set_extmem_wptr:
+	save_p_816_8bitmode
 	cmp #$02
 	bcc :+
 	cmp #$20
 	bcs :+
 	; first zp set ;
 	sta STORE_PROG_EXTMEM_WPTR
+	restore_p_816
 	rts
 	:
 	cmp #$30
@@ -218,10 +234,12 @@ set_extmem_wptr:
 	bcs :+
 	; second zp set ;
 	sta STORE_PROG_EXTMEM_WPTR
+	restore_p_816
 	rts
 	:
 	; not valid zp space, fail ;
 	lda #0
+	restore_p_816
 	rts
 
 ;
@@ -230,6 +248,7 @@ set_extmem_wptr:
 ;
 .export readf_byte_extmem_y
 readf_byte_extmem_y:
+	save_p_816_8bitmode
 	phx
 	ldx STORE_PROG_EXTMEM_RPTR
 	lda $00, X
@@ -246,6 +265,7 @@ readf_byte_extmem_y:
 	stx RAM_BANK
 	
 	plx
+	restore_p_816
 	rts 
 
 ;
@@ -254,6 +274,7 @@ readf_byte_extmem_y:
 ;
 .export readf_word_extmem_y
 readf_word_extmem_y:
+	save_p_816_8bitmode
 	ldx STORE_PROG_EXTMEM_RPTR
 	lda $00, X
 	sta KZE0
@@ -275,6 +296,7 @@ readf_word_extmem_y:
 	sta RAM_BANK
 	pla
 	plx
+	restore_p_816
 	rts
 
 ;
@@ -283,6 +305,7 @@ readf_word_extmem_y:
 ;
 .export writef_byte_extmem_y
 writef_byte_extmem_y:
+	save_p_816_8bitmode
 	sta KZE1
 	phx
 	ldx STORE_PROG_EXTMEM_WPTR
@@ -303,6 +326,7 @@ writef_byte_extmem_y:
 	sta RAM_BANK
 	
 	lda KZE1
+	restore_p_816
 	rts 
 
 ;
@@ -312,6 +336,7 @@ writef_byte_extmem_y:
 ;
 .export writef_word_extmem_y
 writef_word_extmem_y:
+	save_p_816_8bitmode
 	sta KZE1
 	stx KZE1 + 1
 	ldx STORE_PROG_EXTMEM_WPTR
@@ -335,6 +360,7 @@ writef_word_extmem_y:
 	sta RAM_BANK
 	
 	lda KZE1
+	restore_p_816
 	rts
 
 ;
@@ -345,6 +371,7 @@ writef_word_extmem_y:
 ;
 .export vread_byte_extmem_y
 vread_byte_extmem_y:
+	save_p_816_8bitmode
 	lda $00, X
 	sta KZE0
 	lda $01, X
@@ -362,6 +389,7 @@ vread_byte_extmem_y:
 	tya
 	ply
 	
+	restore_p_816
 	rts
 
 ;
@@ -372,6 +400,7 @@ vread_byte_extmem_y:
 ;
 .export vwrite_byte_extmem_y
 vwrite_byte_extmem_y:
+	save_p_816_8bitmode
 	phy
 	sta KZE1
 	
@@ -391,6 +420,7 @@ vwrite_byte_extmem_y:
 	
 	ply
 	lda KZE1
+	restore_p_816
 	rts
 
 ;
@@ -406,6 +436,12 @@ vwrite_byte_extmem_y:
 ;
 .export memmove_extmem
 memmove_extmem:
+	save_p_816_8bitmode
+	jsr @8_bit_mode
+	restore_p_816
+	rts
+
+@8_bit_mode:
 	sta KZE0
 	stx KZE0 + 1
 	
@@ -476,10 +512,16 @@ memmove_extmem:
 ;
 ; extmem_fill
 ;
-; Sets [r0, r0 + r1] in the previously set bank to .A
+; Sets [r0, r0 + r1) in the previously set bank to .A
 ;
 .export fill_extmem
 fill_extmem:
+	save_p_816_8bitmode
+	jsr @8_bit_mode
+	restore_p_816
+	rts
+
+@8_bit_mode:
 	sta KZE2
 	
 	lda r1
@@ -496,7 +538,7 @@ fill_extmem:
 	inc KZE1 + 1
 	
 	ldy #0
-	ldx r1
+	ldx KZE1
 	lda KZE2	
 @loop:
 	sta (KZE0), Y
@@ -507,8 +549,11 @@ fill_extmem:
 	:
 	dex
 	bne :+
-	dec KZE1 + 1
+	ldx KZE1 + 1
 	beq @end
+	dex
+	stx KZE1 + 1
+	ldx #0
 	:
 	bra @loop
 @end:	

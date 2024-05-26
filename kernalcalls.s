@@ -45,13 +45,13 @@ call_table:
 	jmp parse_num ; $9D15
 	jmp hex_num_to_string ; $9D18
 	jmp kill_process ; $9D1B
-	jmp open_file_kernal_ext ; $9D1E
-	jmp close_file_kernal ; $9D21
-	jmp read_file_ext ; $9D24
-	jmp write_file_ext ; $9D27
-	jmp load_dir_listing_extmem_ext ; $9D2A
-	jmp get_pwd_ext ; $9D2D
-	jmp chdir_ext ; $9D30
+	jmp open_file ; $9D1E
+	jmp close_file ; $9D21
+	jmp read_file ; $9D24
+	jmp write_file ; $9D27
+	jmp load_dir_listing_extmem ; $9D2A
+	jmp get_pwd ; $9D2D
+	jmp chdir ; $9D30
 	jmp res_extmem_bank ; $9D33
 	jmp set_extmem_rbank ; $9D36
 	jmp set_extmem_rptr ; $9D39
@@ -69,11 +69,11 @@ call_table:
 	jmp wait_process ; $9D5D
 	jmp fgetc ; $9D60
 	jmp fputc ; $9D63
-	jmp unlink_ext ; $9D66
-	jmp rename_ext ; $9D69
-	jmp copy_file_ext ; $9D6C
-	jmp mkdir_ext
-	jmp rmdir_ext
+	jmp unlink ; $9D66
+	jmp rename ; $9D69
+	jmp copy_file ; $9D6C
+	jmp mkdir
+	jmp rmdir
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -89,6 +89,7 @@ call_table_end:
 ; return value: 0 on failure, otherwise return bank of new process
 ;
 exec:
+	save_p_816_8bitmode
 	sta $02 + 1
 	
 	lda #1
@@ -105,6 +106,7 @@ exec:
 	stx RAM_BANK
 	
 	stz irq_already_triggered
+	restore_p_816
 	rts
 
 
@@ -113,6 +115,7 @@ exec:
 ;
 .export putc
 putc:
+	save_p_816_8bitmode
 	phy
 	phx
 	pha
@@ -123,6 +126,7 @@ putc:
 	pla
 	plx
 	ply
+	restore_p_816
 	rts
 
 ;
@@ -130,6 +134,7 @@ putc:
 ;
 .export fputc
 fputc:
+	save_p_816_8bitmode
 	cpx #PV_OPEN_TABLE_SIZE
 	bcs @exit_nsuch_file
 	
@@ -144,7 +149,9 @@ fputc:
 	
 	cpx #2 ; STDIN / STDOUT
 	bcs :+
-	jmp putc_v
+	jsr putc_v
+	restore_p_816
+	rts
 	:
 	
 	ldy #1
@@ -163,14 +170,17 @@ fputc:
 
 	stz atomic_action_st
 	ldy #0
+	restore_p_816
 	rts
 	
 @exit_nsuch_file:
 	ldy #$FF
+	restore_p_816
 	rts
 @chkout_error:
 	stz atomic_action_st
 	tay
+	restore_p_816
 	rts
 	
 
@@ -240,6 +250,7 @@ valid_c_table_1:
 ;
 .export getc	
 getc:
+	save_p_816_8bitmode
 	phx
 	
 	ldx #0
@@ -249,6 +260,7 @@ getc:
 	; CHRIN doesn't preserve .Y so this is fine
 	
 	plx
+	restore_p_816
 	rts
 
 ;
@@ -256,6 +268,7 @@ getc:
 ;	
 .export fgetc
 fgetc:
+	save_p_816_8bitmode
 	pha
 	inc RAM_BANK
 	lda PV_OPEN_TABLE, X
@@ -268,7 +281,9 @@ fgetc:
 	cpx #2
 	bcs :+
 	; reading from stdin
-	jmp GETIN
+	jsr GETIN
+	restore_p_816
+	rts
 	:
 	lda #1
 	sta RAM_BANK
@@ -307,16 +322,19 @@ fgetc:
 	stz atomic_action_st
 	
 	ldx #0
+	restore_p_816
 	rts
 	
 @exit_nsuch_file:
 	lda #0
 	; .X = $FF already
+	restore_p_816
 	rts
 @eof:
 @chkout_error:
 	stz atomic_action_st
 	tax
+	restore_p_816
 	rts
 	
 ;
@@ -324,6 +342,7 @@ fgetc:
 ;
 .export print_str_ext
 print_str_ext:
+	save_p_816_8bitmode
 	sta r0
 	stx r0 + 1
 	ldy #0
@@ -334,6 +353,7 @@ print_str_ext:
 	iny
 	bne :-
 	:
+	restore_p_816
 	rts
 
 ;
@@ -343,9 +363,11 @@ print_str_ext:
 ; .Y = priority value, r0.L = active process or not
 ;
 get_process_info:
+	save_p_816_8bitmode
 	tax
 	jsr is_valid_process
 	bne :+
+	restore_p_816
 	rts
 
 	:
@@ -369,15 +391,18 @@ get_process_info:
 	lda return_table, X
 	tax
 	lda #1 ; already know process is valid
+	restore_p_816
 	rts
 
 ;
 ; Return pointer to args in .AX and argc in .Y
 ;
 get_args:
+	save_p_816_8bitmode
 	lda #<STORE_PROG_ARGS
 	ldx #>STORE_PROG_ARGS
 	ldy STORE_PROG_ARGC
+	restore_p_816
 	rts
 	
 ;
@@ -387,6 +412,7 @@ get_args:
 ; no return value
 ;
 get_process_name:
+	save_p_816_8bitmode
 	pha 
 	lda #1
 	sta atomic_action_st
@@ -395,6 +421,7 @@ get_process_name:
 	jsr get_process_name_kernal_ext
 	
 	stz atomic_action_st
+	restore_p_816
 	rts
 
 ;
@@ -402,14 +429,20 @@ get_process_name:
 ; if leading $ or 0x, treat as hex number 
 ;
 parse_num:
-	jmp parse_num_kernal_ext
+	save_p_816_8bitmode
+	jsr parse_num_kernal_ext
+	restore_p_816
+	rts
 	
 ;
 ; returns base-16 representation of byte in .A in .X & .A
 ; returns low nibble in .X, high nibble in .A, preserves .Y
 ;
 hex_num_to_string:
-	jmp hex_num_to_string_kernal
+	save_p_816_8bitmode
+	jsr hex_num_to_string_kernal
+	restore_p_816
+	rts
 
 ;
 ; kills the process in bank .A
@@ -418,12 +451,91 @@ hex_num_to_string:
 ; return val: .AX = 0 -> no process to kill, .X = 1 -> process .A killed
 ;	
 kill_process:
-	jmp kill_process_kernal
+	save_p_816_8bitmode
+	jsr kill_process_kernal
+	restore_p_816
+	rts
+
+;
+; File I/O routines
+;
+open_file:
+	save_p_816_8bitmode
+	jsr open_file_kernal_ext
+	restore_p_816
+	rts
+
+close_file:
+	save_p_816_8bitmode
+	jsr close_file_kernal
+	restore_p_816
+	rts
+
+read_file:
+	save_p_816_8bitmode
+	jsr read_file_ext
+	restore_p_816
+	rts
+
+write_file:
+	save_p_816_8bitmode
+	jsr write_file_ext
+	restore_p_816
+	rts
+
+load_dir_listing_extmem:
+	save_p_816_8bitmode
+	jsr load_dir_listing_extmem_ext
+	restore_p_816
+	rts
+
+get_pwd:
+	save_p_816_8bitmode
+	jsr get_pwd_ext
+	restore_p_816
+	rts
+
+chdir:
+	save_p_816_8bitmode
+	jsr chdir_ext
+	restore_p_816
+	rts
+
+unlink:
+	save_p_816_8bitmode
+	jsr unlink_ext
+	restore_p_816
+	rts
+
+rename:
+	save_p_816_8bitmode
+	jsr rename_ext
+	restore_p_816
+	rts
+
+copy_file:
+	save_p_816_8bitmode
+	jsr copy_file
+	restore_p_816
+	rts
+
+mkdir:
+	save_p_816_8bitmode
+	jsr mkdir
+	restore_p_816
+	rts
+
+rmdir:
+	save_p_816_8bitmode
+	jsr rmdir_ext
+	restore_p_816
+	rts
 
 ; 
 ; waits until process in .A is completed
 ;
 wait_process:
+	save_p_816_8bitmode
 	sta KZE0
 	
 	; save priority and set to zero ;
@@ -449,5 +561,6 @@ wait_process:
 	sta process_priority_table, X
 	
 	lda KZE0
+	restore_p_816
 	rts
 
