@@ -7,15 +7,15 @@ r0 := $02
 r1 := $04
 
 start:
-	lda #<end
-	sta r0
-	lda #>end
-	sta r0 + 1
+	rep #$30
 	
-	lda #<ENOUGH_BYTES
+	.a16
+	.i16
+	lda #end
+	sta r0
+	
+	lda #ENOUGH_BYTES
 	sta r1
-	lda #>ENOUGH_BYTES
-	sta r1 + 1
 	
 	jsr get_pwd
 	
