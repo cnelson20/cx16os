@@ -115,18 +115,18 @@ exec:
 ;
 .export putc
 putc:
-	save_p_816_8bitmode
 	phy
 	phx
 	pha
+	save_p_816_8bitmode
 	
 	ldx #1
 	jsr fputc
 	
+	restore_p_816
 	pla
 	plx
 	ply
-	restore_p_816
 	rts
 
 ;

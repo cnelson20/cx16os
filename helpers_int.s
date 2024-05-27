@@ -5,6 +5,8 @@
 
 .SEGMENT "CODE"
 
+.import strlen
+
 ;
 ; copies up to n characters in .A from KZP1 to KZP0
 ;
@@ -15,7 +17,7 @@ strncpy_int:
 	ldax_word KZP1
 	pha
 	phx
-	jsr strlen_int
+	jsr strlen
 	inc A ; need to copy \0 byte as well
 	ply_word KZP1
 	ply_word KZP0
@@ -35,23 +37,6 @@ strncpy_int:
 	jmp memcpy_int	
 
 ;
-; gets length of str in .AX
-;
-.export strlen_int
-strlen_int:
-	sta KZP0
-	stx KZP0 + 1
-	ldy #0
-	:
-	lda (KZP0), Y
-	beq :+
-	iny
-	bne :-
-	:	
-	tya	
-	rts
-
-;
 ; strncat_int
 ;
 ; appends str in KZP1 to end of KZP0, 
@@ -66,7 +51,7 @@ strncat_int:
 	pha
 	ldx KZP0 + 1
 	phx
-	jsr strlen_int
+	jsr strlen
 	ply_word KZP0
 	ply_word KZP1
 	

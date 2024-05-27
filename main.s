@@ -4,7 +4,7 @@
 .include "ascii_charmap.inc"
 
 .import print_str_ext
-.import strlen_int, strncpy_int
+.import strlen, strncpy_int
 .import setup_kernal_file_table, setup_process_file_table_int
 .import get_dir_filename_int
 .import clear_process_extmem_banks
@@ -247,7 +247,6 @@ irq_re_caller:
 	cmp #$C0
 	bcs :+
 	; process trampled into another bank, need to kill
-	stp
 	lda current_program_id
 	ldx #RETURN_PAGE_BREAK
 	jmp program_exit
@@ -269,7 +268,6 @@ default_nmi_handler:
 
 .export custom_nmi_handler
 custom_nmi_handler:
-	stp
 	pha
 	php
 
@@ -754,10 +752,11 @@ load_new_process:
 	
 	lda #<new_prog_args
 	ldx #>new_prog_args
-	jsr strlen_int ; holds strlen of prog
+	jsr strlen ; holds strlen of prog
 	
-	ldx #1
-	sta atomic_action_st
+	pha
+	set_atomic_st
+	pla
 	
 	; .A holds strlen
 	ldx #<new_prog_args
@@ -778,7 +777,7 @@ load_new_process:
 	ldy #>PROG_LOAD_ADDRESS
 	jsr LOAD
 	
-	stz atomic_action_st
+	clear_atomic_st
 	
 	bcc :+ ; if carry clear, load was a success
 	lda #0
@@ -834,7 +833,7 @@ setup_process_info:
 	pha ; KZP0
 	phx ; KZP0 + 1
 	
-	jsr strlen_int
+	jsr strlen
 	pha
 	
 	lda RAM_BANK

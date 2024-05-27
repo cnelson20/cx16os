@@ -2,12 +2,16 @@
 .segment "CODE"
 
 init:
-	ldx #$BB
-	ldy #$CC
+	rep #$30
+
+	.a16
+	.i16
+	lda #$1241
+	ldx #$5678
+	ldy #$9ABC
 main:
 	wai
 	wai
-	lda #$41
 	jsr CHROUT
 	jmp main
 	

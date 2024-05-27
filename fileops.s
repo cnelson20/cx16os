@@ -7,8 +7,8 @@
 
 .import atomic_action_st
 .import file_table
-.import strlen_ext, memcpy_ext, memcpy_banks_ext, strcmp_banks_ext
-.import strlen_int, strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str
+.import strlen, memcpy_ext, memcpy_banks_ext, strcmp_banks_ext
+.import strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str
 .import current_program_id
 
 .import putc
@@ -223,7 +223,7 @@ get_dir_filename_ext:
 	pha
 	ldx KZE0 + 1
 	phx
-	jsr strlen_ext
+	jsr strlen
 	tay
 	pla_word KZE0
 	
@@ -266,12 +266,12 @@ get_dir_filename_ext:
 	stx KZES5 + 1
 	stx KZE0 + 1
 	
-	jsr strlen_ext
+	jsr strlen
 	sta KZES6
 	
 	lda KZES4
 	ldx KZES4 + 1
-	jsr strlen_ext
+	jsr strlen
 	sta KZES6 + 1
 	
 	clc
@@ -453,7 +453,7 @@ open_file_kernal_ext:
 	; We have corrected path to this file ;
 	
 	ldax_addr PV_TMP_FILENAME
-	jsr strlen_ext
+	jsr strlen
 	tax
 	lda #','
 	sta PV_TMP_FILENAME, X
@@ -492,7 +492,7 @@ open_file_kernal_ext:
 	sta atomic_action_st ; need to call SETLFS , SETNAM, OPEN all at once
 	
 	ldax_addr PV_TMP_FILENAME_PREFIX
-	jsr strlen_ext
+	jsr strlen
 	ldx #<PV_TMP_FILENAME_PREFIX
 	ldy #>PV_TMP_FILENAME_PREFIX
 	jsr SETNAM
@@ -1035,7 +1035,7 @@ load_dir_listing_extmem_ext:
 	ldax_addr (PV_PWD - 3)
 	pha
 	phx
-	jsr strlen_ext
+	jsr strlen
 	ply
 	plx
 	jsr SETNAM
@@ -1122,7 +1122,7 @@ get_pwd_ext:
 	
 	lda #<PV_PWD
 	ldx #>PV_PWD
-	jsr strlen_ext
+	jsr strlen
 	inc A
 	
 	; if somehow strlen (pwd) > MAX_FILELEN, only copy MAX_FILELEN bytes
@@ -1181,7 +1181,7 @@ cd_process_pwd:
 	ldax_addr (PV_PWD - 3)
 	pha
 	phx
-	jsr strlen_ext
+	jsr strlen
 	ply
 	plx
 	jsr SETNAM
@@ -1301,7 +1301,7 @@ do_dos_cmd:
 	lda #<PV_TMP_FILENAME
 	ldx #>PV_TMP_FILENAME
 	
-	jsr strlen_ext
+	jsr strlen
 	
 	clc
 	adc #<PV_TMP_FILENAME
@@ -1316,7 +1316,7 @@ do_dos_cmd:
 	
 	lda KZES4
 	ldx KZES4 + 1
-	jsr strlen_ext
+	jsr strlen
 	inc A
 	pha
 	
@@ -1345,7 +1345,7 @@ do_dos_cmd:
 	
 	lda #<PV_TMP_FILENAME
 	ldx #>PV_TMP_FILENAME
-	jsr strlen_ext
+	jsr strlen
 	tax
 	lda #'='
 	sta PV_TMP_FILENAME, X
@@ -1365,7 +1365,7 @@ do_dos_cmd:
 	
 	lda KZES5
 	ldx KZES5 + 1
-	jsr strlen_ext
+	jsr strlen
 	inc A
 	pha
 	
@@ -1393,7 +1393,7 @@ do_dos_cmd:
 	ldax_addr PV_TMP_FILENAME
 	pha
 	phx
-	jsr strlen_ext
+	jsr strlen
 	ply
 	plx
 	jsr SETNAM

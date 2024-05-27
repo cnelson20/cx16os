@@ -106,6 +106,34 @@
 	sep #$30
 .endmacro
 
+.macro save_p_816
+	php
+.endmacro
+
 .macro restore_p_816
 	plp
+.endmacro
+
+.macro accum_8_bit
+	sep #$20
+.endmacro
+
+.macro accum_16_bit
+	rep #$20
+.endmacro
+
+.macro index_8_bit
+	sep #$10
+.endmacro
+
+.macro index_16_bit
+	rep #$10
+.endmacro
+
+.macro accum_index_16_bit
+	rep #$30
+.endmacro
+
+.macro accum_index_8_bit
+	sep #$30
 .endmacro
