@@ -5,6 +5,8 @@
 
 .SEGMENT "CODE"
 
+.import strlen
+
 ;
 ; copies up to n characters in .A from KZP1 to KZP0
 ;
@@ -13,9 +15,8 @@ strncpy_int:
 	pha
 	phy_word KZP0
 	ldax_word KZP1
-	pha
-	phx
-	jsr strlen_int
+	push_ax
+	jsr strlen
 	inc A ; need to copy \0 byte as well
 	ply_word KZP1
 	ply_word KZP0
@@ -32,24 +33,8 @@ strncpy_int:
 	tya
 	:
 	
+	ldx #0
 	jmp memcpy_int	
-
-;
-; gets length of str in .AX
-;
-.export strlen_int
-strlen_int:
-	sta KZP0
-	stx KZP0 + 1
-	ldy #0
-	:
-	lda (KZP0), Y
-	beq :+
-	iny
-	bne :-
-	:	
-	tya	
-	rts
 
 ;
 ; strncat_int
@@ -62,11 +47,9 @@ strncat_int:
 	pha ; push n
 	
 	phy_word KZP1
-	lda KZP0
-	pha
-	ldx KZP0 + 1
-	phx
-	jsr strlen_int
+	ldax_word KZP0
+	push_ax
+	jsr strlen
 	ply_word KZP0
 	ply_word KZP1
 	
@@ -88,22 +71,47 @@ strncat_int:
 ;
 ; memcpy_int
 ;
-; copies .A bytes from KZP1 to KZP0 
+; copies .AX bytes from KZP1 to KZP0 
 ; ignores banks
 ;
 .export memcpy_int
 memcpy_int:
+	sta KZP2
+	stx KZP2 + 1
+	save_p_816
+	accum_index_16_bit
+	.a16
+	.i16
+
+	dec KZP2 ; 16-bit decrement, MVN & MVP use bytes to move - 1
+
+	ldx KZP1
+	ldy KZP0
+
+	lda KZP1
+	cmp KZP0
+
+	bcc @move_upward
+
+@move_downward:
+	lda KZP2
+	mvn #$00, #$00
+	bra @exit
+
+@move_upward:
+	txa
+	adc KZP2
+	tax
+	tya
+	adc KZP2
 	tay
-	cpy #0
-	bne @loop
-	rts
-@loop:
-	dey
-	lda (KZP1), Y
-	sta (KZP0), Y
-	
-	cpy #0
-	bne @loop
+	lda KZP2
+	mvp #$00, #$00
+
+@exit:
+	.a8
+	.i8
+	restore_p_816
 	rts
 
 ;

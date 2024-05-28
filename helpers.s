@@ -12,18 +12,40 @@
 ;
 ; returns length of string pointed to by .AX in .A
 ;
-.export strlen_ext
-strlen_ext:
-	sta KZE0
-	stx KZE0 + 1
+.export strlen
+strlen:
+	save_p_816
+	xba
+	txa
+	xba
+	index_16_bit
+	tax
+	stx KZE0
+	jsr :+
+	restore_p_816
+	rts
+
+.export strlen_16bit
+strlen_16bit:
+	save_p_816
+	jsr :+
+	restore_p_816
+	rts
+	
+	:
+
+	.i16
 	ldy #0
 	:
-	lda (KZE0), Y
+	lda $0000, X
 	beq :+
+	inx
 	iny
 	bne :-
-	:	
-	tya	
+	:
+	accum_16_bit
+	tya
+	.i8
 	rts
 
 ;
@@ -36,7 +58,7 @@ strncpy_ext:
 	ldax_word KZE1
 	pha
 	phx
-	jsr strlen_ext
+	jsr strlen
 	inc A ; need to copy \0 byte as well
 	ply_word KZE1
 	ply_word KZE0
@@ -69,7 +91,7 @@ parse_num_radix_kernal_ext:
 	beq parse_hex
 parse_decimal:
 	; .AX already contains string
-	jsr strlen_ext
+	jsr strlen
 	tay
 	dey
 	; y + kzps4 = last byte of string
@@ -350,7 +372,7 @@ get_process_name_kernal_ext:
 	
 	lda KZE2
 	ldx KZE2 + 1
-	jsr strlen_ext ; return length of name
+	jsr strlen ; return length of name
 	
 	rts
 
@@ -362,40 +384,42 @@ get_process_name_kernal_ext:
 ;
 .export memcpy_ext
 memcpy_ext:
-	stx KZE2 + 1 ; using + 1 makes this more consistent with memcpy_banks_ext
-	tay
-	cpy #0
-	bne :+
-	cpx #0
-	bne :+
-	rts
-	:
-	clc
+	sta KZE2	
+	stx KZE2 + 1
+	save_p_816
+	accum_index_16_bit
+	.a16
+	.i16
+
+	dec KZE2 ; 16-bit decrement, MVN & MVP use bytes to move - 1
+
+	ldx KZE1
+	ldy KZE0
+
 	lda KZE1
-	adc KZE2 + 1
-	sta KZE1
-	clc
-	lda KZE0
-	adc KZE2 + 1
-	sta KZE0
-	
-@loop:
-	cpy #0
-	bne :+
-	dec KZE1
-	dec KZE0
-	:
-	dey
-	lda (KZE1), Y
-	sta (KZE0), Y
-	
-	cpy #0
-	bne @loop
-	lda KZE2 + 1
-	beq :+
-	dec KZE2 + 1
-	jmp @loop
-	:
+	cmp KZE0
+
+	bcc @move_upward
+
+@move_downward:
+	lda KZE2
+	mvn #$00, #$00
+	jmp @exit
+
+@move_upward:
+	txa
+	adc KZE2
+	tax
+	tya
+	adc KZE2
+	tay
+	lda KZE2
+	mvp #$00, #$00
+
+@exit:
+	.a8
+	.i8
+	restore_p_816
 	rts
 
 ;
@@ -456,7 +480,7 @@ rev_str:
 	phx
 	pha
 	
-	jsr strlen_ext
+	jsr strlen
 	pha 
 	lsr A
 	sta KZE2

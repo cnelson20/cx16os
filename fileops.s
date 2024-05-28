@@ -7,8 +7,8 @@
 
 .import atomic_action_st
 .import file_table
-.import strlen_ext, memcpy_ext, memcpy_banks_ext, strcmp_banks_ext
-.import strlen_int, strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str
+.import strlen, memcpy_ext, memcpy_banks_ext, strcmp_banks_ext
+.import strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str
 .import current_program_id
 
 .import putc
@@ -184,6 +184,7 @@ update_internal_pwd:
 get_dir_filename_int:
 	sty KZP0
 	
+	phy_byte RAM_BANK
 	phy_word KZE0
 	phy_word KZE1
 	phy_word KZE2
@@ -196,6 +197,8 @@ get_dir_filename_int:
 	ply_word KZE2
 	ply_word KZE1
 	ply_word KZE0
+	ply_byte RAM_BANK
+
 	rts
 
 .export get_dir_filename_ext
@@ -210,8 +213,6 @@ get_dir_filename_ext:
 	; if absolute pathing, dont change anything
 	rts
 @not_abs_pathing:
-	lda RAM_BANK
-	pha
 	lda current_program_id
 	ora #%00000001
 	sta RAM_BANK
@@ -219,11 +220,9 @@ get_dir_filename_ext:
 	cpy #0
 	beq @relative_pathing
 	
-	lda KZE0
-	pha
-	ldx KZE0 + 1
-	phx
-	jsr strlen_ext
+	ldax_word KZE0
+	push_ax
+	jsr strlen
 	tay
 	pla_word KZE0
 	
@@ -252,9 +251,9 @@ get_dir_filename_ext:
 	ldx #>path_dir
 
 @copy_paths:
-	phy_word KZES4
-	phy_word KZES5
-	phy_word KZES6
+	push_zp_word KZES4
+	push_zp_word KZES5
+	push_zp_word KZES6
 	
 	ldy KZE0 ; argument path
 	sty KZES4
@@ -266,12 +265,12 @@ get_dir_filename_ext:
 	stx KZES5 + 1
 	stx KZE0 + 1
 	
-	jsr strlen_ext
+	jsr strlen
 	sta KZES6
 	
 	lda KZES4
 	ldx KZES4 + 1
-	jsr strlen_ext
+	jsr strlen
 	sta KZES6 + 1
 	
 	clc
@@ -312,8 +311,6 @@ get_dir_filename_ext:
 	pla_word KZES6
 	pla_word KZES5
 	pla_word KZES4
-	pla
-	sta RAM_BANK
 	rts
 
 ;
@@ -447,13 +444,21 @@ open_file_kernal_ext:
 	ldx #0
 	jsr memcpy_banks_ext
 	
+	lda current_program_id
+	inc A
+	sta RAM_BANK
+	pha
+
 	ldax_addr PV_TMP_FILENAME
 	ldy #0 ; don't search path
 	jsr get_dir_filename_ext
 	; We have corrected path to this file ;
 	
+	pla
+	sta RAM_BANK
+
 	ldax_addr PV_TMP_FILENAME
-	jsr strlen_ext
+	jsr strlen
 	tax
 	lda #','
 	sta PV_TMP_FILENAME, X
@@ -492,7 +497,7 @@ open_file_kernal_ext:
 	sta atomic_action_st ; need to call SETLFS , SETNAM, OPEN all at once
 	
 	ldax_addr PV_TMP_FILENAME_PREFIX
-	jsr strlen_ext
+	jsr strlen
 	ldx #<PV_TMP_FILENAME_PREFIX
 	ldy #>PV_TMP_FILENAME_PREFIX
 	jsr SETNAM
@@ -1035,7 +1040,7 @@ load_dir_listing_extmem_ext:
 	ldax_addr (PV_PWD - 3)
 	pha
 	phx
-	jsr strlen_ext
+	jsr strlen
 	ply
 	plx
 	jsr SETNAM
@@ -1122,7 +1127,7 @@ get_pwd_ext:
 	
 	lda #<PV_PWD
 	ldx #>PV_PWD
-	jsr strlen_ext
+	jsr strlen
 	inc A
 	
 	; if somehow strlen (pwd) > MAX_FILELEN, only copy MAX_FILELEN bytes
@@ -1181,7 +1186,7 @@ cd_process_pwd:
 	ldax_addr (PV_PWD - 3)
 	pha
 	phx
-	jsr strlen_ext
+	jsr strlen
 	ply
 	plx
 	jsr SETNAM
@@ -1301,7 +1306,7 @@ do_dos_cmd:
 	lda #<PV_TMP_FILENAME
 	ldx #>PV_TMP_FILENAME
 	
-	jsr strlen_ext
+	jsr strlen
 	
 	clc
 	adc #<PV_TMP_FILENAME
@@ -1316,7 +1321,7 @@ do_dos_cmd:
 	
 	lda KZES4
 	ldx KZES4 + 1
-	jsr strlen_ext
+	jsr strlen
 	inc A
 	pha
 	
@@ -1345,7 +1350,7 @@ do_dos_cmd:
 	
 	lda #<PV_TMP_FILENAME
 	ldx #>PV_TMP_FILENAME
-	jsr strlen_ext
+	jsr strlen
 	tax
 	lda #'='
 	sta PV_TMP_FILENAME, X
@@ -1365,7 +1370,7 @@ do_dos_cmd:
 	
 	lda KZES5
 	ldx KZES5 + 1
-	jsr strlen_ext
+	jsr strlen
 	inc A
 	pha
 	
@@ -1393,7 +1398,7 @@ do_dos_cmd:
 	ldax_addr PV_TMP_FILENAME
 	pha
 	phx
-	jsr strlen_ext
+	jsr strlen
 	ply
 	plx
 	jsr SETNAM
