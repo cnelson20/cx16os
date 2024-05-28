@@ -19,17 +19,17 @@
 .endmacro
 
 .macro pha_word addr
-	lda addr
-	pha
 	lda addr + 1
+	pha
+	lda addr
 	pha
 .endmacro
 
 .macro pla_word addr
-	pla
-	sta addr + 1
 	pla 
 	sta addr
+	pla
+	sta addr + 1
 .endmacro
 
 .macro pha_byte addr
@@ -43,17 +43,17 @@
 .endmacro
 
 .macro phy_word addr
-	ldy addr
-	phy
 	ldy addr + 1
+	phy
+	ldy addr
 	phy
 .endmacro
 
 .macro ply_word addr
-	ply
-	sty addr + 1
 	ply 
 	sty addr
+	ply
+	sty addr + 1
 .endmacro
 
 .macro phy_byte addr
@@ -65,6 +65,21 @@
 	ply
 	sty addr
 .endmacro
+
+.macro push_ax
+	phx
+	pha
+.endmacro
+
+.macro pull_ax
+	pla
+	plx
+.endmacro
+
+.macro push_zp_word addr
+	pei (addr)
+.endmacro
+	
 
 .macro ldsta_word src, dest
 	lda src
@@ -100,6 +115,10 @@
 .macro clear_atomic_st
 	stz atomic_action_st
 .endmacro
+
+;
+; Macros to deal with M/X flags of 65816
+;
 
 .macro save_p_816_8bitmode
 	php

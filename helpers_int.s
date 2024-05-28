@@ -15,8 +15,7 @@ strncpy_int:
 	pha
 	phy_word KZP0
 	ldax_word KZP1
-	pha
-	phx
+	push_ax
 	jsr strlen
 	inc A ; need to copy \0 byte as well
 	ply_word KZP1
@@ -48,10 +47,8 @@ strncat_int:
 	pha ; push n
 	
 	phy_word KZP1
-	lda KZP0
-	pha
-	ldx KZP0 + 1
-	phx
+	ldax_word KZP0
+	push_ax
 	jsr strlen
 	ply_word KZP0
 	ply_word KZP1

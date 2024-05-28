@@ -282,6 +282,7 @@ fgetc:
 	bcs :+
 	; reading from stdin
 	jsr GETIN
+	ldx #0
 	restore_p_816
 	rts
 	:
@@ -295,8 +296,7 @@ fgetc:
 	cmp #1 ; normal status
 	bne @eof
 	
-	lda #1
-	sta atomic_action_st
+	set_atomic_st
 	
 	stx KZE0
 	jsr CHKIN
@@ -319,7 +319,7 @@ fgetc:
 	:
 	jsr CLRCHN
 	pla
-	stz atomic_action_st
+	clear_atomic_st
 	
 	ldx #0
 	restore_p_816

@@ -37,6 +37,11 @@ init:
 	
 new_line:
 	; close these files in case got through
+	lda exit_after_exec
+	beq :+
+	jmp exit_shell
+	:
+
 	lda new_stdin_fileno
 	beq :+
 	jsr close_file
@@ -76,8 +81,16 @@ new_line:
 	ldx #0
 wait_for_input:
 	phx
-	jsr GETIN
+	ldx #0
+	jsr fgetc
+	txy
 	plx
+	cpy #0 ; check for end of input
+	beq :+
+	lda #1
+	sta exit_after_exec
+	lda #$0D ; if eof has been reached, exec what's in buffer
+	:
 	cmp #0
 	beq wait_for_input
 
@@ -365,6 +378,7 @@ narg_not_0_amp:
 	sta r2 + 1
 	lda #<output
 	ldx #>output
+	stp
 	jsr exec
 	cmp #0
 	beq exec_error
@@ -385,6 +399,7 @@ wait_child:
 	jmp new_line
 	
 exec_error:
+	stp
 	lda new_stdin_fileno
 	beq @new_stdin_file_zero
 	jsr close_file
@@ -587,6 +602,8 @@ output:
 command_length:
 	.byte 0
 curr_arg:
+	.byte 0
+exit_after_exec:
 	.byte 0
 
 args_offset_arr:

@@ -184,6 +184,7 @@ update_internal_pwd:
 get_dir_filename_int:
 	sty KZP0
 	
+	phy_byte RAM_BANK
 	phy_word KZE0
 	phy_word KZE1
 	phy_word KZE2
@@ -196,6 +197,8 @@ get_dir_filename_int:
 	ply_word KZE2
 	ply_word KZE1
 	ply_word KZE0
+	ply_byte RAM_BANK
+
 	rts
 
 .export get_dir_filename_ext
@@ -210,8 +213,6 @@ get_dir_filename_ext:
 	; if absolute pathing, dont change anything
 	rts
 @not_abs_pathing:
-	lda RAM_BANK
-	pha
 	lda current_program_id
 	ora #%00000001
 	sta RAM_BANK
@@ -219,10 +220,8 @@ get_dir_filename_ext:
 	cpy #0
 	beq @relative_pathing
 	
-	lda KZE0
-	pha
-	ldx KZE0 + 1
-	phx
+	ldax_word KZE0
+	push_ax
 	jsr strlen
 	tay
 	pla_word KZE0
@@ -252,9 +251,9 @@ get_dir_filename_ext:
 	ldx #>path_dir
 
 @copy_paths:
-	phy_word KZES4
-	phy_word KZES5
-	phy_word KZES6
+	push_zp_word KZES4
+	push_zp_word KZES5
+	push_zp_word KZES6
 	
 	ldy KZE0 ; argument path
 	sty KZES4
@@ -312,8 +311,6 @@ get_dir_filename_ext:
 	pla_word KZES6
 	pla_word KZES5
 	pla_word KZES4
-	pla
-	sta RAM_BANK
 	rts
 
 ;
@@ -447,11 +444,19 @@ open_file_kernal_ext:
 	ldx #0
 	jsr memcpy_banks_ext
 	
+	lda current_program_id
+	inc A
+	sta RAM_BANK
+	pha
+
 	ldax_addr PV_TMP_FILENAME
 	ldy #0 ; don't search path
 	jsr get_dir_filename_ext
 	; We have corrected path to this file ;
 	
+	pla
+	sta RAM_BANK
+
 	ldax_addr PV_TMP_FILENAME
 	jsr strlen
 	tax

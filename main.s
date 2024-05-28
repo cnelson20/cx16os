@@ -830,8 +830,7 @@ setup_process_info:
 	sty RAM_BANK ; .Y holds new bank
 	sty STORE_PROG_RAMBANK
 	
-	pha ; KZP0
-	phx ; KZP0 + 1
+	push_ax ; KZP0
 	
 	jsr strlen
 	pha
@@ -840,9 +839,8 @@ setup_process_info:
 	jsr set_process_bank_used
 	
 	ply ; strlen in .Y
-	plx
+	pull_ax
 	stx KZP0 + 1
-	pla
 	sta KZP0
 
 	; find last / in program name, ignore
@@ -936,8 +934,14 @@ setup_process_info:
 	inc A
 	sta RAM_BANK
 	
-	; see if r2L is a valid file num ; 
-	ldx r2 + 1
+	;
+	; see if r2H is a valid file num ; 
+	;
+	stp
+	lda r2 + 1
+	beq :+ ; skip check if filenum is 0. to use stdin, use 0 | 16
+	and #$0F
+	tax
 	lda PV_OPEN_TABLE, X
 	tax
 	cpx #2
@@ -953,8 +957,14 @@ setup_process_info:
 	:
 	ldx #1
 	:
+	
+	;
 	; same for r2L ; 
-	ldy r2
+	;
+	lda r2
+	beq :+
+	and #$0F
+	tay
 	lda PV_OPEN_TABLE, Y
 	cmp #2
 	bcc :+
