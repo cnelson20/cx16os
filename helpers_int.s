@@ -34,6 +34,7 @@ strncpy_int:
 	tya
 	:
 	
+	ldx #0
 	jmp memcpy_int	
 
 ;
@@ -73,22 +74,47 @@ strncat_int:
 ;
 ; memcpy_int
 ;
-; copies .A bytes from KZP1 to KZP0 
+; copies .AX bytes from KZP1 to KZP0 
 ; ignores banks
 ;
 .export memcpy_int
 memcpy_int:
+	sta KZP2
+	stx KZP2 + 1
+	save_p_816
+	accum_index_16_bit
+	.a16
+	.i16
+
+	dec KZP2 ; 16-bit decrement, MVN & MVP use bytes to move - 1
+
+	ldx KZP1
+	ldy KZP0
+
+	lda KZP1
+	cmp KZP0
+
+	bcc @move_upward
+
+@move_downward:
+	lda KZP2
+	mvn #$00, #$00
+	bra @exit
+
+@move_upward:
+	txa
+	adc KZP2
+	tax
+	tya
+	adc KZP2
 	tay
-	cpy #0
-	bne @loop
-	rts
-@loop:
-	dey
-	lda (KZP1), Y
-	sta (KZP0), Y
-	
-	cpy #0
-	bne @loop
+	lda KZP2
+	mvp #$00, #$00
+
+@exit:
+	.a8
+	.i8
+	restore_p_816
 	rts
 
 ;
