@@ -1223,8 +1223,8 @@ cd_process_pwd:
 ;
 .export chdir_ext
 chdir_ext:
-	phy_word KZES4
-	phy_word KZES5
+	push_zp_word KZES4
+	push_zp_word KZES5
 	stz KZES5
 	stz KZES5 + 1
 	
@@ -1310,10 +1310,11 @@ do_dos_cmd:
 	
 	clc
 	adc #<PV_TMP_FILENAME
-	pha
+	tax
 	lda #>PV_TMP_FILENAME
 	adc #0
-	pha ; push copy address to stack
+	pha ; push hi byte copy address to stack
+	phx ; push lo byte
 	
 	; need to calc number of bytes to copy ;
 	lda current_program_id
@@ -1360,10 +1361,11 @@ do_dos_cmd:
 	txa
 	clc
 	adc #<PV_TMP_FILENAME
-	pha
+	tax
 	lda #>PV_TMP_FILENAME
 	adc #0
-	pha ; push address to copy to once more
+	pha ; push hi byte of address to copy to once more
+	phx ; push lo byte
 	
 	lda current_program_id
 	sta RAM_BANK

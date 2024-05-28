@@ -937,7 +937,6 @@ setup_process_info:
 	;
 	; see if r2H is a valid file num ; 
 	;
-	stp
 	lda r2 + 1
 	beq :+ ; skip check if filenum is 0. to use stdin, use 0 | 16
 	and #$0F

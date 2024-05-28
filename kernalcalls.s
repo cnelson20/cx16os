@@ -72,8 +72,8 @@ call_table:
 	jmp unlink ; $9D66
 	jmp rename ; $9D69
 	jmp copy_file ; $9D6C
-	jmp mkdir
-	jmp rmdir
+	jmp mkdir ; $9D6F
+	jmp rmdir ; $9D72
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -456,79 +456,61 @@ kill_process:
 	restore_p_816
 	rts
 
+.macro run_routine_8bit addr
+	save_p_816_8bitmode
+	jsr addr
+	restore_p_816
+.endmacro
+
 ;
 ; File I/O routines
 ;
 open_file:
-	save_p_816_8bitmode
-	jsr open_file_kernal_ext
-	restore_p_816
+	run_routine_8bit open_file_kernal_ext
 	rts
 
 close_file:
-	save_p_816_8bitmode
-	jsr close_file_kernal
-	restore_p_816
+	run_routine_8bit close_file_kernal
 	rts
 
 read_file:
-	save_p_816_8bitmode
-	jsr read_file_ext
-	restore_p_816
+	run_routine_8bit read_file_ext
 	rts
 
 write_file:
-	save_p_816_8bitmode
-	jsr write_file_ext
-	restore_p_816
+	run_routine_8bit write_file_ext
 	rts
 
 load_dir_listing_extmem:
-	save_p_816_8bitmode
-	jsr load_dir_listing_extmem_ext
-	restore_p_816
+	run_routine_8bit load_dir_listing_extmem_ext
 	rts
 
 get_pwd:
-	save_p_816_8bitmode
-	jsr get_pwd_ext
-	restore_p_816
+	run_routine_8bit get_pwd_ext
 	rts
 
 chdir:
-	save_p_816_8bitmode
-	jsr chdir_ext
-	restore_p_816
+	run_routine_8bit chdir_ext
 	rts
 
 unlink:
-	save_p_816_8bitmode
-	jsr unlink_ext
-	restore_p_816
+	run_routine_8bit unlink_ext
 	rts
 
 rename:
-	save_p_816_8bitmode
-	jsr rename_ext
-	restore_p_816
+	run_routine_8bit rename_ext
 	rts
 
 copy_file:
-	save_p_816_8bitmode
-	jsr copy_file
-	restore_p_816
+	run_routine_8bit copy_file_ext
 	rts
 
 mkdir:
-	save_p_816_8bitmode
-	jsr mkdir
-	restore_p_816
+	run_routine_8bit mkdir_ext
 	rts
 
 rmdir:
-	save_p_816_8bitmode
-	jsr rmdir_ext
-	restore_p_816
+	run_routine_8bit rmdir_ext
 	rts
 
 ; 

@@ -378,7 +378,6 @@ narg_not_0_amp:
 	sta r2 + 1
 	lda #<output
 	ldx #>output
-	stp
 	jsr exec
 	cmp #0
 	beq exec_error
@@ -399,7 +398,6 @@ wait_child:
 	jmp new_line
 	
 exec_error:
-	stp
 	lda new_stdin_fileno
 	beq @new_stdin_file_zero
 	jsr close_file
