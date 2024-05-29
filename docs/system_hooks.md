@@ -10,6 +10,8 @@ Arguments:
 - r0 holds a pointer where to write the ringbuffer
 - r1 holds a pointer in a program's RAM where to write info about the ringbuffer
 
+Returns size of buffer in .AX, 0 on failure (hook already in use)
+
 buffer information:
 
 - 4 bytes
