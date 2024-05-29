@@ -9,5 +9,7 @@ API guides:
 
 [I/O, Processes, Other Routines Table](routines.md)
 
-[Extmem Routines](extmem.md)
+[extmem routines](extmem.md)
+
+[system hooks](system_hooks.md)
 
