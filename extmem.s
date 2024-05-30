@@ -194,6 +194,8 @@ set_extmem_wbank:
 ; Set ptr to read from for readf calls
 ; Returns 0 in .A if ptr is valid
 ;
+; preserves .XL, .YL
+;
 .export set_extmem_rptr
 set_extmem_rptr:
 	save_p_816_8bitmode
@@ -217,11 +219,22 @@ set_extmem_rptr:
 	:
 	; not valid zp space, fail ;
 	lda #0
+	xba
+	lda #1
+	restore_p_816
+	rts
+@valid_rptr:
+	sta STORE_PROG_EXTMEM_RPTR
+	lda #0
+	xba
+	lda #0
 	restore_p_816
 	rts
 
 ;
 ; Same for writef calls
+;
+; preserves .XL, .YL
 ;
 .export set_extmem_wptr
 set_extmem_wptr:
@@ -231,20 +244,25 @@ set_extmem_wptr:
 	cmp #$20
 	bcs :+
 	; first zp set ;
-	sta STORE_PROG_EXTMEM_WPTR
-	restore_p_816
-	rts
+	bra @valid_wptr
 	:
 	cmp #$30
 	bcc :+
 	cmp #$50
 	bcs :+
 	; second zp set ;
-	sta STORE_PROG_EXTMEM_WPTR
-	restore_p_816
-	rts
+	bra @valid_wptr
 	:
 	; not valid zp space, fail ;
+	lda #0
+	xba
+	lda #1
+	restore_p_816
+	rts
+@valid_wptr:
+	sta STORE_PROG_EXTMEM_WPTR
+	lda #0
+	xba
 	lda #0
 	restore_p_816
 	rts
