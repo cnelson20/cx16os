@@ -130,7 +130,7 @@ free_extmem_bank:
 ;
 ; Set a process' extmem read bank (in .A)
 ; Returns 0 on success, !0 on error
-; preserves .Y
+; preserves .YL
 ;
 .export set_extmem_rbank
 set_extmem_rbank:
@@ -140,8 +140,7 @@ set_extmem_rbank:
 	
 	lda current_program_id
 	sta STORE_PROG_EXTMEM_RBANK
-	restore_p_816
-	rts
+	bra @success_return
 	
 	:
 	pha
@@ -149,19 +148,24 @@ set_extmem_rbank:
 	beq :+
 	; not this program's bank, error
 	pla
+	lda #0
+	xba
 	lda #1 ; return non-zero
-	rts
+	bra @return
 	:
 	pla
 	sta STORE_PROG_EXTMEM_RBANK
+@success_return:
 	lda #0
+	xba
+	lda #0
+@return:
 	restore_p_816
 	rts
-	
 ;
 ; Set a process' extmem write bank (in .A)
 ; Returns 0 on success, !0 on error
-; preserves .Y
+; preserves .YL
 ;
 .export set_extmem_wbank
 set_extmem_wbank:
@@ -171,24 +175,28 @@ set_extmem_wbank:
 	
 	lda current_program_id
 	sta STORE_PROG_EXTMEM_WBANK
-	restore_p_816
-	rts
-	
+	bra @success_return
 	:
 	pha
 	jsr check_process_owns_bank
 	beq :+
 	; not this program's bank, error
 	pla
+	lda #0
+	xba
 	lda #1 ; return non-zero
-	restore_p_816
-	rts
+	bra @return
 	:
 	pla
 	sta STORE_PROG_EXTMEM_WBANK
+@success_return:
 	lda #0
+	xba
+	lda #0
+@return:
 	restore_p_816
 	rts
+
 
 ;
 ; Set ptr to read from for readf calls
@@ -273,9 +281,13 @@ set_extmem_wptr:
 ;
 .export readf_byte_extmem_y
 readf_byte_extmem_y:
-	save_p_816_8bitmode
 	phx
-	ldx STORE_PROG_EXTMEM_RPTR
+	save_p_816
+	accum_8_bit
+	lda #0
+	xba
+	lda STORE_PROG_EXTMEM_RPTR
+	tax
 	lda $00, X
 	sta KZE0
 	lda $01, X
@@ -284,13 +296,20 @@ readf_byte_extmem_y:
 	lda STORE_PROG_EXTMEM_RBANK
 	sta RAM_BANK
 	
+	restore_p_816
+
 	lda (KZE0), Y
 	
-	ldx current_program_id
-	stx RAM_BANK
+	save_p_816
+	accum_8_bit
+
+	pha
+	lda current_program_id
+	sta RAM_BANK
+	pla
 	
-	plx
 	restore_p_816
+	plx
 	rts 
 
 ;
@@ -330,10 +349,13 @@ readf_word_extmem_y:
 ;
 .export writef_byte_extmem_y
 writef_byte_extmem_y:
-	save_p_816_8bitmode
-	sta KZE1
 	phx
-	ldx STORE_PROG_EXTMEM_WPTR
+	sta KZE1
+	save_p_816_8bitmode
+	lda #0
+	xba
+	lda STORE_PROG_EXTMEM_WPTR
+	tax
 	lda $00, X
 	sta KZE0
 	lda $01, X
@@ -341,17 +363,19 @@ writef_byte_extmem_y:
 	
 	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
-	plx
 	
+	restore_p_816
 	lda KZE1
-	
 	sta (KZE0), Y
-	
+	save_p_816
+	accum_8_bit
+
 	lda current_program_id
 	sta RAM_BANK
 	
-	lda KZE1
 	restore_p_816
+	lda KZE1
+	plx
 	rts 
 
 ;
