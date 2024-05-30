@@ -23,11 +23,21 @@ chrout_info_addr:
 .export setup_system_hooks
 setup_system_hooks:
     jsr reset_chrout_hook
+    jsr reset_other_hooks
     rts
 
-.export reset_chrout_hook
 reset_chrout_hook:
     stz chrout_prog_bank
+    rts
+
+;
+; Release all possible hooks a process could have
+;
+.export release_all_process_hooks
+release_all_process_hooks:
+    pha
+    jsr try_release_chrout_hook
+    pla
     rts
 
 ;
@@ -79,13 +89,21 @@ setup_chrout_hook:
 release_chrout_hook:
     save_p_816_8bitmode
     lda current_program_id
-    cmp chrout_prog_bank
-    bne :+
-
-    stz chrout_prog_bank
-
-    :
+    jsr try_release_chrout_hook
     restore_p_816
+    rts
+
+;
+; release prog with bank .A's hook on chrout, if it has one
+;
+try_release_chrout_hook:
+    cmp chrout_prog_bank
+    beq :+
+    lda #1 ; failure
+    rts
+    :
+    stz chrout_prog_bank
+    lda #0 ; success
     rts
 
 .export CHROUT_screen
@@ -105,15 +123,22 @@ CHROUT_screen:
 
     pha_byte RAM_BANK
 
-    bra :+
+    bra @check_offsets
 @buffer_full:
     plx
     pla_byte RAM_BANK
     clear_atomic_st
     jsr surrender_process_time
+    lda chrout_prog_bank ; check if hook is still in place
+    bne :+
+    restore_p_816
+    lda KZE0
+    jmp putc_v
+    :
     set_atomic_st_disc_a
     pha_byte RAM_BANK
-    :
+
+@check_offsets:
 
     lda chrout_prog_bank
     sta RAM_BANK
@@ -137,6 +162,14 @@ CHROUT_screen:
     :
     cpx KZE1
     beq @buffer_full ; buffer is full
+    ; do it again ;
+    inx
+    cpx #CHROUT_BUFF_SIZE
+    bcc :+
+    ldx #0
+    :
+    cpx KZE1
+    beq @buffer_full
     accum_16_bit
     txa
     sta $02, Y
@@ -151,6 +184,9 @@ CHROUT_screen:
     sta RAM_BANK
     lda KZE0
     sta (KZE2), Y
+    lda current_program_id
+    iny
+    lda (KZE2), Y
 
     bra @exit
 @exit:
@@ -220,3 +256,25 @@ valid_c_table_1:
 	.byte 0, 0, 0, 0, 0, 1, 0, 0
 	.byte 1, 1, 1, 1, 0, 1, 1, 1
 	.byte 1, 1, 1, 1, 1, 1, 1, 1
+
+;
+; other hooks
+;
+NUM_OTHER_HOOKS = 16
+
+hook_prog_banks:
+    .res NUM_OTHER_HOOKS
+hook_extmem_banks:
+    .res NUM_OTHER_HOOKS
+hook_data_addrs:
+    .word NUM_OTHER_HOOKS * 2
+hook_info_addrs:
+    .word NUM_OTHER_HOOKS * 2
+
+reset_other_hooks:
+    ldx #NUM_OTHER_HOOKS
+    :
+    stz hook_prog_banks, X
+    dex
+    bpl :-
+    rts

@@ -9,7 +9,7 @@
 .import get_dir_filename_int
 .import clear_process_extmem_banks, setup_process_extmem_table
 .import hex_num_to_string_kernal
-.import setup_system_hooks
+.import setup_system_hooks, release_all_process_hooks
 
 .import check_channel_status, load_process_entry_pt
 .import file_table_count
@@ -423,8 +423,11 @@ program_exit:
 	
 	lda KZP0
 	jsr clear_process_extmem_banks
+	lda KZP0
+	jsr release_all_process_hooks
 	
 @check_process_switch:	
+	ldx KZP0
 	cpx current_program_id
 	bne :+
 	jmp switch_next_program

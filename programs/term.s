@@ -39,8 +39,12 @@ loop:
     jsr REAL_CHROUT
     rep #$10
     plx
-    stz chrout_ringbuff, X
     
+    inx
+    cpx chrout_buff_size
+    bcc :+
+    ldx #0
+    :
     inx
     cpx chrout_buff_size
     bcc :+
