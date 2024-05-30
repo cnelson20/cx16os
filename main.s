@@ -7,8 +7,9 @@
 .import strlen, strncpy_int
 .import setup_kernal_file_table, setup_process_file_table_int
 .import get_dir_filename_int
-.import clear_process_extmem_banks
+.import clear_process_extmem_banks, setup_process_extmem_table
 .import hex_num_to_string_kernal
+.import setup_system_hooks
 
 .import check_channel_status, load_process_entry_pt
 .import file_table_count
@@ -76,32 +77,33 @@ IRQ_816_VECTOR := $0338
 
 setup_interrupts:
 	sei
-	
+	save_p_816
+	accum_16_bit
+	.a16
 	lda IRQ_816_VECTOR
 	sta default_816_irq_handler
-	lda IRQ_816_VECTOR + 1
-	sta default_816_irq_handler + 1
 	
-	lda #<custom_irq_816_handler
+	lda #custom_irq_816_handler
 	sta IRQ_816_VECTOR
-	lda #>custom_irq_816_handler
-	sta IRQ_816_VECTOR + 1
 	
 	lda $0318
 	sta default_nmi_handler
-	lda $0319
-	sta default_nmi_handler + 1
+
+	lda #custom_nmi_handler
+	sta $0318
+
+	lda $033c
+	sta default_816_nmi_handler
 	
-	lda #<custom_nmi_handler
+	lda #custom_nmi_handler
 	sta $033c
-	lda #>custom_nmi_handler
-	sta $033d
-	
+	.a8
+	restore_p_816
 	lda #1
 	sta irq_already_triggered
 	stz atomic_action_st
 	stz nmi_queued
-	
+
 	cli
 	rts
 
@@ -112,9 +114,15 @@ reset_interrupts:
 	sta $0314
 	lda default_816_irq_handler
 	sta $0315
+
 	lda default_nmi_handler
-	sta $033c
+	sta $0318
 	lda default_nmi_handler + 1
+	sta $0319
+
+	lda default_816_nmi_handler
+	sta $033c
+	lda default_816_nmi_handler + 1
 	sta $033d
 	
 	cli
@@ -226,12 +234,12 @@ custom_irq_816_handler:
 	.byte 0
 
 irq_re_caller:
-	sep #$30
+	accum_index_8_bit
 	
 	lda nmi_queued
 	beq :+
 	stz nmi_queued
-	jmp nmi_re_caller
+	jsr nmi_re_caller
 	:
 
 	lda STORE_PROG_RAMBANK
@@ -265,94 +273,26 @@ irq_re_caller:
 .export default_nmi_handler
 default_nmi_handler:
 	.word 0
+.export default_816_nmi_handler
+default_816_nmi_handler:
+	.word 0
 
 .export custom_nmi_handler
 custom_nmi_handler:
 	pha
 	php
 
-	sep #$30
-	lda RAM_BANK
-	pha
-	lda current_program_id
-	sta RAM_BANK
-	pla ; pull RAM_BANK back off stack
-	sta STORE_PROG_RAMBANK
-
-	pla ; pull status reg off stack
-	pha
-	sta STORE_REG_STATUS
+	accum_8_bit
+	
+	lda #1
+	sta nmi_queued
 
 	plp
 	pla
-
-	; .A , .XY are 16-bits
-	sta STORE_REG_A
-	stx STORE_REG_X
-	sty STORE_REG_Y
-	
-	sep #$30
-	
-	lda irq_already_triggered
-	beq :+
-	; if not servicing system routine, continue ;
-	lda #1
-	sta nmi_queued ; set toggle for next interrupt to trigger nmi
-	
-	lda STORE_REG_A + 1
-	xba
-	lda STORE_REG_A
-	ldx STORE_REG_X 
-	ldy STORE_REG_Y
-	rti
-	:
-	
-	tsx
-	txa
-	clc
-	adc #3
-	sta STORE_PROG_SP
-	tsx
-
-	lda $101, X
-	sta STORE_REG_STATUS
-
-	lda $102, X
-	sta STORE_PROG_ADDR
-	lda #<nmi_re_caller
-	sta $102, X ; low byte of return address
-
-	lda $103, X
-	sta STORE_PROG_ADDR + 1
-	lda #>nmi_re_caller
-	sta $103, X ; high byte of return address
-
-	lda STORE_PROG_RAMBANK
-	sta RAM_BANK
-	
-	lda #1
-	sta irq_already_triggered
 	
 	rti
-
-nmi_queued_re_caller:
-	bcs :+
-	clc
-	xce
-	clc
-	bra :++
-	:
-	clc
-	xce
-	sec
-	:
-	jmp (STORE_PROG_ADDR)
 
 nmi_re_caller:
-	; disable emulation mode
-	clc
-	xce
-	
 	ldx active_process_sp
 	cpx #$FF - 1
 	bne :+
@@ -365,7 +305,7 @@ nmi_re_caller:
 	lda active_process_stack, X
 	ldx #RETURN_NMI
 	jsr program_exit
-	jmp return_control_program
+	rts
 
 program_return_handler:
 	sep #$30
@@ -744,7 +684,7 @@ load_new_process:
 	iny
 	bpl :-
 	:
-	
+
 	lda #<new_prog_args
 	ldx #>new_prog_args
 	ldy #1
@@ -754,9 +694,7 @@ load_new_process:
 	ldx #>new_prog_args
 	jsr strlen ; holds strlen of prog
 	
-	pha
 	set_atomic_st
-	pla
 	
 	; .A holds strlen
 	ldx #<new_prog_args
@@ -984,6 +922,8 @@ setup_process_info:
 	ply
 	sty RAM_BANK
 	jsr setup_process_file_table_int
+	lda RAM_BANK
+	jsr setup_process_extmem_table
 
 @end_func:
 	lda RAM_BANK
@@ -1092,6 +1032,7 @@ vera_status:
 setup_kernal:
 	jsr setup_kernal_processes
 	jsr setup_kernal_file_table
+	jsr setup_system_hooks
 	jmp setup_call_table
 
 ;

@@ -21,6 +21,8 @@
 .import readf_byte_extmem_y, readf_word_extmem_y, vread_byte_extmem_y
 .import writef_byte_extmem_y, writef_word_extmem_y, vwrite_byte_extmem_y, memmove_extmem, fill_extmem
 
+.import setup_chrout_hook, release_chrout_hook, CHROUT_screen
+
 .import surrender_process_time	
 .import irq_already_triggered
 .import atomic_action_st
@@ -74,6 +76,8 @@ call_table:
 	jmp copy_file ; $9D6C
 	jmp mkdir ; $9D6F
 	jmp rmdir ; $9D72
+	jmp setup_chrout_hook ; $9D75
+	jmp release_chrout_hook ; $9D78
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -149,7 +153,7 @@ fputc:
 	
 	cpx #2 ; STDIN / STDOUT
 	bcs :+
-	jsr putc_v
+	jsr CHROUT_screen
 	restore_p_816
 	rts
 	:
@@ -182,67 +186,6 @@ fputc:
 	tay
 	restore_p_816
 	rts
-	
-
-;
-; filters certain invalid chars, then calls CHROUT 
-;
-putc_v:
-	; need to handle quote mode ;
-	cmp #$22 ; "
-	bne :+
-	pha
-	lda #$80
-	jsr CHROUT
-	pla
-	jmp CHROUT
-	:
-
-	pha
-	and #$7F
-	cmp #$20
-	bcc @unusual_char
-@valid_char:
-	pla
-	jmp CHROUT	
-	
-@unusual_char:
-	tax
-	pla
-	pha
-	
-	cmp #$d ; '\r'
-	bne :+
-	jsr CHROUT
-	pla
-	lda #$a ; '\n'
-	jmp CHROUT
-	:
-	
-	cmp #$80
-	bcs :+
-	lda valid_c_table_0, X
-	bra :++
-	:
-	lda valid_c_table_1, X
-	:
-	bne @valid_char
-	
-	; needs to be appended ;
-	lda #$80
-	jsr CHROUT
-	jmp @valid_char
-	
-valid_c_table_0:
-	.byte 0, 0, 0, 0, 1, 1, 0, 1
-	.byte 1, 1, 1, 1, 1, 1, 0, 0
-	.byte 0, 0, 1, 1, 0, 0, 0, 0
-	.byte 1, 0, 1, 0, 1, 1, 1, 1
-valid_c_table_1:
-	.byte 0, 1, 0, 0, 0, 0, 0, 0
-	.byte 0, 0, 0, 0, 0, 1, 0, 0
-	.byte 1, 1, 1, 1, 0, 1, 1, 1
-	.byte 1, 1, 1, 1, 1, 1, 1, 1
 
 ;
 ; Returns char from stdin in .A

@@ -54,10 +54,9 @@ strlen_16bit:
 .export strncpy_ext
 strncpy_ext:
 	pha
-	phy_word KZE0
+	push_zp_word KZE0
 	ldax_word KZE1
-	pha
-	phx
+	push_ax
 	jsr strlen
 	inc A ; need to copy \0 byte as well
 	ply_word KZE1
@@ -430,44 +429,41 @@ memcpy_ext:
 ;
 .export memcpy_banks_ext
 memcpy_banks_ext:
-	stx KZE2 + 1
-	tay
-	cpy #0
+	save_p_816_8bitmode
+	cmp #0
 	bne :+
 	cpx #0
-	bne :+
-	rts
+	beq @end
 	:
-	clc
-	lda KZE1
-	adc KZE2 + 1
-	sta KZE1
-	clc
-	lda KZE0
-	adc KZE2 + 1
-	sta KZE0
+
+	ldy KZE3
+	sty KZE2 + 1
+
+	sta KZE3
+	stx KZE3 + 1
 	
+	index_16_bit
+
+	ldx KZE1
+	ldy KZE0
 @loop:
-	cpy #0
-	bne :+
-	dec KZE1
-	dec KZE0
-	:
-	dey
-	ldx KZE3
-	stx RAM_BANK
-	lda (KZE1), Y
-	ldx KZE2
-	stx RAM_BANK
-	sta (KZE0), Y
-	
-	cpy #0
-	bne @loop
 	lda KZE2 + 1
-	beq :+
-	dec KZE2 + 1
-	jmp @loop
-	:
+	sta RAM_BANK
+	lda $00, X
+	pha ; save
+	lda KZE2
+	sta RAM_BANK
+	pla
+	sta $00, Y ; store back in new loc in other bank
+	
+	inx
+	iny
+	accum_16_bit
+	dec KZE3 ; bytes to copy
+	accum_8_bit
+	bne @loop
+@end:
+	restore_p_816
 	rts
 
 ;

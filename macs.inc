@@ -13,7 +13,7 @@
 	ldx #>addr
 .endmacro
 
-.macro stax_addr addr
+.macro stax_word addr
 	sta addr
 	stx addr + 1
 .endmacro
@@ -107,7 +107,28 @@
 	ldx addr + 1
 .endmacro
 
+.macro inc_word addr
+	inc addr
+	bne :+
+	inc addr + 1
+	:
+.endmacro
+
+.macro inc_ax
+	inc A
+	bne :+
+	inx
+	:
+.endmacro
+
 .macro set_atomic_st
+	pha
+	lda #1
+	sta atomic_action_st
+	pla
+.endmacro
+
+.macro set_atomic_st_disc_a
 	lda #1
 	sta atomic_action_st
 .endmacro
@@ -155,4 +176,34 @@
 
 .macro accum_index_8_bit
 	sep #$30
+.endmacro
+
+.macro mv_a_16bit_ax
+	phy
+	save_p_816
+	index_8_bit
+	xba
+	tax
+	lda #0
+	xba
+
+	restore_p_816
+	ply
+.endmacro
+
+.macro mv_x_16bit_ax
+	save_p_816
+	accum_8_bit
+	txa
+	pha
+	lda #0
+	xba
+	tax
+	pla
+	restore_p_816
+.endmacro
+
+.macro mv_y_16bit_ax
+	tyx
+	mv_x_16bit_ax
 .endmacro

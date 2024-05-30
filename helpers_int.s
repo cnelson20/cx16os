@@ -46,7 +46,7 @@ strncpy_int:
 strncat_int:
 	pha ; push n
 	
-	phy_word KZP1
+	push_zp_word KZP1
 	ldax_word KZP0
 	push_ax
 	jsr strlen

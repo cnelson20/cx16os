@@ -6,7 +6,9 @@ r0H = $03
 r1L = $04
 r1H = $05
 
+r0 := $02
 r1 := $04
+r2 := $06
 r3 := $08
 
 ptr0 = $30
@@ -19,7 +21,24 @@ init:
 	
 	jsr res_extmem_bank
 	sta extmem_bank
+
+	lda #<$A000
+	sta r0
+	lda #>$A000
+	sta r0 + 1
+
+	lda #<$2000
+	sta r1
+	lda #>$2000
+	sta r1 + 1
+
+	lda extmem_bank
+	jsr set_extmem_wbank
+
+	lda #0
+	jsr fill_extmem
 	
+	lda extmem_bank
 	jsr load_dir_listing_extmem
 	cpx #$FF
 	beq file_error

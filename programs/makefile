@@ -1,7 +1,7 @@
 CC = cl65
 FLAGS =-t none -C cl65_progs.cfg
 
-all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir cat_slow
+all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir cat_slow term
 
 bindir: ../mnt/bin
 	
@@ -20,8 +20,16 @@ shell: shell.s
 # ed - based off the program of the same name
 #
 
-ed: ed.s
+ed: ed.s routines.inc
 	$(CC) $(FLAGS) -o $@ ed.s
+	cp $@ ../mnt/bin
+
+#
+# System programs
+#
+
+term: term.s
+	$(CC) $(FLAGS) -o $@ $@.s
 	cp $@ ../mnt/bin
 
 #

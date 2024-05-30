@@ -66,3 +66,6 @@ copy_file := $9D6C
 mkdir := $9D6F
 rmdir := $9D72
 
+setup_chrout_hook := $9D75
+release_chrout_hook := $9D78
+

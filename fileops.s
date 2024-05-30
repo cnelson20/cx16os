@@ -11,7 +11,7 @@
 .import strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str
 .import current_program_id
 
-.import putc
+.import CHROUT_screen
 
 .export file_table_count
 file_table_count := $A000
@@ -27,6 +27,11 @@ path_dir:
 	.res MAX_FILELEN, 0
 pwd:
 	.res MAX_FILELEN, 0
+curr_fd_chkin:
+	.byte 0
+curr_fd_chkout:
+	.byte 0
+
 
 ;
 ; setup_kernal_file_table
@@ -70,11 +75,54 @@ setup_kernal_file_table:
 	cnsta_word path_dir, KZP0
 	lda #MAX_FILELEN
 	jsr strncat_int
+
+	stz curr_fd_chkin
+	stz curr_fd_chkout
 	
 @end_setup_files:	
 	pla 
 	sta RAM_BANK
 	rts
+
+;
+; Wrap CHKIN, CHKOUT, CLRCHN, and CLOSE to save files chkin'd and chkout'd
+;
+; CHKIN, CHKOUT, CLOSE, CLRCHN are global'd in cx16.inc
+;
+CHKIN:
+	phx
+	jsr REAL_CHKIN
+	plx
+	bcs :+
+	stx curr_fd_chkin
+	:
+	rts
+
+CHKOUT:
+	phx
+	jsr REAL_CHKOUT
+	plx
+	bcs :+
+	stx curr_fd_chkout
+	:
+	rts
+
+CLRCHN:
+	stz curr_fd_chkin
+	stz curr_fd_chkout
+	jmp REAL_CLRCHN
+
+CLOSE:
+	cmp curr_fd_chkin
+	bne :+
+	stz curr_fd_chkin
+	:
+	cmp curr_fd_chkout
+	bne :+
+	stz curr_fd_chkout
+	:
+	jmp REAL_CLOSE
+
 
 ;
 ; update_internal_pwd
@@ -185,10 +233,10 @@ get_dir_filename_int:
 	sty KZP0
 	
 	phy_byte RAM_BANK
-	phy_word KZE0
-	phy_word KZE1
-	phy_word KZE2
-	phy_word KZE3
+	push_zp_word KZE0
+	push_zp_word KZE1
+	push_zp_word KZE2
+	push_zp_word KZE3
 	
 	ldy KZP0
 	jsr get_dir_filename_ext
@@ -255,23 +303,18 @@ get_dir_filename_ext:
 	push_zp_word KZES5
 	push_zp_word KZES6
 	
-	ldy KZE0 ; argument path
-	sty KZES4
-	ldy KZE0 + 1
-	sty KZES4 + 1
+	ldsty_word KZE0, KZES4 ; argument path
 	
 	sta KZES5 ; pwd / path_dir 
-	sta KZE0
 	stx KZES5 + 1
-	stx KZE0 + 1
 	
 	jsr strlen
-	sta KZES6
+	sta KZES6 ; strlen of pwd / path_dir
 	
 	lda KZES4
 	ldx KZES4 + 1
 	jsr strlen
-	sta KZES6 + 1
+	sta KZES6 + 1 ; strlen of file name
 	
 	clc
 	lda KZES4
@@ -284,10 +327,10 @@ get_dir_filename_ext:
 	adc #0
 	sta KZE0 + 1
 	
-	lda #MAX_FILELEN
+	lda #MAX_FILELEN - 1
 	clc ; - 1
 	sbc KZES6 ; pwd.strlen
-	cmp KZES6 + 1 ; file name
+	cmp KZES6 + 1 ; file name.strlen
 	bcc :+
 	lda KZES6 + 1
 	inc A
@@ -298,7 +341,9 @@ get_dir_filename_ext:
 	; make sure string is null term'd
 	pla ; pull n
 	dec A
+	clc
 	adc KZES6
+	tay
 	lda #0
 	sta (KZES4), Y
 	
@@ -432,7 +477,7 @@ free_dos_channel:
 .export open_file_kernal_ext
 open_file_kernal_ext:
 	phy
-	stax_addr KZE1
+	stax_word KZE1
 	
 	cnsta_word PV_TMP_FILENAME, KZE0
 	
@@ -985,30 +1030,37 @@ write_file_ext:
 	rts
 	
 write_stdout:
-	inc KZE1
-	bne :+
-	inc KZE1 + 1
-	:
+	push_zp_word KZES4
+	push_zp_word KZES5
+
+	ldax_word KZE0
+	inc_ax
+	stax_word KZES4
+	ldsta_word KZE1, KZES5
 	ldy #0
 @loop:
-	dec KZE1
+	dec KZES4
 	bne :+
-	dec KZE1 + 1
+	dec KZES4 + 1
 	bpl :+
 
 	;no more bytes to copy, return
+	pla_word KZES5
+	pla_word KZES4
 	lda r1
 	ldx r1 + 1
 	ldy #0
 	rts
 	
 	:
-	lda (KZE0), Y
-	jsr putc
+	lda (KZES4), Y
+	phy
+	jsr CHROUT_screen
+	ply
 	
 	iny
 	bne @loop
-	inc KZE0 + 1
+	inc KZES4 + 1
 	bra @loop
 
 ;
@@ -1024,8 +1076,7 @@ load_dir_listing_extmem_ext:
 	set_atomic_st
 	
 	; cd to process' pwd ;
-	lda RAM_BANK
-	pha ; this will go into KZE0
+	pha_byte RAM_BANK
 	pha_byte KZE1
 	
 	inc RAM_BANK
@@ -1105,6 +1156,8 @@ load_dir_listing_extmem_ext:
 	rts
 	
 @cd_open_error:
+	lda KZE0
+	sta RAM_BANK
 	lda #15
 	jsr CLOSE
 	jsr free_dos_channel
@@ -1459,8 +1512,8 @@ mkdir_rmdir_ld:
 	bra single_arg_dos_cmd
 	
 single_arg_dos_cmd:
-	phy_word KZES4
-	phy_word KZES5
+	push_zp_word KZES4
+	push_zp_word KZES5
 	stz KZES5
 	stz KZES5 + 1
 	
@@ -1468,7 +1521,7 @@ single_arg_dos_cmd:
 	stx KZES4 + 1
 	
 	; push S/MD/RD cmd to stack ;
-	phy_word KZE0
+	push_zp_word KZE0
 	
 	set_atomic_st
 	
@@ -1536,8 +1589,8 @@ copy_file_ext:
 
 copy_rename_file:
 	sty KZE0
-	phy_word KZES4
-	phy_word KZES5
+	push_zp_word KZES4
+	push_zp_word KZES5
 	
 	ldy KZE0
 	

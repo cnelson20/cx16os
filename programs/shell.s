@@ -376,6 +376,8 @@ narg_not_0_amp:
 	sta r2
 	lda new_stdout_fileno
 	sta r2 + 1
+	lda do_wait_child
+	sta r0
 	lda #<output
 	ldx #>output
 	jsr exec

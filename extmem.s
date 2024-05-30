@@ -8,6 +8,27 @@
 .import find_new_process_bank
 
 ;
+; Setup process extmem bank table
+;
+.export setup_process_extmem_table
+setup_process_extmem_table:
+	save_p_816_8bitmode
+	phy_byte RAM_BANK
+
+	inc A
+	sta RAM_BANK
+
+	ldx #0
+	:
+	stz process_extmem_table, X
+	inx
+	bne :-
+
+	ply_byte RAM_BANK
+	restore_p_816
+	rts
+
+;
 ; Finds the next available extmem banks, returns in .A
 ; Zeros out those banks
 ; Returns 0 on error
@@ -15,52 +36,26 @@
 .export res_extmem_bank
 res_extmem_bank:
 	save_p_816_8bitmode
-	lda #1
-	sta atomic_action_st
+	set_atomic_st
 	
 	jsr find_new_process_bank
 	cmp #0
 	beq :+
 	
 	tax
-	lda current_program_id
+	lda #1
 	sta process_table, X
-	txa
-	
-	:
-	; zero out these banks ;
-	; start with bank + 1 ;
-	sta KZE0
-	inc A
-	sta RAM_BANK
-	
-	lda #<$A000
-	sta r0
-	lda #>$A000
-	sta r0 + 1
-	
-	stz r1
-	lda #>$2000
-	sta r1 + 1
-	lda #0
-	jsr memory_fill
-	
-	; now do bank ( +0 ) ;
-	lda KZE0
-	sta RAM_BANK
-	
-	stz r1
-	lda #>$2000
-	sta r1 + 1
-	lda #0
-	jsr memory_fill
-	
-	lda current_program_id
-	sta RAM_BANK
-	
-	lda KZE0
-	stz atomic_action_st
 
+	inc RAM_BANK
+
+	lda #1
+	sta process_extmem_table, X
+
+	dec RAM_BANK
+
+	txa
+
+	clear_atomic_st
 	restore_p_816
 	rts
 
@@ -85,14 +80,16 @@ clear_process_extmem_banks:
 	rts
 
 ; check whether a process can access a bank ;
-; preserves .X
+; preserves .XY
 check_process_owns_bank:
 	phx
 	and #$FE ; %1111 1110
 	tax
-	lda current_program_id
-	cmp process_table, X
-	bne @no
+	inc RAM_BANK
+	lda process_extmem_table, X
+	dec RAM_BANK
+	cmp #0
+	beq @no
 @yes:
 	plx
 	lda #0
@@ -113,7 +110,17 @@ free_extmem_bank:
 	bne :+
 	pla ; preserve X
 	phx
-	stz process_table, X
+
+	tax
+	dec process_table, X
+
+	pha
+	inc RAM_BANK
+	lda #1
+	sta process_extmem_table, X
+	dec RAM_BANK
+	pla
+
 	plx
 	rts
 	:
@@ -512,52 +519,38 @@ memmove_extmem:
 ;
 ; extmem_fill
 ;
-; Sets [r0, r0 + r1) in the previously set bank to .A
+; Sets [r0, r0 + r1) in bank EXTMEM_WBANK to .A
 ;
 .export fill_extmem
 fill_extmem:
 	save_p_816_8bitmode
-	jsr @8_bit_mode
-	restore_p_816
-	rts
-
-@8_bit_mode:
-	sta KZE2
-	
-	lda r1
-	ora r1 + 1
-	bne :+
-	rts ; if we don't need to copy any bytes, just exit
-	:
+	sta KZE0
 	
 	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
 	
-	ldsta_word r0, KZE0
-	ldsta_word r1, KZE1
-	inc KZE1 + 1
-	
-	ldy #0
-	ldx KZE1
-	lda KZE2	
-@loop:
-	sta (KZE0), Y
-	
-	iny
-	bne :+
-	inc KZE0 + 1
-	:
-	dex
-	bne :+
-	ldx KZE1 + 1
+	index_16_bit
+	ldx r0
+	ldy r1
 	beq @end
-	dex
-	stx KZE1 + 1
-	ldx #0
+	.i16
+	cpy #$2000
+	bcc :+
+	ldy #$2000
 	:
-	bra @loop
+	.i8
+	
+	lda KZE0	
+@loop:
+	sta $00, X
+	
+	inx
+	dey
+	bne @loop
 @end:	
 	lda current_program_id
 	sta RAM_BANK
+
+	restore_p_816
 	rts
 	

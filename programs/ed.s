@@ -46,17 +46,17 @@
 .endmacro
 
 .macro phy_word addr
-	ldy addr
-	phy
 	ldy addr + 1
+	phy
+	ldy addr
 	phy
 .endmacro
 
 .macro ply_word addr
-	ply
-	sty addr + 1
 	ply 
 	sty addr
+	ply
+	sty addr + 1
 .endmacro
 
 r0 := $02
@@ -113,11 +113,15 @@ main:
 	rts
 	:
 	sta lines_ordered_bank
+	jsr fill_bank_zero
 	
 	jsr res_extmem_bank
 	sta extmem_banks + 0
+	jsr fill_bank_zero
 	inc A
 	sta extmem_banks + 1
+	jsr fill_bank_zero
+
 	stz extmem_banks + 2
 	stz line_count
 	stz input_mode
@@ -1753,6 +1757,32 @@ delete_lines:
 	
 	rts
 
+fill_bank_zero:
+	pha
+	phx
+	phy
+
+	jsr set_extmem_wbank
+
+
+	lda #<$A000
+	sta r0
+	lda #>$A000
+	sta r0 + 1
+
+	lda #<$2000
+	sta r1
+	lda #>$2000
+	sta r1 + 1
+
+	lda #0
+	jsr fill_extmem
+
+	ply
+	plx
+	pla
+	rts
+
 get_io_filename:
 	lda input ; args are copied into input
 	beq @use_default_filename ; if arg = "", use the default filename
@@ -2468,9 +2498,11 @@ find_extmem_space:
 	
 	pha
 	sta extmem_banks, Y
+	jsr fill_bank_zero
 	iny
 	inc A
 	sta extmem_banks, Y
+	jsr fill_bank_zero
 	lda #0
 	iny
 	sta extmem_banks, Y
