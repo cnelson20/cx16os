@@ -6,16 +6,16 @@ Routines to expand a program's data access beyond its allocated $2000 bytes
 | Address | Function name | Argument Registers | Return Registers | Registers trampled |
 |---------|---------------|--------------------|------------------|--------------------|
 | $9D33 | [`res_extmem_bank`](#res_extmem_bank) | | .A | .XY |
-| $9D36 | [`set_extmem_rbank`](#set_extmem_rbank) | .A | .A | .X |
-| $9D57 | [`set_extmem_wbank`](#set_extmem_wbank) | .A | .A | .X |
-| $9D39 | [`set_extmem_rptr`](#set_extmem_rptr) | .A | .A | |
-| $9D3C | [`set_extmem_wptr`](#set_extmem_wptr) | .A | .A | |
+| $9D36 | [`set_extmem_rbank`](#set_extmem_rbank) | .A | .A | .XY |
+| $9D57 | [`set_extmem_wbank`](#set_extmem_wbank) | .A | .A | .XY |
+| $9D39 | [`set_extmem_rptr`](#set_extmem_rptr) | .A | .A | .XY |
+| $9D3C | [`set_extmem_wptr`](#set_extmem_wptr) | .A | .A | .XY |
 | $9D3F | [`readf_byte_extmem_y`](#readf_byte_extmem_y) | .Y | .A | |
-| $9D42 | [`readf_word_extmem_y`](#readf_word_extmem_y) | .Y | .AX | |
-| $9D45 | [`vread_byte_extmem_y`](#vread_byte_extmem_y) | .X, .Y | .A | |
+| $9D42 | [`readf_word_extmem_y`](#readf_word_extmem_y) | .Y | .AX | .XH, .YH |
+| $9D45 | [`vread_byte_extmem_y`](#vread_byte_extmem_y) | .X, .Y | .A | .XH, .YH |
 | $9D48 | [`writef_byte_extmem_y`](#writef_byte_extmem_y) | .A, .Y | | |
-| $9D4B | [`writef_word_extmem_y`](#writef_word_extmem_y) | .AX, .Y | | |
-| $9D4E | [`vwrite_byte_extmem_y`](#vwrite_byte_extmem_y) | .A, .X, .Y | | |
+| $9D4B | [`writef_word_extmem_y`](#writef_word_extmem_y) | .AX, .Y | | .XH, .YH |
+| $9D4E | [`vwrite_byte_extmem_y`](#vwrite_byte_extmem_y) | .A, .X, .Y | | .XH, .YH |
 | $9D51 | [`memmove_extmem`](#memmove_extmem) | r0, r1, r2.L, r3.L, .AX | .A | .XY |
 | $9D54 | [`fill_extmem`](#fill_extmem) | r0, r1, .A | | .XY |
 
