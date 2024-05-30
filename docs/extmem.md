@@ -43,7 +43,7 @@ Returns 0 if ptr is valid, non-zero other
 ### readf_byte_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_rptr](#set_extmem_rptr)
  
-Does the equivalent of `LDA (rptr), Y` from memory of the previously set bank  
+Does the equivalent of `LDA (rptr), Y` from memory of the previously set bank (works with 16-bit index registers and accumulator)  
 Preserves all registers  
 
 ### readf_word_extmem_y
@@ -60,7 +60,7 @@ Preserves .XY
 
 ### writef_byte_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_wptr](#set_extmem_wptr)  
-Does the equivalent of `STA (wptr), Y` to memory of the previously set bank  
+Does the equivalent of `STA (wptr), Y` to memory of the previously set bank (works with 16-bit index registers and accumulator) 
 Preserves .AXY  
 
 ### writef_word_extmem_y
