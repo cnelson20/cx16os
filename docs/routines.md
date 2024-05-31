@@ -30,6 +30,13 @@
 | $9D6C | [`copy_file`](#9d6c-copy_file) | r0, r1 | .A | .XY | 
 | $9D6F | [`mkdir`](#9d6f-mkdir) | .AX | .A | .Y |
 | $9D72 | [`rmdir`](#9d72-rmdir) | .AX | .A | .Y |
+| $9D75 | [`setup_chrout_hook`]() | .A, r0, r1 | .AX | .Y |
+| $9D78 | [`release_chrout_hook`]() | | .A | .XH, .YH |
+| $9D7B | [`setup_general_hook`]() | .A, .X, r0, r1 | .AX | .Y |
+| $9D7E | [`release_general_hook`]() | .A | .A | .XY |
+| $9D81 | [`get_general_hook_info`]() | .A | .A, TBD | .XY |
+| $9D84 | [`send_message_general_hook`]() | .A, .X, r0, r1 | .A | .XY |
+| $9D87 | [`send_byte_chrout_hook`]() | .A | .A | .XY |
 
 ## Function Reference
 
