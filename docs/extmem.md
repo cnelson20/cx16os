@@ -25,11 +25,11 @@ Can use bank, bank + 1 for calls to [set_extmem_bank](#set_extmem_bank)
 Returns 0 in .A if no banks available  
 
 ### set_extmem_rbank
-Set bank to use for read_\*_extmem_\* routines  
+Set bank to use for read_\*_extmem routines  
 Returns 0 if bank is valid, non-zero value otherwise  
 
 ### set_extmem_wbank
-Set bank to use for write_\*_extmem\* routines  
+Set bank to use for write_\*_extmem routines  
 Returns 0 if bank is valid, non-zero value otherwise  
 
 ### set_extmem_rptr
