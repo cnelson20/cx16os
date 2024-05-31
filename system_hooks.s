@@ -6,8 +6,9 @@
 .SEGMENT "CODE"
 
 .import atomic_action_st, current_program_id
-.import surrender_process_time
-.import schedule_timer
+.import surrender_process_time, schedule_timer
+.import memcpy_banks_ext
+.import check_process_owns_bank
 
 CHROUT_BUFF_SIZE = $1000
 
@@ -38,10 +39,20 @@ release_all_process_hooks:
     pha
     jsr try_release_chrout_hook
     pla
+    tax
+    lda #NUM_OTHER_HOOKS - 1
+    :
+    pha
+    phx
+    jsr try_release_general_hook
+    plx
+    pla
+    dec A
+    bpl :-
     rts
 
 ;
-; setup a chrout hook for a program
+; setup the chrout hook for a program
 ;
 ; .A = bank of data buffer
 ; r0 = addr of data buffer
@@ -261,15 +272,20 @@ valid_c_table_1:
 ; other hooks
 ;
 NUM_OTHER_HOOKS = 16
+GEN_HOOK_BUFF_SIZE = $1000
 
 hook_prog_banks:
     .res NUM_OTHER_HOOKS
 hook_extmem_banks:
     .res NUM_OTHER_HOOKS
-hook_data_addrs:
-    .word NUM_OTHER_HOOKS * 2
-hook_info_addrs:
-    .word NUM_OTHER_HOOKS * 2
+hook_data_addrs_lo:
+    .res NUM_OTHER_HOOKS
+hook_data_addrs_hi:
+    .res NUM_OTHER_HOOKS
+hook_info_addrs_lo:
+    .res NUM_OTHER_HOOKS
+hook_info_addrs_hi:
+    .res NUM_OTHER_HOOKS
 
 reset_other_hooks:
     ldx #NUM_OTHER_HOOKS
@@ -277,4 +293,323 @@ reset_other_hooks:
     stz hook_prog_banks, X
     dex
     bpl :-
+    rts
+
+;
+; setup a chrout hook for a program
+;
+; .A = hook # (0-15)
+; .X = bank of data buffer
+; r0 = addr of data buffer
+; r1 = addr of buffer info (4 bytes)
+;
+.export setup_general_hook
+setup_general_hook:
+    save_p_816_8bitmode
+    cmp #NUM_OTHER_HOOKS
+    bcs @return_failure
+    sta KZE0
+    stx KZE1
+    tax
+    lda hook_prog_banks, X
+    cmp #0
+    bne @return_failure
+
+    lda KZE1
+    jsr check_process_owns_bank
+    bne @return_failure
+
+    ; add hook ;
+
+    ldx KZE0 ; hook #
+    lda KZE1
+    sta hook_extmem_banks, X
+
+    lda r0
+    sta hook_data_addrs_lo, X
+    lda r0 + 1
+    sta hook_data_addrs_hi, X
+
+    lda r1
+    sta hook_info_addrs_lo, X
+    lda r1 + 1
+    sta hook_info_addrs_hi, X
+
+    ldy #3
+    lda #0
+    :
+    sta (r1), Y
+    dey
+    bpl :-
+
+    lda current_program_id
+    sta hook_prog_banks, X
+
+@return_success:
+    lda #<GEN_HOOK_BUFF_SIZE
+    ldx #>GEN_HOOK_BUFF_SIZE
+    bra @return
+@return_failure:
+    lda #0
+    lda #0
+@return:
+    restore_p_816
+    rts
+
+;
+; release_general_hook
+;
+; Releases current program's lock on hook # .A if it has one
+;
+; returns 0 on success, 1 on failure
+;
+.export release_general_hook
+release_general_hook:
+    save_p_816_8bitmode
+    ldx current_program_id
+    jsr try_release_general_hook
+    xba
+    lda #0
+    xba
+    restore_p_816
+    rts
+
+
+;
+; try to release prog .X's lock on hook # .A if it has one
+;
+try_release_general_hook:
+    cmp #NUM_OTHER_HOOKS
+    bcs @failure
+
+    stx KZE0
+    tax
+    lda hook_prog_banks, X
+    cmp KZE0
+    bne @failure
+
+    stz hook_prog_banks, X
+
+    lda #0 ; return 0 on success
+    rts
+@failure:
+    lda #1 ; return 1 on failure
+    rts
+
+;
+; get_general_hook_info
+;
+; get information about hook # .A
+;
+.export get_general_hook_info
+get_general_hook_info:
+    save_p_816_8bitmode
+    cmp #NUM_OTHER_HOOKS
+    bcs @no_hook_present
+
+    tax
+    lda hook_prog_banks, X
+    beq @no_hook_present
+    sta KZE0
+
+    ; get info about this hook ;
+    lda #0
+    xba
+    lda KZE0
+
+    bra @return
+@no_hook_present:
+    lda #0
+    xba
+    lda #0
+@return:
+    restore_p_816
+    rts
+
+;
+; send_message_general_hook
+;
+; .A = message length
+; .X = hook #
+; r0 = pointer to message
+; r1.L = bank of message (0 if prog bank)
+;
+.export send_message_general_hook
+send_message_general_hook:
+@MESSAGE_HEADER_SIZE = 2
+    save_p_816_8bitmode
+    cpx #NUM_OTHER_HOOKS
+    bcc :+
+    jmp @return_failure ; not a hook #
+    :
+    sta KZE0 ; store message length in KZE0
+    stz KZE0 + 1
+    lda hook_prog_banks, X ; is hook in use ?
+    bne :+
+    jmp @return_failure ; if not, return early
+    :
+    stx KZE1 ; store hook #
+
+    lda r1
+    bne :+
+    lda current_program_id
+    sta r1
+    bra :++
+    :
+    jsr check_process_owns_bank
+    beq :+ ; 0 means yes
+    jmp @return_failure
+    :
+
+    lda hook_info_addrs_lo, X
+    sta KZE2
+    lda hook_info_addrs_hi, X
+    sta KZE2 + 1
+
+    bra @check_offsets
+@gen_hook_buff_full:
+    accum_index_8_bit
+    lda current_program_id
+    sta RAM_BANK
+    clear_atomic_st
+    jsr surrender_process_time
+    ldx KZE1
+    lda hook_prog_banks, X
+    bne :+
+    jmp @return_failure
+    :
+
+@check_offsets:
+    set_atomic_st_disc_a
+    ldx KZE1
+    lda hook_prog_banks, X
+    sta RAM_BANK
+
+    accum_index_16_bit
+    .i16
+    .a16
+    ldy #0
+    lda (KZE2), Y
+    sta KZE3 ; write start_offset to KZE3
+    ldy #2
+    lda (KZE2), Y
+    tay 
+    cpy KZE3 ; compare end_offset in .Y to start_offset in KZE3
+    bcc :+ ; if end_offset >= start_offset, add hook_size to start_offset
+    lda KZE3
+    clc
+    adc #GEN_HOOK_BUFF_SIZE
+    sta KZE3
+    :
+    phy ; push end_offset in .Y
+    tya
+    clc
+    adc KZE0 ; add message_len to end_offset
+    adc #@MESSAGE_HEADER_SIZE ; add message header size
+    tay
+    ; compare y again ;
+    cpy KZE3 ; if end_offset + message_len (in .Y) >= start_offset + (possibly GEN_HOOK_BUFF_SIZE)
+    ply ; pull unadded end_offset back to .Y (doesn't affect carry flag)
+    bcs @gen_hook_buff_full
+    
+    ; there is enough space
+    ; store end_offset (where to write) to KZE3
+    sty KZE3
+
+    accum_index_8_bit
+    .a8
+    .i8
+
+    ldx KZE1
+    lda hook_extmem_banks, X
+    sta RAM_BANK
+    
+    push_zp_word KZES4
+    push_zp_word KZES5
+    lda hook_data_addrs_lo, X
+    sta KZES4
+    lda hook_data_addrs_hi, X
+    sta KZES4 + 1
+
+    lda hook_extmem_banks, X
+    sta KZES5
+
+    index_16_bit
+    .i16
+
+    .macro iny_check_buff_wraparound
+    iny
+    cpy #GEN_HOOK_BUFF_SIZE
+    bcc :+
+    ldy #0
+    :
+    .endmacro
+
+    ldy KZE3 ; end_offset, the first byte where we will write
+    lda current_program_id
+    sta (KZES4), Y
+    iny_check_buff_wraparound
+    lda KZE0 ; message size
+    sta (KZES4), Y
+    iny_check_buff_wraparound
+
+    ; loop to write all bytes of message to buffer
+    ldx #0
+@copy_loop:
+    lda r1 ; bank of message
+    sta RAM_BANK
+    phy
+    txy
+    lda (r0), Y
+    ply
+    pha
+    lda KZES5 ; hook extmem bank
+    sta RAM_BANK
+    pla
+    sta (KZES4), Y
+
+    iny_check_buff_wraparound
+    inx
+    cpx KZE0 ; compare to message size
+    bcc @copy_loop ; continue if less
+
+    ply_word KZES5
+    ply_word KZES4
+    index_8_bit
+    .i8
+
+    ; increment end_offset by message_length + 2
+    ldx KZE1 ; hook #
+    lda hook_prog_banks, X
+    sta RAM_BANK ; write back new end_offset into prog_bank
+    accum_16_bit
+    .a16
+    lda KZE3 ; end_offset
+    clc
+    adc KZE0 ; message_length
+    adc #@MESSAGE_HEADER_SIZE
+    cmp #GEN_HOOK_BUFF_SIZE
+    bcc :+
+    ; carry is set
+    sbc #GEN_HOOK_BUFF_SIZE
+    :
+    ldy #2
+    sta (KZE2), Y
+    .a8
+    accum_8_bit
+
+    lda current_program_id
+    sta RAM_BANK
+    clear_atomic_st
+
+@return_success:
+    lda #0
+    bra @return
+@return_failure:
+    lda #1
+@return:
+    xba
+    lda #0
+    xba
+    restore_p_816
     rts

@@ -1,2 +1,3 @@
-ls
-cat words.txt
+gui &
+ps
+term &

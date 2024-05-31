@@ -19,17 +19,27 @@
 .endmacro
 
 .macro pha_word addr
+	.if .asize = 8
 	lda addr + 1
 	pha
 	lda addr
 	pha
+	.else
+	lda addr
+	pha
+	.endif
 .endmacro
 
 .macro pla_word addr
+	.if .asize = 8
 	pla 
 	sta addr
 	pla
 	sta addr + 1
+	.else
+	pla
+	sta addr
+	.endif
 .endmacro
 
 .macro pha_byte addr
@@ -43,17 +53,27 @@
 .endmacro
 
 .macro phy_word addr
+	.if .isize = 8
 	ldy addr + 1
 	phy
 	ldy addr
 	phy
+	.else 
+	ldy addr
+	phy
+	.endif
 .endmacro
 
 .macro ply_word addr
+	.if .isize = 8
 	ply 
 	sty addr
 	ply
 	sty addr + 1
+	.else
+	ply
+	sty addr
+	.endif
 .endmacro
 
 .macro phy_byte addr
@@ -82,24 +102,39 @@
 	
 
 .macro ldsta_word src, dest
+	.if .asize = 8
 	lda src
 	sta dest
 	lda src + 1
 	sta dest + 1
+	.else
+	lda src
+	sta dest
+	.endif
 .endmacro
 
 .macro ldstx_word src, dest
+	.if .isize = 8
 	ldx src
 	stx dest
 	ldx src + 1
 	stx dest + 1
+	.else
+	ldx src
+	stx dest
+	.endif
 .endmacro
 
 .macro ldsty_word src, dest
+	.if .isize = 8
 	ldy src
 	sty dest
 	ldy src + 1
 	sty dest + 1
+	.else 
+	ldy src
+	sty dest
+	.endif
 .endmacro
 
 .macro ldax_word addr
@@ -108,10 +143,14 @@
 .endmacro
 
 .macro inc_word addr
+	.if .asize = 8
 	inc addr
 	bne :+
 	inc addr + 1
 	:
+	.else
+	inc addr
+	.endif
 .endmacro
 
 .macro inc_ax

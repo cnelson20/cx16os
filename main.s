@@ -587,7 +587,7 @@ is_valid_process:
 	lda process_table, X 
 	plx
 
-	cmp #1
+	cmp #PID_IN_USE
 	bne @fail
 	
 	lda #1

@@ -18,10 +18,11 @@
 .import get_pwd_ext, chdir_ext, unlink_ext, rename_ext, copy_file_ext, mkdir_ext, rmdir_ext
 
 .import res_extmem_bank, set_extmem_rbank, set_extmem_wbank, set_extmem_rptr, set_extmem_wptr
-.import readf_byte_extmem_y, readf_word_extmem_y, vread_byte_extmem_y
-.import writef_byte_extmem_y, writef_word_extmem_y, vwrite_byte_extmem_y, memmove_extmem, fill_extmem
+.import readf_byte_extmem_y, vread_byte_extmem_y, writef_byte_extmem_y, vwrite_byte_extmem_y
+.import free_extmem_bank_extwrapper, share_extmem_bank, memmove_extmem, fill_extmem
 
 .import setup_chrout_hook, release_chrout_hook, CHROUT_screen
+.import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook
 
 .import surrender_process_time	
 .import irq_already_triggered
@@ -59,10 +60,10 @@ call_table:
 	jmp set_extmem_rptr ; $9D39
 	jmp set_extmem_wptr ; $9D3C
 	jmp readf_byte_extmem_y ; $9D3F
-	jmp readf_word_extmem_y ; $9D42
+	jmp free_extmem_bank_extwrapper ; $9D42
 	jmp vread_byte_extmem_y ; $9D45
 	jmp writef_byte_extmem_y ; $9D48
-	jmp writef_word_extmem_y ; $9D4B
+	jmp share_extmem_bank ; $9D4B
 	jmp vwrite_byte_extmem_y ; $9D4E
 	jmp memmove_extmem ; $9D51
 	jmp fill_extmem ; $9D54
@@ -78,6 +79,10 @@ call_table:
 	jmp rmdir ; $9D72
 	jmp setup_chrout_hook ; $9D75
 	jmp release_chrout_hook ; $9D78
+	jmp setup_general_hook ; $9D7B
+	jmp release_general_hook ; $9D7E
+	jmp get_general_hook_info ; $9D81
+	jmp send_message_general_hook ; $9D84
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -356,14 +361,11 @@ get_args:
 ;
 get_process_name:
 	save_p_816_8bitmode
-	pha 
-	lda #1
-	sta atomic_action_st
-	pla
+	set_atomic_st
 	
 	jsr get_process_name_kernal_ext
 	
-	stz atomic_action_st
+	clear_atomic_st
 	restore_p_816
 	rts
 

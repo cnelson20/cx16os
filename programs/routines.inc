@@ -42,11 +42,11 @@ set_extmem_rptr := $9D39
 set_extmem_wptr := $9D3C
 
 readf_byte_extmem_y := $9D3F
-readf_word_extmem_y := $9D42
+free_extmem_bank := $9D42
 vread_byte_extmem_y := $9D45
 
 writef_byte_extmem_y := $9D48
-writef_word_extmem_y := $9D4B
+share_extmem_bank := $9D4B
 vwrite_byte_extmem_y := $9D3E
 
 memmove_extmem := $9D51
@@ -69,3 +69,7 @@ rmdir := $9D72
 setup_chrout_hook := $9D75
 release_chrout_hook := $9D78
 
+setup_general_hook := $9D7B
+release_general_hook := $9D7E
+get_general_hook_info := $9D81
+send_message_general_hook := $9D84

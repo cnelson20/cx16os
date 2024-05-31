@@ -5,7 +5,7 @@
 
 .import process_table, current_program_id, atomic_action_st
 .import memcpy_ext, memcpy_banks_ext
-.import find_new_process_bank
+.import find_new_process_bank, is_valid_process
 
 ;
 ; Setup process extmem bank table
@@ -81,6 +81,7 @@ clear_process_extmem_banks:
 
 ; check whether a process can access a bank ;
 ; preserves .XY
+.export check_process_owns_bank
 check_process_owns_bank:
 	phx
 	and #$FE ; %1111 1110
@@ -102,29 +103,39 @@ check_process_owns_bank:
 ;
 ; Release a process' extmem bank (in .A)
 ;
-; preserves .AXY
+; preserves .XY
 ;
 free_extmem_bank:
-	pha
 	jsr check_process_owns_bank
 	bne :+
-	pla ; preserve X
 	phx
 
 	tax
 	dec process_table, X
 
-	pha
 	inc RAM_BANK
 	lda #1
 	sta process_extmem_table, X
 	dec RAM_BANK
-	pla
 
 	plx
 	rts
 	:
-	pla
+	rts
+
+;
+; Release a process' extmem bank in .A
+;
+; preserves .XL, .YL
+;
+.export free_extmem_bank_extwrapper
+free_extmem_bank_extwrapper:
+	save_p_816_8bitmode
+	jsr free_extmem_bank
+	xba
+	lda #0
+	xba
+	restore_p_816
 	rts
 
 ;
@@ -313,37 +324,6 @@ readf_byte_extmem_y:
 	rts 
 
 ;
-; Read two bytes from (rptr), Y
-; .Y will be incremented by 2 after call
-;
-.export readf_word_extmem_y
-readf_word_extmem_y:
-	save_p_816_8bitmode
-	ldx STORE_PROG_EXTMEM_RPTR
-	lda $00, X
-	sta KZE0
-	lda $01, X
-	sta KZE0 + 1
-	
-	lda STORE_PROG_EXTMEM_RBANK
-	sta RAM_BANK
-	
-	lda (KZE0), Y
-	tax
-	iny 
-	lda (KZE0), Y
-	iny
-	
-	pha
-	phx
-	lda current_program_id
-	sta RAM_BANK
-	pla
-	plx
-	restore_p_816
-	rts
-
-;
 ; Write (wptr), Y to extmem
 ; preserves .X, .Y, .A
 ;
@@ -379,38 +359,41 @@ writef_byte_extmem_y:
 	rts 
 
 ;
-; Write two bytes to (wptr), Y
-; .Y will be incremented by 2 after call
-; Preserves .AX
+; shares the bank in .A with the process with id in .X
 ;
-.export writef_word_extmem_y
-writef_word_extmem_y:
+.export share_extmem_bank
+share_extmem_bank:
+	stp
 	save_p_816_8bitmode
-	sta KZE1
-	stx KZE1 + 1
-	ldx STORE_PROG_EXTMEM_WPTR
-	lda $00, X
+	jsr check_process_owns_bank
+	bne @failure_return ; doesn't own bank
+
 	sta KZE0
-	lda $01, X
-	sta KZE0 + 1
-	
-	lda STORE_PROG_EXTMEM_WBANK
-	sta RAM_BANK
-	
-	lda KZE1
-	sta (KZE0), Y
-	iny
-	lda KZE1 + 1
-	sta (KZE0), Y
-	iny
-	tax ; .X now restored
-	
-	lda current_program_id
-	sta RAM_BANK
-	
-	lda KZE1
+	txa
+	jsr is_valid_process
+	cmp #0
+	beq @failure_return
+
+	set_atomic_st
+	pha_byte RAM_BANK
+	stx RAM_BANK
+
+	ldx KZE0
+	lda #1
+	sta process_extmem_table, X
+	inc process_table, X
+
+	pla_byte RAM_BANK
+	clear_atomic_st
+	lda #0
+	bra @return
+@failure_return:
+	lda #1
+@return:
 	restore_p_816
 	rts
+
+
 
 ;
 ; vread_byte_extmem_y
