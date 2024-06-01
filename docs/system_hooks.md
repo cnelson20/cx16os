@@ -29,8 +29,8 @@ Arguments:
 
 - None
 
-Releases the calling program's hook on CHROUT calls, if it has one
-Returns 0 on success, non-zero on failure
+Releases the calling program's hook on CHROUT calls, if it has one  
+Returns 0 on success, non-zero on failure in .A
 
 ---
 
@@ -43,18 +43,52 @@ Arguments:
 - r0 holds the address of the same data ringbuffer
 - r1 holds the address where to hold the hook's buffer information in the calling process' bank (see [above](#buffer-information-pointers)
 
+Sets up general hook # .A based on the provided arguments  
+Returns size of buffer in .AX, 0 on failure (hook already in use)
+
 ---
 
 ### release_general_hook
+Call Address: $9D7E  
+Arguments:
+
+- .A holds the hook # to release
+
+Releases the calling process' lock on hook # .A, if it has one  
+Returns 0 on success, non-zero on failure in .A
 
 ---
 
 ### get_general_hook_info
+Call Address: $9D81  
+Arguments:
+
+- .A holds the hook # to get information about
+
+Returns whether a hook is active, and what process has a lock on it  
+.A contains the pid of the process with the lock, or 0 if no process has one
 
 ---
 
 ### send_message_general_hook
+Call Address: $9D84  
+Arguments:
+
+- .X holds the hook # to send a message to
+- .A holds the message length
+- r0 holds a pointer to the message
+- r1.L holds the bank of the message (0 means the message is in the caller's own bank)
+
+Returns 0 on success, non-zero on failure in .A
 
 ---
 
 ### send_byte_chrout_hook
+Call Address: $9D87  
+Arguments:
+
+- .A holds the byte to send
+
+Preserves .A, returns 0 on success, non-zero on failure in .X
+
+
