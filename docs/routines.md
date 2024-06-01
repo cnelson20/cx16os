@@ -30,6 +30,14 @@
 | $9D6C | [`copy_file`](#9d6c-copy_file) | r0, r1 | .A | .XY | 
 | $9D6F | [`mkdir`](#9d6f-mkdir) | .AX | .A | .Y |
 | $9D72 | [`rmdir`](#9d72-rmdir) | .AX | .A | .Y |
+| $9D75 | [`setup_chrout_hook`](system_hooks.md#setup_chrout_hook) | .A, r0, r1 | .AX | .Y |
+| $9D78 | [`release_chrout_hook`](system_hooks.md#release_chrout_hook) | | .A | .XH, .YH |
+| $9D7B | [`setup_general_hook`](system_hooks.md#setup_general_hook) | .A, .X, r0, r1 | .AX | .Y |
+| $9D7E | [`release_general_hook`](system_hooks.md#release_general_hook) | .A | .A | .XY |
+| $9D81 | [`get_general_hook_info`](system_hooks.md#get_general_hook_info) | .A | .A, TBD | .XY |
+| $9D84 | [`send_message_general_hook`](system_hooks.md#send_message_general_hook) | .A, .X, r0, r1 | .A | .XY |
+| $9D87 | [`send_byte_chrout_hook`](system_hooks.md#send_byte_chrout_hook) | .A | .A | .XY |
+| $9D8A | [`set_own_priority`](#9d8a-set_own_priority) | .A | | .X, .YH |
 
 ## Function Reference
 
@@ -257,3 +265,12 @@ Return values:
 - Returns 0 on success, non-zero on failure
 
 ---
+
+### $9D8A: set_own_priority
+- Sets a process' own priority (how many jiffies it gets to run) to .A
+- If .A = 0, will use default priority of 10
+
+Return values:
+- None
+
+
