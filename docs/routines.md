@@ -38,6 +38,7 @@
 | $9D84 | [`send_message_general_hook`](system_hooks.md#send_message_general_hook) | .A, .X, r0, r1 | .A | .XY |
 | $9D87 | [`send_byte_chrout_hook`](system_hooks.md#send_byte_chrout_hook) | .A | .A | .XY |
 | $9D8A | [`set_own_priority`](#9d8a-set_own_priority) | .A | | .X, .YH |
+| $9D8D | [`surrender_process_time`](#9d8a-surrender_process_time) | | | |
 
 ## Function Reference
 
