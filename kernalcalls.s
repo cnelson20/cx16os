@@ -21,10 +21,10 @@
 .import readf_byte_extmem_y, vread_byte_extmem_y, writef_byte_extmem_y, vwrite_byte_extmem_y
 .import free_extmem_bank_extwrapper, share_extmem_bank, memmove_extmem, fill_extmem
 
-.import setup_chrout_hook, release_chrout_hook, CHROUT_screen
+.import setup_chrout_hook, release_chrout_hook, CHROUT_screen, send_byte_chrout_hook
 .import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook
 
-.import surrender_process_time	
+.import surrender_process_time, schedule_timer
 .import irq_already_triggered
 .import atomic_action_st
 .import process_table
@@ -83,6 +83,9 @@ call_table:
 	jmp release_general_hook ; $9D7E
 	jmp get_general_hook_info ; $9D81
 	jmp send_message_general_hook ; $9D84
+	jmp send_byte_chrout_hook ; $9D87
+	jmp set_own_priority ; $9D8A
+	jmp surrender_process_time_extwrapper ; $9D8D
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -307,7 +310,7 @@ print_str_ext:
 ;
 ; returns info about the process using bank .A 
 ;
-; return values: .A = alive/dead, .X = return value
+; return values: .A = alive (non-zero)/ dead (zero), .X = return value
 ; .Y = priority value, r0.L = active process or not
 ;
 get_process_info:
@@ -315,6 +318,9 @@ get_process_info:
 	tax
 	jsr is_valid_process
 	bne :+
+	; a is #00 already
+	xba
+	lda #0
 	restore_p_816
 	rts
 
@@ -338,6 +344,8 @@ get_process_info:
 	tay
 	lda return_table, X
 	tax
+	lda #0
+	xba
 	lda #1 ; already know process is valid
 	restore_p_816
 	rts
@@ -491,3 +499,38 @@ wait_process:
 	restore_p_816
 	rts
 
+;
+; set_own_priority
+;
+; sets calling process' priority to .A
+; if .A = 0, will reset priority to DEFAULT_PRIORITY
+;
+set_own_priority:
+	save_p_816_8bitmode
+	cmp #0
+	bne :+
+	lda #DEFAULT_PRIORITY
+	:
+	ldx current_program_id
+	sta process_priority_table, X
+
+	set_atomic_st_disc_a
+	tax
+	cpx schedule_timer ; if new priority < schedule_timer, lower schedule_timer
+	bcs :+
+	stx schedule_timer
+	:
+	clear_atomic_st
+
+	restore_p_816
+	rts
+
+surrender_process_time_extwrapper:
+	phx
+	phy
+	save_p_816_8bitmode
+	jsr surrender_process_time
+	restore_p_816
+	ply
+	plx
+	rts

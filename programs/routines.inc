@@ -73,3 +73,8 @@ setup_general_hook := $9D7B
 release_general_hook := $9D7E
 get_general_hook_info := $9D81
 send_message_general_hook := $9D84
+send_byte_chrout_hook := $9D87
+
+set_own_priority := $9D8A
+surrender_process_time := $9D8D
+

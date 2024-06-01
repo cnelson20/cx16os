@@ -119,9 +119,26 @@ try_release_chrout_hook:
 
 .export CHROUT_screen
 CHROUT_screen:
+    jsr write_char_chrout_hook_buff
+    cpx #0
+    beq :+
+    jmp putc_v
+    :
+    rts
+
+.export send_byte_chrout_hook
+send_byte_chrout_hook:
+    save_p_816
+    jsr write_char_chrout_hook_buff
+    restore_p_816
+    txa
+    rts
+
+write_char_chrout_hook_buff:
     ldx chrout_prog_bank
     bne :+
-    jmp putc_v
+    ldx #1
+    rts
     :
     save_p_816
     index_16_bit
@@ -144,7 +161,7 @@ CHROUT_screen:
     bne :+
     restore_p_816
     lda KZE0
-    jmp putc_v
+    rts
     :
     set_atomic_st_disc_a
     pha_byte RAM_BANK
@@ -197,14 +214,19 @@ CHROUT_screen:
     sta (KZE2), Y
     lda current_program_id
     iny
-    lda (KZE2), Y
+    cpy #CHROUT_BUFF_SIZE
+    bcc :+
+    ldy #0
+    :
+    sta (KZE2), Y
 
     bra @exit
 @exit:
     pla_byte RAM_BANK
     clear_atomic_st
-    .i8
     restore_p_816
+    .i8
+    ldx #0
     rts
 
 ;

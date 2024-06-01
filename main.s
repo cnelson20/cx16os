@@ -653,7 +653,7 @@ set_process_bank_used:
 	tax
 	lda #PID_IN_USE
 	sta process_table, X
-	lda #10
+	lda #DEFAULT_PRIORITY
 	sta process_priority_table, X
 	rts
 

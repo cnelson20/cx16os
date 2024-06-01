@@ -172,6 +172,9 @@ get_user_cmd:
 	jsr CHROUT
 	lda #LEFT_CURSOR
 	jsr CHROUT
+
+	lda #0
+	jsr send_byte_chrout_hook
 	
 	ldx #0
 @input_loop:
@@ -207,6 +210,11 @@ get_user_cmd:
 	jsr CHROUT
 	lda #LEFT_CURSOR
 	jsr CHROUT
+
+	phx
+	lda #0
+	jsr send_byte_chrout_hook
+	plx
 	
 	inx
 	jmp @input_loop
@@ -229,6 +237,12 @@ get_user_cmd:
 	jsr CHROUT
 	lda #LEFT_CURSOR
 	jsr CHROUT
+
+	phx
+	lda #0
+	jsr send_byte_chrout_hook
+	plx
+
 	jmp @input_loop
 	
 @newline:

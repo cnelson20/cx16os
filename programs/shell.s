@@ -77,8 +77,11 @@ new_line:
 	lda #LEFT_CURSOR
 	jsr CHROUT
 
+	lda #0
+	jsr send_byte_chrout_hook
+
 	stz input
-	ldx #0
+	ldx #0	
 wait_for_input:
 	phx
 	ldx #0
@@ -121,6 +124,10 @@ char_entered:
 	jsr CHROUT
 	lda #LEFT_CURSOR
 	jsr CHROUT
+	lda #0
+	phx
+	jsr send_byte_chrout_hook
+	plx
 	
 	jmp wait_for_input
 	
@@ -140,6 +147,10 @@ backspace_not_empty:
 	lda #LEFT_CURSOR
 	jsr CHROUT
 	jsr CHROUT
+	lda #0
+	phx
+	jsr send_byte_chrout_hook
+	plx
 	
 	jmp wait_for_input
 
