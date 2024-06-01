@@ -39,7 +39,7 @@
 | $9D87 | [`send_byte_chrout_hook`](system_hooks.md#send_byte_chrout_hook) | .A | .A | .XY |
 | $9D8A | [`set_own_priority`](#9d8a-set_own_priority) | .A | | .X, .YH |
 | $9D8D | [`surrender_process_time`](#9d8a-surrender_process_time) | | | |
-| $9D90 | [`mark_last_hook_message_received`](system_hooks#mark_last_hook_message_received) | .A | | .XY |
+| $9D90 | [`mark_last_hook_message_received`](system_hooks.md#mark_last_hook_message_received) | .A | | .XY |
 
 ## Function Reference
 
