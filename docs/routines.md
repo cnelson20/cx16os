@@ -16,7 +16,7 @@
 | $9D1B | [`kill_process`](#9d1b-kill_process) | .A | .A, .X | |
 | $9D1E | [`open_file`](#9d1e-open_file) | .AX, .Y | .A, .X | |
 | $9D21 | [`close_file`](#9d21-close_file) | .A | | .X, .Y |
-| $9D24 | [`read_file`](#9d24-read_file) | .A, r0, r1 | .AX, .Y | |
+| $9D24 | [`read_file`](#9d24-read_file) | .A, r0, r1, r2 | .AX, .Y | |
 | $9D27 | [`write_file`](#9d27-write_file) | .A, r0, r1 | .AX, .Y | |
 | $9D2A | [`load_dir_listing_extmem`](#9d2a-load_dir_listing_extmem) | .A | .AX | .Y |
 | $9D2D | [`get_pwd`](#9d2d-get_pwd) | r0, r1 | | .A, .X, .Y |
@@ -156,7 +156,8 @@ Return values:
 ---
 
 ### $9D24: read_file
-- Reads up to r1 bytes into memory pointed to by r0 from fd .A
+- Reads up to r1 bytes into memory in bank r2.L pointed to by r0 from fd .A
+- r2.L being 0 signifies a read to the calling process' bank
 
 Return values:
 - .Y = 0 on success, else error code
