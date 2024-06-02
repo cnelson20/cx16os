@@ -5,6 +5,14 @@ It is setup / released with different calls than the general hooks, and can be s
 
 ---
 
+#### buffer information pointers:
+
+- 4 bytes
+- First 2 bytes (start_offset) are an offset into the ringbuffer where the first characters to work with are
+- Last 2 bytes (end_offset) are an offset into the ringbuffer where the last character is at (offset - 1)
+
+---
+
 ### setup_chrout_hook
 Call Address: $9D75  
 Arguments:
@@ -14,12 +22,6 @@ Arguments:
 - r1 holds a pointer in a program's RAM where to write info about the ringbuffer
 
 Returns size of buffer in .AX, 0 on failure (hook already in use)
-
-#### buffer information pointers:
-
-- 4 bytes
-- First 2 bytes are an offset into the ringbuffer where the first characters to work with are
-- Last 2 bytes are an offset into the ringbuffer where the last character is at (offset - 1)
 
 ---
 
@@ -91,4 +93,14 @@ Arguments:
 
 Preserves .A, returns 0 on success, non-zero on failure in .X
 
+---
+
+### mark_last_hook_message_received
+Call Address: $9D90  
+Arguments:
+
+- .A holds the bank number to affect
+
+If the calling process has a lock on hook .A, increment that hook's start_offset to point to the next message  
+Returns 0 on success, non-zero on failure in .A
 
