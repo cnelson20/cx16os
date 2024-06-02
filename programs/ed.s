@@ -1986,6 +1986,8 @@ read_buf_file:
 	sta r1
 	stz r1 + 1
 	
+	stz r2
+
 	lda ptr0
 	jsr read_file
 	cpy #0

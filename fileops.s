@@ -9,6 +9,7 @@
 .import file_table
 .import strlen, memcpy_ext, memcpy_banks_ext, strcmp_banks_ext
 .import strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str
+.import check_process_owns_bank
 .import current_program_id
 
 .import CHROUT_screen
@@ -755,6 +756,7 @@ close_file_kernal:
 ; .A = fd
 ; r0 = buffer to write bytes
 ; r1 = num of bytes to read
+; r2.L = bank to read to (0 means own bank)
 ;
 .export read_file_ext
 read_file_ext:
@@ -766,14 +768,31 @@ read_file_ext:
 	cmp #$FF
 	bne :+
 	; file isn't open, return
+@exit_failure:
 	lda #0
 	ldx #0
 	rts 
-	
 	:
+
+	sta KZE2
+
+	lda r2
+	bne :+
+	lda current_program_id
+	sta r2 ; if r2 = 0, set it to current_program_id
+	:
+	lda r2
+	cmp current_program_id
+	beq :+
+	jsr check_process_owns_bank
+	cmp #0
+	bne @exit_failure
+	:
+
 	ldstx_word r0, KZE0
 	ldstx_word r1, KZE1
 	
+	lda KZE2
 	cmp #STDIN_FILENO
 	bne :+
 	jmp read_stdin
@@ -790,8 +809,8 @@ load_process_entry_pt:
 	jsr CHKIN
 	bcs read_error_chkin
 @read_loop:	
-	lda RAM_BANK
-	pha ; MACPTR can change ram, bank need to restore after call
+	lda r2
+	sta RAM_BANK
 	
 	lda KZE1 + 1 ; is bytes remaining > 255
 	beq :+
@@ -804,7 +823,8 @@ load_process_entry_pt:
 	ldy KZE0 + 1
 	clc
 	jsr MACPTR
-	pla ; pull RAM bank off stack ;
+	
+	lda current_program_id
 	sta RAM_BANK
 	
 	; bytes read in .XY, carry = !success
@@ -898,6 +918,9 @@ read_slow:
 	rts
 	
 read_stdin:
+	lda r2
+	sta RAM_BANK
+
 	inc KZE1
 	bne :+
 	inc KZE1 + 1
@@ -910,6 +933,9 @@ read_stdin:
 	bpl :+
 
 	;no more bytes to copy, return
+	lda current_program_id
+	sta RAM_BANK
+
 	lda r1
 	ldx r1 + 1
 	ldy #0
@@ -1068,9 +1094,17 @@ write_stdout:
 ;
 .export load_dir_listing_extmem_ext
 load_dir_listing_extmem_ext:
-	; need to wait for channel 15 to open up ;
 	sta KZE1
+
+	jsr check_process_owns_bank
+	cmp #0
+	beq :+
+	lda #$FF ; not a valid bank to load data to
+	ldx #$FF
+	rts
+	:
 	
+	; need to wait for channel 15 to open up ;
 	jsr wait_dos_channel
 	
 	set_atomic_st

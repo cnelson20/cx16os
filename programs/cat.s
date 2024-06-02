@@ -1,10 +1,11 @@
 .include "routines.inc"
 .segment "CODE"
 
-r0L = $02
-r0H = $03
-r1L = $04
-r1H = $05
+r0L := $02
+r0H := $03
+r1L := $04
+r1H := $05
+r2L := $06
 
 init:
 	jsr get_args
@@ -51,6 +52,8 @@ file_print_loop:
 	lda #0
 	sta r1H
 	
+	stz r2L
+
 	lda fd
 	jsr read_file
 	sta bytes_read

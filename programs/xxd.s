@@ -3,10 +3,11 @@
 
 BYTES_PER_ROW = 16
 
-r0L = $02
-r0H = $03
-r1L = $04
-r1H = $05
+r0L := $02
+r0H := $03
+r1L := $04
+r1H := $05
+r2L := $06
 
 init:
 	jsr get_args
@@ -49,6 +50,8 @@ file_print_loop:
 	sta r0L
 	lda #>buff
 	sta r0H
+
+	stz r2L
 	
 	lda #BYTES_PER_ROW ; low one row of display
 	sta r1L
