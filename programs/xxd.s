@@ -128,7 +128,7 @@ print_text_loop:
 	lda buff, X
 	cmp #$20
 	bcc @invalid_char
-	cmp #$80
+	cmp #$7F
 	bcs @invalid_char
 	lda buff, X
 	jmp @inc_loop

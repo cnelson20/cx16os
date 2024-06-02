@@ -1,6 +1,16 @@
 .include "routines.inc"
 .segment "CODE"
 
+.macro pha_byte addr
+    lda addr
+    pha
+.endmacro
+
+.macro pla_byte addr
+    pla
+    sta addr
+.endmacro
+
 r0 = $02
 r1 = $04
 r2 = $06
@@ -63,11 +73,11 @@ gui_print:
     sta gui_prog_bank
 
 gui_print_loop:
-    jsr check_dead_processes
-
     ldy chrout_first_char_offset
     cpy chrout_last_char_offset
     bne @process_messages_in_buffer
+
+    jsr check_dead_processes
 
     jsr surrender_process_time
     jmp gui_print_loop
@@ -90,6 +100,17 @@ gui_print_loop:
     ldy #0
     :
     sty chrout_first_char_offset
+
+    lda prog_printing
+    jsr get_process_info
+    cmp #0
+    beq :+ ; if process is alive, print dead process output first
+    pha_byte char_printed
+    pha_byte prog_printing
+    jsr check_dead_processes
+    pla_byte prog_printing
+    pla_byte char_printed
+    :
 
     jsr process_char
 
@@ -247,7 +268,7 @@ send_command:
     rts
 
 
-chrout_buff_info := $B000
+chrout_buff_info:
     .res 4, 0
 chrout_first_char_offset := chrout_buff_info
 chrout_last_char_offset := chrout_buff_info + 2

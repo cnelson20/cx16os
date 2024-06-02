@@ -68,13 +68,18 @@ rmdir := $9D72
 
 setup_chrout_hook := $9D75
 release_chrout_hook := $9D78
+send_byte_chrout_hook := $9D87
+
+lock_vera_regs := $9D93
+unlock_vera_regs := $9D96
 
 setup_general_hook := $9D7B
 release_general_hook := $9D7E
 get_general_hook_info := $9D81
 send_message_general_hook := $9D84
-send_byte_chrout_hook := $9D87
+mark_last_hook_message_received := $9D90
 
 set_own_priority := $9D8A
 surrender_process_time := $9D8D
+
 

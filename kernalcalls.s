@@ -22,7 +22,8 @@
 .import free_extmem_bank_extwrapper, share_extmem_bank, memmove_extmem, fill_extmem
 
 .import setup_chrout_hook, release_chrout_hook, CHROUT_screen, send_byte_chrout_hook
-.import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook
+.import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook, mark_last_hook_message_received
+.import lock_vera_regs, unlock_vera_regs
 
 .import surrender_process_time, schedule_timer
 .import irq_already_triggered
@@ -86,6 +87,9 @@ call_table:
 	jmp send_byte_chrout_hook ; $9D87
 	jmp set_own_priority ; $9D8A
 	jmp surrender_process_time_extwrapper ; $9D8D
+	jmp mark_last_hook_message_received ; $9D90
+	jmp lock_vera_regs ; $9D93
+	jmp unlock_vera_regs ; $9D96
 	.res 3, $FF
 .export call_table_end
 call_table_end:

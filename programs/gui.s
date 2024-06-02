@@ -45,10 +45,17 @@ init:
     pla
 
     cmp #0
-    bne waitloop
+    bne :+
     cpx #0
-    bne waitloop
-    jmp exit ; if buff_size = 0, couldnt reserve hook
+    bne :+
+    jmp exit_failure ; if buff_size = 0, couldnt reserve hook
+    :
+
+    jsr lock_vera_regs
+    cmp #0
+    beq :+
+    jmp exit_failure
+    :
 
 waitloop:
     ldx hook0_buff_start_offset
@@ -57,7 +64,7 @@ waitloop:
     jsr surrender_process_time
     jmp waitloop
     :
-
+    
     lda hook0_extmem_bank
     jsr set_extmem_rbank
 
@@ -71,9 +78,8 @@ waitloop:
     sta message_sender_bank
     iny_check_buff_wraparound
     jsr readf_byte_extmem_y
-    sta message_body_size
-    sta ptr1 ; message length
-    stz ptr1 + 1
+    sta message_body_size ; message length
+    stz message_body_size + 1
     iny_check_buff_wraparound
 
     ldx #0
@@ -82,23 +88,20 @@ waitloop:
     sta message_body, X
     iny_check_buff_wraparound
     inx
-    cpx ptr1 ; compare to msg length
+    cpx message_body_size ; compare to msg length
     bcc @read_msg_loop
 
     jsr parse_gui_message
-
-    rep #$20
-    .a16
-    clc
-    lda hook0_buff_start_offset
-    adc message_body_size
-    adc #2
-    sta hook0_buff_start_offset
-    sep #$20
-    .a8
+    
+    lda #GUI_HOOK
+    jsr mark_last_hook_message_received
 
     jmp waitloop
 
+
+exit_failure:
+    sep #$30
+    lda #1
 exit:
     rts
 
@@ -130,7 +133,7 @@ hook0_extmem_bank:
     .byte 0
 hook0_buff_size:
     .word 0
-hook0_buff_info := $B000
+hook0_buff_info:
     .res 4, 0
 hook0_buff_start_offset := hook0_buff_info
 hook0_buff_end_offset := hook0_buff_info + 2
@@ -140,5 +143,5 @@ hook0_buff_end_offset := hook0_buff_info + 2
 message_sender_bank:
     .byte 0
 message_body_size:
-    .byte 0
+    .word 0
 message_body:

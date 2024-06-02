@@ -36,10 +36,16 @@ reset_chrout_hook:
 ;
 .export release_all_process_hooks
 release_all_process_hooks:
-    pha
+    phy_byte KZES4
+    sta KZES4
+
+    ; try releasing chrout hook
     jsr try_release_chrout_hook
-    pla
-    tax
+    ; same for lock on vera regs (not a hook but kinda close)
+    lda KZES4
+    jsr try_unlock_vera_regs
+    
+    ldx KZES4
     lda #NUM_OTHER_HOOKS - 1
     :
     pha
@@ -49,6 +55,8 @@ release_all_process_hooks:
     pla
     dec A
     bpl :-
+
+    ply_byte KZES4
     rts
 
 ;
@@ -448,6 +456,38 @@ get_general_hook_info:
     restore_p_816
     rts
 
+;debug_print_char:
+;    pha
+;    phx
+;    phy
+;    save_p_816_8bitmode
+;    pha
+;    lsr
+;    lsr
+;    lsr
+;    lsr
+;    tax
+;    lda table, X
+;    sta $9FBB
+;    pla
+;    and #$0F
+;    tax
+;    lda table, X
+;    sta $9FBB
+;
+;    lda #$20
+;    sta $9FBB
+;    sta $9FBB
+;
+;    restore_p_816
+;    ply
+;    plx
+;    pla
+;    rts
+;table:
+;    .byte "0123456789ABCDEF"
+
+
 ;
 ; send_message_general_hook
 ;
@@ -535,9 +575,9 @@ send_message_general_hook:
     bcs @gen_hook_buff_full
     
     ; there is enough space
-    ; store end_offset (where to write) to KZE3
+    ; store end_offset (where to write) to KZE3    
     sty KZE3
-
+    
     accum_index_8_bit
     .a8
     .i8
@@ -635,3 +675,137 @@ send_message_general_hook:
     xba
     restore_p_816
     rts
+
+.export mark_last_hook_message_received
+mark_last_hook_message_received:
+    save_p_816_8bitmode
+    tax
+    cpx #NUM_OTHER_HOOKS
+    bcs @return_failure
+    lda hook_prog_banks, X
+    cmp current_program_id
+    bne @return_failure
+
+    lda hook_info_addrs_lo, X
+    sta KZE0
+    lda hook_info_addrs_hi, X
+    sta KZE0 + 1
+    lda hook_data_addrs_lo, X
+    sta KZE1
+    lda hook_data_addrs_hi, X
+    sta KZE1 + 1
+
+    lda hook_extmem_banks, X
+    tax
+
+    accum_index_16_bit
+    .i16
+    .a16
+    lda (KZE0)
+    ldy #2
+    cmp (KZE0), Y
+    bne :+
+    accum_index_8_bit
+    bra @return_failure
+    :
+
+    tay
+    iny
+    cpy #GEN_HOOK_BUFF_SIZE
+    bcc :+
+    ldy #0
+    :
+
+    accum_8_bit
+    .a8
+    txa
+    sta RAM_BANK
+    lda (KZE1), Y ; load [message body length] [sender id]
+    pha
+    lda current_program_id
+    sta RAM_BANK
+    pla
+    accum_16_bit
+    .a16
+    and #$00FF
+    clc
+    adc (KZE0)
+    adc #2
+    cmp #GEN_HOOK_BUFF_SIZE
+    bcc :+
+    sbc #GEN_HOOK_BUFF_SIZE
+    :
+    sta (KZE0)
+
+    lda #0 ; return successfully
+    restore_p_816
+    rts
+@return_failure:
+    .a8
+    .i8
+    lda #0
+    xba
+    lda #1
+    restore_p_816
+    rts
+
+.export prog_using_vera_regs
+prog_using_vera_regs:
+    .byte 0
+
+;
+; lock_vera_regs
+;
+.export lock_vera_regs
+lock_vera_regs:
+    save_p_816_8bitmode
+    set_atomic_st_disc_a
+
+    lda prog_using_vera_regs
+    bne @return_failure
+
+    lda current_program_id
+    sta prog_using_vera_regs
+
+    lda #0
+    bra @return
+@return_failure:
+    lda #1
+@return:
+    xba
+    lda #0
+    xba
+    
+    clear_atomic_st
+    restore_p_816
+    rts
+
+;
+; unlock_vera_regs
+;
+.export unlock_vera_regs
+unlock_vera_regs:
+    save_p_816_8bitmode
+    lda current_program_id
+    jsr try_unlock_vera_regs
+
+    xba
+    lda #0
+    xba
+    
+    restore_p_816
+    rts
+
+try_unlock_vera_regs:
+    cmp prog_using_vera_regs
+    beq :+
+    
+    lda #1
+    rts
+
+    :
+    stz prog_using_vera_regs
+    lda #0
+    rts
+
+    

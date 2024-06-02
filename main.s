@@ -13,6 +13,7 @@
 
 .import check_channel_status, load_process_entry_pt
 .import file_table_count
+.import prog_using_vera_regs
 
 .SEGMENT "STARTUP"
 .SEGMENT "INIT"
@@ -492,13 +493,53 @@ surrender_process_time:
 	wai
 	pla
 	rts
-	
+
+store_vera_addr0:
+	.res 3, 0
+store_vera_addr1:
+	.res 3, 0
+store_vera_ctrl:
+	.byte 0
+
 ;
 ; save info about current process
 ;
 save_current_process:
 	lda current_program_id
 	sta RAM_BANK
+
+	cmp prog_using_vera_regs
+	bne @not_using_vera_regs
+
+	lda $9F25 ; vera_ctrl
+	and #$7F
+	sta store_vera_ctrl
+
+	and #$FE ; clear bit 0
+	pha
+	sta $9F25 ; addrsel is now 0
+
+	lda $9F20
+	sta store_vera_addr0
+	lda $9F21
+	sta store_vera_addr0 + 1
+	lda $9F22
+	sta store_vera_addr0 + 2
+
+	pla
+	ora #$01 ; set bit 1
+	sta $9F25 ; addrsel is now 1
+
+	lda $9F20
+	sta store_vera_addr0
+	lda $9F21
+	sta store_vera_addr0 + 1
+	lda $9F22
+	sta store_vera_addr0 + 2
+
+	lda store_vera_ctrl
+	sta $9F25
+@not_using_vera_regs:
 	
 	ldx #$02
 	:
@@ -540,6 +581,35 @@ restore_new_process:
 	lda current_program_id
 	sta RAM_BANK
 	
+	cmp prog_using_vera_regs
+	bne @not_using_vera_regs ; don't need to restore ;
+
+	lda store_vera_ctrl
+	and #$FE
+	sta $9F25
+
+	lda store_vera_addr0
+	sta $9F20
+	lda store_vera_addr0 + 1
+	sta $9F21
+	lda store_vera_addr0 + 2
+	sta $9F22
+
+	lda store_vera_ctrl
+	ora #$01
+	sta $9F25
+
+	lda store_vera_addr0
+	sta $9F20
+	lda store_vera_addr0 + 1
+	sta $9F21
+	lda store_vera_addr0 + 2
+	sta $9F22
+
+	lda store_vera_ctrl ; write actual saved value to ctrl register
+	sta $9F25
+@not_using_vera_regs:
+
 	ldx #$02
 	:
 	lda STORE_RAM_ZP_SET1, X
