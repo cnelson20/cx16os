@@ -5,7 +5,7 @@
 
 .import print_str_ext
 .import strlen, strncpy_int
-.import setup_kernal_file_table, setup_process_file_table_int
+.import setup_kernal_file_table, setup_process_file_table_int, close_process_files_int
 .import get_dir_filename_int
 .import clear_process_extmem_banks, setup_process_extmem_table
 .import hex_num_to_string_kernal
@@ -33,8 +33,8 @@ init:
 	
 	lda #SWAP_FGBG_COLORS
 	jsr CHROUT
-	;lda #$90
-	;jsr CHROUT
+	lda #$90
+	jsr CHROUT
 	lda #SWAP_FGBG_COLORS
 	jsr CHROUT
 	
@@ -294,8 +294,8 @@ custom_nmi_handler:
 	rti
 
 nmi_re_caller:
-	ldx active_process_sp
-	cpx #$FF - 1
+	ldx active_process
+	lda process_parents_table, X
 	bne :+
 	; if last program, exit to basic using normal nmi handler ;
 	sec
@@ -303,7 +303,7 @@ nmi_re_caller:
 	jmp (default_nmi_handler)
 	
 	:
-	lda active_process_stack, X
+	txa ; active process id now in .A
 	ldx #RETURN_NMI
 	jsr program_exit
 	rts
@@ -352,22 +352,15 @@ program_exit:
 	:
 	; check that process being killed is not active
 	; if is, increment sp and move thru stack
-	ldx active_process_sp
-	lda active_process_stack, X
+	lda active_process
 	cmp KZP0
-	bne @exit_stack_loop
-@stack_loop:
-	inx
-	stx active_process_sp
-	cpx #$FF
-	beq @exit_stack_loop ; increment sp, if $ff, exit loop 
-	
-	lda active_process_stack, X
-	tay
-	lda process_table, Y ; see if prog is still alive
-	cmp #PID_IN_USE
-	bne @stack_loop ; if not alive, keep going
-@exit_stack_loop:
+	bne @not_active_process
+@new_active_process:
+	tax
+	lda process_parents_table, X
+	sta active_process
+
+@not_active_process:
 
 @clear_prog_data:
 	ldx KZP0 ; pid
@@ -375,53 +368,12 @@ program_exit:
 	lda KZP1
 	sta return_table, X
 	
-	lda RAM_BANK
-	pha ; preserve RAM_BANK
+	pha_byte KZP0
+	jsr close_process_files_int
+	pla_byte KZP0	
 	
-	stx RAM_BANK ; ram bank = pid + 1
-	inc RAM_BANK ; holds process file table
-	
-	ldy #PV_OPEN_TABLE_SIZE - 1
-@close_process_files:	
-	lda PV_OPEN_TABLE, Y
-	cmp #$FF ; FF means entry is empty
-	beq :+
-	cmp #2 ; < 2 means stdin/out
-	bcc :+
-	
-	phx
-	pha ; preserve file num
-	phy ; preserve index in loop
-	jsr CLOSE
-	ply ; pull back off index
-	plx ; pull file num/SA from stack
-	
-	lda #1 ; file_table_count is located in bank #1
-	sta RAM_BANK
-	stz file_table_count, X
-	
-	plx
-	stx RAM_BANK
-	inc RAM_BANK
-	
-	:
-	dey
-	bpl @close_process_files
-	
-	lda #1
-	sta RAM_BANK
-	
-	lda current_program_id
-	cmp file_table_count + 15
-	bne :+
-	lda #15
-	jsr CLOSE
-	stz file_table_count + 15
-	:
-	
-	pla ; restore RAM_BANK
-	sta RAM_BANK
-	
+	lda KZP0
+	jsr update_parent_processes
 	lda KZP0
 	jsr clear_process_extmem_banks
 	lda KZP0
@@ -480,7 +432,28 @@ switch_next_program:
 	jmp restore_new_process
 @new_program_id:
 	.byte 0
-	
+
+update_parent_processes:
+	tax
+	lda process_parents_table, X
+	tay ; store this processes' parent in .Y
+	txa
+
+	ldx #$10
+@check_loop:
+	cmp process_parents_table, X
+	bne :+
+	pha
+	tya
+	sta process_parents_table, X
+	pla
+	:
+	inx
+	inx
+	bne @check_loop
+
+	rts
+
 ;
 ; surrender_process_time
 ; sets current process to have 1 frame remaining
@@ -913,22 +886,23 @@ setup_process_info:
 	lda #> ( program_return_handler - 1)
 	sta STORE_PROG_STACK + $FF
 
+	ldx RAM_BANK
+	lda current_program_id
+	sta process_parents_table, X
+
 	; check if calling current process is active
 	; if is, add calling process to stack
-	ldx active_process_sp
-	cpx #$FF
+	ldx active_process
+	cpx #0
 	beq @new_active_process ; the first process is always the first active process
 	lda current_program_id
-	ldx active_process_sp
-	cmp active_process_stack, X
+	cmp active_process
 	bne @end_active_process_check
 	lda r0 ; if not set to be active, ignore
 	beq @end_active_process_check
 @new_active_process:
-	dex
-	stx active_process_sp
 	lda RAM_BANK ; new process' bank
-	sta active_process_stack, X
+	sta active_process
 	
 @end_active_process_check:	
 	; make sure r2L is a valid file no ;
@@ -1140,9 +1114,6 @@ setup_kernal_processes:
 	cpx r0
 	bne :-
 	
-	lda #$FF
-	sta active_process_sp
-	
 	rts
 
 setup_call_table:
@@ -1181,19 +1152,19 @@ process_priority_table := other_process_tables
 PROCESS_PRIORITY_SIZE = PROCESS_TABLE_SIZE	
 	
 ; holds order of active processes
-.export active_process_stack
-active_process_stack := process_priority_table + PROCESS_PRIORITY_SIZE
-ACTIVE_PROCESS_STACK_SIZE = PROCESS_TABLE_SIZE
+.export process_parents_table
+process_parents_table := process_priority_table + PROCESS_PRIORITY_SIZE
+PROCESS_PARENTS_SIZE = PROCESS_TABLE_SIZE
 
 ; holds return values for programs ;
 .export return_table
-return_table = active_process_stack + ACTIVE_PROCESS_STACK_SIZE
+return_table = process_parents_table + PROCESS_PARENTS_SIZE
 RETURN_TABLE_SIZE = PROCESS_TABLE_SIZE
 
 ; for fill operations
 END_PROCESS_TABLES = return_table + RETURN_TABLE_SIZE
 
 ; pointer to top of above stack ;
-.export active_process_sp
-active_process_sp:
+.export active_process
+active_process:
 	.byte 0

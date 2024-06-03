@@ -85,6 +85,56 @@ setup_kernal_file_table:
 	sta RAM_BANK
 	rts
 
+.export close_process_files_int
+close_process_files_int:
+	; pid in .A
+	sta KZP0
+	phy_byte RAM_BANK ; preserve RAM_BANK
+	
+	inc A ; ram bank = pid + 1
+	sta RAM_BANK ; holds process file table
+	
+	ldy #PV_OPEN_TABLE_SIZE - 1
+@close_loop:	
+	lda PV_OPEN_TABLE, Y
+	cmp #$FF ; FF means entry is empty
+	beq :+
+	cmp #2 ; < 2 means stdin/out
+	bcc :+
+	
+	phx
+	pha ; preserve file num
+	phy ; preserve index in loop
+	jsr CLOSE
+	ply ; pull back off index
+	plx ; pull file num/SA from stack
+	
+	lda #1 ; file_table_count is located in bank #1
+	sta RAM_BANK
+	stz file_table_count, X
+	
+	plx
+	stx RAM_BANK
+	inc RAM_BANK
+	
+	:
+	dey
+	bpl @close_loop
+
+	lda #1
+	sta RAM_BANK
+	
+	lda KZP0
+	cmp file_table_count + 15
+	bne :+
+	lda #15
+	jsr CLOSE
+	stz file_table_count + 15
+	:
+	
+	pla_byte RAM_BANK ; restore RAM_BANK
+	rts
+
 ;
 ; Wrap CHKIN, CHKOUT, CLRCHN, and CLOSE to save files chkin'd and chkout'd
 ;

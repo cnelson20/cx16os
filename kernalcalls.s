@@ -28,11 +28,8 @@
 .import surrender_process_time, schedule_timer
 .import irq_already_triggered
 .import atomic_action_st
-.import process_table
-.import return_table
-.import process_priority_table
-.import active_process_stack
-.import active_process_sp
+.import process_table, return_table, process_parents_table, process_priority_table
+.import active_process
 .import current_program_id
 .import file_table_count
 
@@ -314,8 +311,12 @@ print_str_ext:
 ;
 ; returns info about the process using bank .A 
 ;
-; return values: .A = alive (non-zero)/ dead (zero), .X = return value
-; .Y = priority value, r0.L = active process or not
+; return values: 
+; .A = alive (non-zero)/ dead (zero)
+; .X = return value
+; .Y = priority value
+; r0.L = active process or not
+; r0.H = parent id
 ;
 get_process_info:
 	save_p_816_8bitmode
@@ -331,19 +332,17 @@ get_process_info:
 	:
 	txa
 	
-	ldx active_process_sp
-	cmp active_process_stack, X
+	stz r0 ; zero r0
+	cmp active_process
 	bne @not_active_process
 	; active ;
-	ldy #1
-	sty r0
-	jmp @done_active_inactive
+	inc r0 ; r0 now 1 if process is active
 @not_active_process:
-	stz r0
-@done_active_inactive:
-	stz r0 + 1 ; zero high byte of r0
-	
+
 	tax
+	lda process_parents_table, X
+	sta r0 + 1
+
 	lda process_priority_table, X
 	tay
 	lda return_table, X
