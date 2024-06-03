@@ -89,6 +89,8 @@ Return values:
 - .A = whether process is alive or dead (!= 0 -> alive)
 - .X = last completed process with pid .A's return value
 - .Y = (if .A != 0) process's priority, how much time it gets to run
+- r0.L = 1 if the process is the active process, 0 if not
+- r0.H = the process's ppid
 
 ---
 
