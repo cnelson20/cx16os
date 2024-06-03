@@ -333,7 +333,8 @@ readf_byte_extmem_y:
 writef_byte_extmem_y:
 	phx
 	sta KZE1
-	save_p_816_8bitmode
+	save_p_816
+	accum_8_bit
 	lda #0
 	xba
 	lda STORE_PROG_EXTMEM_WPTR
