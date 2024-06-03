@@ -2,6 +2,7 @@
 .segment "CODE"
 
 r0L = $02
+r0H = $03
 
 main:
 	lda #<first_line
@@ -16,6 +17,7 @@ main_loop:
 	cmp #0
 	beq no_such_process
 	
+	; print pid
 	lda #$20 ; space
 	jsr CHROUT
 	lda #$24 ; $
@@ -27,9 +29,23 @@ main_loop:
 	txa
 	jsr CHROUT
 	
+	; print ppid
 	lda #$20
 	jsr CHROUT
+	jsr CHROUT
+	lda #$24 ; $
+	jsr CHROUT
+
+	lda r0H
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
 	
+
+	lda #$20
+	jsr CHROUT
+
 	lda #128
 	sta r0L 
 	ldy loop_pid
@@ -51,7 +67,7 @@ no_such_process:
 loop_pid:
 	.byte 0
 first_line:
-	.byte " PID CMD"
+	.byte " PID PPID CMD"
 	.byte $0d, $00
 buffer:
 	.res 128
