@@ -1,16 +1,44 @@
 .include "routines.inc"
 .segment "CODE"
 
-r0 := $02
-r1 := $04
+; vera addresses
+vera_addrl := $9F20
+vera_addrh := $9F21
+vera_addri := $9F22
+
+vera_data0 := $9F23
+vera_data1 := $9F24
+
+vera_ctrl := $9F25
+vera_dc_video := $9F29
+
+.macro vera_set_addrsel
+lda vera_ctrl
+ora #1
+sta vera_ctrl
+.endmacro
+.macro vera_clear_addrsel
+lda vera_ctrl
+and #$FE
+sta vera_ctrl
+.endmacro
+
+
+
+; other defines
 
 GUI_HOOK = 0
-
 COMMAND_DISPLAY_CHARS = 0
+
+r0 := $02
+r1 := $04
 
 ptr0 := $30
 ptr1 := $32
 ptr2 := $34
+
+hook0_buff_addr := $A000
+charset_addr := $B800
 
 .macro iny_check_buff_wraparound
     iny
@@ -23,9 +51,52 @@ ptr2 := $34
 init:
     jsr res_extmem_bank
     sta hook0_extmem_bank
+    sta charset_bank
 
     rep #$10
     .i16
+
+    ; lock vera regs and set up
+    jsr lock_vera_regs
+    cmp #0
+    beq :+
+    jmp exit_failure
+    :
+    
+    lda #<ptr1
+    jsr set_extmem_wptr
+    lda charset_bank
+    jsr set_extmem_wbank
+
+    stz vera_ctrl
+    ldx #$F000
+    stx vera_addrl
+    lda #$11
+    sta vera_addri
+
+    ldx #charset_addr
+    stx ptr1
+
+    ldy #0
+    :
+    lda vera_data0
+    jsr writef_byte_extmem_y
+    iny
+    cpy #$800
+    bcc :-
+
+    lda #%0100
+    sta $9F2D
+    lda #%01
+    sta $9F2F
+    stz $9F37
+    stz $9F38
+    stz $9F39
+    stz $9F3A
+
+    jsr clear_bitmap
+    
+    ; setup gui hook ;
     ldx #$A000
     stx r0
     ldx #hook0_buff_info
@@ -51,11 +122,12 @@ init:
     jmp exit_failure ; if buff_size = 0, couldnt reserve hook
     :
 
-    jsr lock_vera_regs
-    cmp #0
-    beq :+
-    jmp exit_failure
-    :
+    ; enable bitmap ;
+    
+    stz vera_ctrl
+    lda vera_dc_video
+    ora #%00010000
+    sta vera_dc_video ; enable layer0
 
 waitloop:
     ldx hook0_buff_start_offset
@@ -129,7 +201,35 @@ display_chars:
     .i16
     rts
 
+clear_bitmap:
+    php
+    rep #$10
+    sep #$20
+    .i16
+    .a8
+
+    ldx #0
+    stx vera_addrl
+    lda #$10
+    sta vera_addri
+
+    ldx #640 * 480 / 8 / 4
+    :
+    stz vera_data0
+    stz vera_data0
+    stz vera_data0
+    stz vera_data0
+    dex
+    bne :-
+
+
+    plp
+    rts
+
+.SEGMENT "BSS"
+
 hook0_extmem_bank:
+charset_bank:
     .byte 0
 hook0_buff_size:
     .word 0
@@ -137,8 +237,6 @@ hook0_buff_info:
     .res 4, 0
 hook0_buff_start_offset := hook0_buff_info
 hook0_buff_end_offset := hook0_buff_info + 2
-
-.SEGMENT "BSS"
 
 message_sender_bank:
     .byte 0
