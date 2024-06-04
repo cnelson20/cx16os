@@ -438,15 +438,14 @@ vread_byte_extmem_y:
 ;
 .export vwrite_byte_extmem_y
 vwrite_byte_extmem_y:
-	save_p_816
 	sta KZE1
-
+	save_p_816
 	accum_8_bit
 	
 	lda $00, X
 	sta KZE0
 	lda $01, X
-	sta KZE1	
+	sta KZE0 + 1	
 	
 	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
