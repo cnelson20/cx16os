@@ -12,10 +12,10 @@ Routines to expand a program's data access beyond its allocated $2000 bytes
 | $9D3C | [`set_extmem_wptr`](#set_extmem_wptr) | .A | .A | .XH, YH |
 | $9D3F | [`readf_byte_extmem_y`](#readf_byte_extmem_y) | .Y | .A | |
 | $9D42 | [`free_extmem_bank`](#free_extmem_bank) | .A | .A | .XY |
-| $9D45 | [`vread_byte_extmem_y`](#vread_byte_extmem_y) | .X, .Y | .A | .XH, .YH |
+| $9D45 | [`vread_byte_extmem_y`](#vread_byte_extmem_y) | .X, .Y | .A | |
 | $9D48 | [`writef_byte_extmem_y`](#writef_byte_extmem_y) | .A, .Y | | |
 | $9D4B | [`share_extmem_bank`](#share_extmem_bank) | .A, .X | .A | .XY |
-| $9D4E | [`vwrite_byte_extmem_y`](#vwrite_byte_extmem_y) | .A, .X, .Y | | .XH, .YH |
+| $9D4E | [`vwrite_byte_extmem_y`](#vwrite_byte_extmem_y) | .A, .X, .Y | | |
 | $9D51 | [`memmove_extmem`](#memmove_extmem) | r0, r1, r2.L, r3.L, .AX | .A | .XY |
 | $9D54 | [`fill_extmem`](#fill_extmem) | r0, r1, .A | | .XY |
 

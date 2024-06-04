@@ -406,7 +406,8 @@ share_extmem_bank:
 ;
 .export vread_byte_extmem_y
 vread_byte_extmem_y:
-	save_p_816_8bitmode
+	save_p_816
+	accum_8_bit
 	lda $00, X
 	sta KZE0
 	lda $01, X
@@ -415,14 +416,16 @@ vread_byte_extmem_y:
 	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
 	
+	restore_p_816
+
 	lda (KZE0), Y
-	
-	phy
-	tay
+
+	save_p_816
+	accum_8_bit
+	pha
 	lda current_program_id
 	sta RAM_BANK
-	tya
-	ply
+	pla
 	
 	restore_p_816
 	rts
@@ -435,9 +438,10 @@ vread_byte_extmem_y:
 ;
 .export vwrite_byte_extmem_y
 vwrite_byte_extmem_y:
-	save_p_816_8bitmode
-	phy
+	save_p_816
 	sta KZE1
+
+	accum_8_bit
 	
 	lda $00, X
 	sta KZE0
@@ -446,16 +450,20 @@ vwrite_byte_extmem_y:
 	
 	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
+
+	restore_p_816
 	
 	lda KZE1
 	sta (KZE0), Y
+
+	save_p_816
+	accum_8_bit
 	
 	lda current_program_id
 	sta RAM_BANK
 	
-	ply
-	lda KZE1
 	restore_p_816
+	lda KZE1
 	rts
 
 ;
