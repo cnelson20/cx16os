@@ -81,7 +81,6 @@ main_loop:
     :
     jmp invalid_flag_err
 
-
 send_message:
     lda hook_num_to_send
     cmp #$FF
