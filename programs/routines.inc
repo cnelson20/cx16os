@@ -47,7 +47,7 @@ vread_byte_extmem_y := $9D45
 
 writef_byte_extmem_y := $9D48
 share_extmem_bank := $9D4B
-vwrite_byte_extmem_y := $9D3E
+vwrite_byte_extmem_y := $9D4E
 
 memmove_extmem := $9D51
 fill_extmem := $9D54
