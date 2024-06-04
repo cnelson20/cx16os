@@ -219,10 +219,17 @@ parse_hex:
 @get_hex_digit:
 	cmp #$3A
 	bcc :+
-	cmp #$40 ; if digit < $40, not a digit
+	cmp #'A' ; if digit < $40, not a digit
 	bcc fail_not_digit
-	cmp #$47 ; 'G'
+	cmp #'G' ; 'G'
+	bcc @valid_hex_digit
+	cmp #'a'
+	bcc fail_not_digit
+	cmp #'g'
 	bcs fail_not_digit
+
+	
+@valid_hex_digit: 
 	
 	and #$0F
 	clc 
@@ -315,6 +322,7 @@ hex_num_to_string_kernal:
 @greater10:
 	sec
 	sbc #10
+	and #$07
 	clc
 	adc #$41
 	rts
