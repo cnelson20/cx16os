@@ -50,8 +50,7 @@ charset_addr := $B800
 
 init:
     jsr res_extmem_bank
-    sta hook0_extmem_bank
-    sta charset_bank
+    sta hook0_extmem_bank ; same as charset bank
 
     rep #$10
     .i16
@@ -62,7 +61,41 @@ init:
     beq :+
     jmp exit_failure
     :
+
+    ; setup gui hook ;
+    ldx #$A000
+    stx r0
+    ldx #hook0_buff_info
+    stx r1
+
+    lda #0
+    xba
+    lda hook0_extmem_bank
+    tax
+    lda #GUI_HOOK
+    jsr setup_general_hook
+    sta hook0_buff_size
+    pha
+    txa
+    sta hook0_buff_size + 1
+    pla
+
+    cmp #0
+    bne :+
+    cpx #0
+    bne :+
+    jmp exit_failure ; if buff_size = 0, couldnt reserve hook
+    :
     
+    lda #GUI_HOOK
+    jsr hex_num_to_string
+    txa
+    sta startup_str_hooknum
+
+    lda #<startup_str
+    ldx #>startup_str
+    jsr print_str
+
     lda #<ptr1
     jsr set_extmem_wptr
     lda charset_bank
@@ -95,32 +128,6 @@ init:
     stz $9F3A
 
     jsr clear_bitmap
-    
-    ; setup gui hook ;
-    ldx #$A000
-    stx r0
-    ldx #hook0_buff_info
-    stx r1
-
-    lda #0
-    xba
-    lda hook0_extmem_bank
-    tax
-
-    lda #GUI_HOOK
-    jsr setup_general_hook
-    sta hook0_buff_size
-    pha
-    txa
-    sta hook0_buff_size + 1
-    pla
-
-    cmp #0
-    bne :+
-    cpx #0
-    bne :+
-    jmp exit_failure ; if buff_size = 0, couldnt reserve hook
-    :
 
     ; enable bitmap ;
     
@@ -225,6 +232,13 @@ clear_bitmap:
 
     plp
     rts
+
+
+
+startup_str:
+    .byte "gui running on hook x"
+    .byte $d, 0
+startup_str_hooknum := * - 3
 
 .SEGMENT "BSS"
 
