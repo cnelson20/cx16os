@@ -217,8 +217,10 @@ parse_hex:
 	rts
 	
 @get_hex_digit:
+	cmp #$30
+	bcc fail_not_digit
 	cmp #$3A
-	bcc :+
+	bcc @numeric_digit
 	cmp #'A' ; if digit < $40, not a digit
 	bcc fail_not_digit
 	cmp #'G' ; 'G'
@@ -229,13 +231,12 @@ parse_hex:
 	bcs fail_not_digit
 
 	
-@valid_hex_digit: 
-	
+@valid_hex_digit:
 	and #$0F
 	clc 
 	adc #9 ; A = $41 -> $1 + $9 = 10
 	rts
-	:
+@numeric_digit:
 	sec 
 	sbc #$30
 	bcc fail_not_digit ; if < $30, not a digit
