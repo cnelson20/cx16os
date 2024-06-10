@@ -141,6 +141,8 @@ waitloop:
     lda #<ptr0
     jsr set_extmem_rptr
 
+    ldy last_char_x
+
     ldy hook0_buff_start_offset
     jsr readf_byte_extmem_y
     sta message_sender_bank
@@ -165,7 +167,6 @@ waitloop:
     jsr mark_last_hook_message_received
 
     jmp waitloop
-
 
 exit_failure:
     sep #$30
@@ -219,8 +220,8 @@ display_chars:
 
     stz ptr0
 
-    php
     sep #$30
+    .a8
     .i8
 
     lda saved_x_offset_chars
@@ -308,7 +309,7 @@ display_chars:
     ldx ptr0
     sta gui_lines_to_draw_len, X
 
-    plp
+    rep #$10
     .i16
     jmp gui_draw_lines
 
@@ -488,7 +489,7 @@ gui_draw_lines:
     ; calculate some needed vera offsets ;
 
     lda store_shift_bank
-    sta set_extmem_rbank
+    jsr set_extmem_rbank
     
     ldx #multiples_80_lo
     stx pointers
@@ -535,12 +536,12 @@ gui_draw_lines:
     sta vera_addrl
     sta ptr2 ; and ptr2
 
+    sep #$20
+    .a8
+
     lda display_x
     inc A
     and #7
-
-    sep #$20
-    .a8
     sta display_bit_offset
     
     stz vera_addri
@@ -575,6 +576,7 @@ gui_draw_lines:
     dey
     bpl :-
 
+
     ldx #gui_lines_to_draw
     stx ptr0
 
@@ -582,7 +584,7 @@ gui_draw_lines:
     jsr set_extmem_rptr
     lda charset_bank
     jsr set_extmem_rbank
-    
+
     ldy #0
 @draw_lines_loop:
     phy

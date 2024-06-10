@@ -100,6 +100,7 @@ setup_interrupts:
 	sta $033c
 	.a8
 	restore_p_816
+
 	lda #1
 	sta irq_already_triggered
 	stz atomic_action_st
@@ -125,7 +126,7 @@ reset_interrupts:
 	sta $033c
 	lda default_816_nmi_handler + 1
 	sta $033d
-	
+
 	cli
 	rts
 
@@ -144,15 +145,13 @@ nmi_queued:
 	.byte 0
 
 jump_default_handler:
-	plp
+	restore_p_816
 	jmp (default_816_irq_handler)
 
 .export custom_irq_816_handler
 custom_irq_816_handler:
-	php
+	save_p_816
 	sep #$30
-	
-	;jmp jump_default_handler
 
 	;
 	; Check for new frame flag on vera
@@ -160,6 +159,9 @@ custom_irq_816_handler:
 	lda $9F27 
 	and #$01
 	beq jump_default_handler
+
+	;lda current_program_id
+	;beq jump_default_handler
 	
 	; Decrement time process has left to run
 	jsr dec_process_time
@@ -186,10 +188,8 @@ custom_irq_816_handler:
 	sta STORE_PROG_RAMBANK
 	sta @curr_ram_bank_in_use
 	
-	tsx
-	inx
-	txa
-	clc 
+	tsc
+	sec 
 	adc #$14
 	sta STORE_PROG_SP
 	
@@ -1002,13 +1002,15 @@ switch_control_bank:
 	lda STORE_REG_STATUS
 	pha
 	
-	rep #$10
+	rep #$30
 	.a16
 	.i16
 	lda STORE_REG_A
 	ldx STORE_REG_X
 	ldy STORE_REG_Y
 	
+	sep #$20
+	.a8
 	pha
 
 	lda STORE_PROG_RAMBANK
@@ -1016,7 +1018,7 @@ switch_control_bank:
 	
 	pla
 	.i8
-	.a8
+	sei
 	stz irq_already_triggered
 	rti
 
