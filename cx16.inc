@@ -41,5 +41,3 @@ r5 := $0C
 r6 := $0E
 r7 := $10
 
-call_table_mem_start := $9D00
-

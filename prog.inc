@@ -56,6 +56,8 @@ PV_TMP_FILENAME := PV_TMP_FILENAME_PREFIX + 2
 ;
 ; Kernal variables
 ;
+call_table_mem_start := $9D00
+
 KERNAL_FILENUM = 2
 
 sys_max_filelen = 128
