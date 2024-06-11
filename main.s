@@ -72,13 +72,12 @@ return_to_basic:
 load_error_msg:
 	.literal $d, "COULD NOT FIND BIN/SHELL TO START OS", 0
 shell_name:
-	.literal "bin/shell", 0
+	.literal "shell", 0
 
 IRQ_816_VECTOR := $0338
 
 setup_interrupts:
 	sei
-	save_p_816
 	accum_16_bit
 	.a16
 	lda IRQ_816_VECTOR
@@ -98,8 +97,8 @@ setup_interrupts:
 	
 	lda #custom_nmi_handler
 	sta $033c
+	accum_8_bit
 	.a8
-	restore_p_816
 
 	lda #1
 	sta irq_already_triggered
