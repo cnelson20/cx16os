@@ -125,6 +125,8 @@ init:
     ora #%00010000
     sta vera_dc_video ; enable layer0
 
+    jsr draw_window_border
+
 waitloop:
     ldx hook0_buff_start_offset
     cpx hook0_buff_end_offset
@@ -344,7 +346,204 @@ clear_bitmap:
     plp
     rts
 
+draw_window_border:
+    php
+    rep #$10
+
+    lda store_shift_bank
+    jsr set_extmem_rbank
+    
+    ldx #multiples_80_lo
+    stx pointers
+    ldx #multiples_80_hi
+    stx pointers + 2
+
+    ldy display_y
+
+    ldx #pointers
+    jsr vread_byte_extmem_y
+    sta vera_addrl
+
+    ldx #pointers + 2
+    jsr vread_byte_extmem_y
+    sta vera_addrh
+
+    rep #$20
+    .a16
+    lda display_x
+    lsr A
+    lsr A
+    lsr A
+    sta ptr0
+    clc
+    adc vera_addrl
+    sta ptr2 ; store offset in ptr2
+    sta vera_addrl
+
+    stz vera_addri
+
+    lda display_width
+    clc
+    adc display_x
+    lsr A
+    lsr A
+    lsr A
+    sta ptr1
+
+    sep #$30
+    .a8
+    .i8
+
+    lda display_x
+    clc
+    adc display_width
+    dec A
+    and #7
+    sta ptr3
+
+    lda display_x
+    and #7
+    sta display_bit_offset
+
+    lda ptr0
+    sta ptr0 + 1 ; x loop counter
+
+    stz pointers
+    stz pointers + 1
+@loop:
+    lda pointers
+    ora pointers + 1
+    beq @zero_line
+    
+    rep #$20
+    lda pointers
+    inc A
+    cmp display_height
+    sep #$20
+    bcc @not_zero_last
+@zero_line:
+    lda #0
+    xba
+    lda display_bit_offset
+    tay
+    lda bit_offset_left_mask, Y
+    ora vera_data0
+    sta vera_data0
+
+    lda #$FF
+    jmp @main_loop
+
+@not_zero_last:
+    lda #0
+    xba
+    lda display_bit_offset
+    tay
+    lda bit_offset_left_mask, Y
+    and vera_data0
+    sta vera_data0
+
+    ldy display_bit_offset
+    lda bit_offset_left_mask, Y
+    inc A
+    ora vera_data0
+    sta vera_data0
+
+    lda #0
+@main_loop:
+    rep #$10
+
+    pha
+    lda #0
+    xba
+    lda ptr0 + 1
+    tay
+    pla
+    ldx vera_addrl
+    inx
+    stx vera_addrl
+    :
+    sta vera_data0
+    inx
+    stx vera_addrl
+    iny
+    cpy ptr1
+    bcc :-
+    
+    sep #$10
+
+@last_write:
+    lda pointers
+    ora pointers + 1
+    beq :+
+    
+    rep #$20
+    lda pointers
+    inc A
+    cmp display_height
+    sep #$20
+    bcc @second_not_zero_last
+    :
+;@second_zero_line:
+    lda #0
+    xba
+    lda #8
+    sec
+    sbc display_bit_offset
+    tay
+    lda bit_offset_right_mask, Y
+    sta vera_data0
+    bra @inc_loop
+
+@second_not_zero_last:
+    lda #0
+    xba
+    lda #8
+    sec
+    sbc display_bit_offset
+    tay
+    lda bit_offset_right_mask, Y
+    and vera_data0
+    sta vera_data0
+
+    lda bit_offset_right_pixel, Y
+    ora vera_data0
+    sta vera_data0
+
+@inc_loop:
+
+    ldy ptr0
+    sty ptr0 + 1
+
+    rep #$20
+    .a16
+    lda ptr2
+    clc
+    adc #80
+    sta ptr2
+    sta vera_addrl
+    sep #$20
+    .a8
+
+@check_loop:
+    rep #$20
+    .a16
+    inc pointers
+    lda pointers
+    cmp display_height
+    sep #$20
+    .a8
+    bcs @end_loop
+    jmp @loop
+
+@end_loop:
+    plp
+    rts
+
+
+
 load_data_extmem:
+    .a8
+    .i16
     ; copy charset to extmem ;
     lda #<ptr1
     jsr set_extmem_wptr
@@ -626,7 +825,7 @@ gui_draw_line:
 
     ; now: 
     ; ptr0 still holds pointer to text ;
-    ; ptr1 + 1 holds lenghth of text ; 
+    ; ptr1 + 1 holds length of text ; 
     ; ptr2 holds a offset into vram where we will draw our text ;
     ; ptr3 holds a pointer into extmem for the top line of each char ;
     sep #$10
@@ -757,6 +956,8 @@ bit_offset_left_mask:
 ; this array needs to be reversed ;
 bit_offset_right_mask:
     .byte $00, $80, $C0, $E0, $F0, $F8, $FC, $FE
+bit_offset_right_pixel:
+    .byte $00, $80, $40, $20, $10, $08, $04, $02
 
 startup_str:
     .byte "gui running on hook x"
