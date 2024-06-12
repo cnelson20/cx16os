@@ -285,7 +285,6 @@ display_chars:
     bne @not_clear
     jsr clear_window
 
-    ;stp
     jsr reset_gui_lines
     ldx #0
     stz @this_line_length
@@ -849,7 +848,6 @@ reset_gui_lines:
     rts
 
 gui_draw_lines:
-    ;stp
     ; calculate some needed vera offsets ;
 
     lda store_shift_bank
@@ -956,6 +954,7 @@ gui_draw_lines:
     sta ptr1 + 1
     
     jsr gui_draw_line
+    wai
     :
     ply
 
