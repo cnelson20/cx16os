@@ -463,6 +463,7 @@ surrender_process_time:
 	lda #1
 	sta schedule_timer
 	wai
+	nop
 	pla
 	rts
 
