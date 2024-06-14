@@ -329,6 +329,10 @@ display_chars:
     ldx ptr0
     sta gui_lines_to_draw_len, X
 
+    lda ptr0
+    inc A
+    sta lines_to_draw
+
     rep #$10
     .i16
     jmp gui_draw_lines
@@ -407,15 +411,15 @@ clear_rows:
     jsr set_extmem_rbank
 
     ldx #multiples_80_lo
-    stx pointers
+    stx mult_pointers
     ldx #multiples_80_hi
-    stx pointers + 2
+    stx mult_pointers + 2
 
     ldy ptr0
-    ldx #pointers
+    ldx #mult_pointers
     jsr vread_byte_extmem_y
     sta vera_addrl
-    ldx #pointers + 2
+    ldx #mult_pointers + 2
     jsr vread_byte_extmem_y
     sta vera_addrh
 
@@ -425,7 +429,7 @@ clear_rows:
     lsr A
     lsr A
     lsr A
-    sta pointers + 0
+    sta mult_pointers + 0
     clc
     adc vera_addrl
     sta vera_addrl
@@ -437,7 +441,7 @@ clear_rows:
     lsr A
     lsr A
     lsr A
-    sta pointers + 2
+    sta mult_pointers + 2
 
     sep #$30
     .a8
@@ -475,13 +479,13 @@ clear_rows:
     inx
     stx vera_addrl
 
-    ldy pointers ; start x
+    ldy mult_pointers ; start x
 @horiz_loop:
     stz vera_data0
     inx
     stx vera_addrl
     iny
-    cpy pointers + 2
+    cpy mult_pointers + 2
     bcc @horiz_loop
 
     ldy ptr3
@@ -508,6 +512,251 @@ clear_rows:
     plp
     rts
 
+scroll_one_term_line:
+    php
+    rep #$20
+    .a16
+
+    lda vera_addrl
+    pha
+    pei (ptr0)
+    pei (ptr1)
+    pei (ptr2)
+    pei (ptr3)
+    pei (ptr4)
+
+    lda #8
+    sta ptr0
+    jsr scroll_window
+
+    lda display_y
+    clc
+    adc display_height
+    dec A
+    sta ptr1
+    sec
+    sbc #8
+    sta ptr0
+    jsr clear_rows
+
+    pla
+    sta ptr4
+    pla
+    sta ptr3
+    pla
+    sta ptr2
+    pla
+    sta ptr1
+    pla
+    sta ptr0
+    
+    sep #$10
+    .i8
+    ldx #0
+    stx vera_ctrl
+    pla
+    sta vera_addrl
+
+    plp
+    rts
+
+; ptr0 holds y to shift by
+scroll_window:   
+    php
+    sep #$20
+    rep #$10
+    .a8
+    .i16
+
+    lda store_shift_bank
+    jsr set_extmem_rbank
+
+    ldx #multiples_80_lo
+    stx mult_pointers
+    ldx #multiples_80_hi
+    stx mult_pointers + 2
+
+    vera_clear_addrsel
+
+    ldy display_y
+    iny
+    ldx #mult_pointers
+    jsr vread_byte_extmem_y
+    sta vera_addrl
+    ldx #mult_pointers + 2
+    jsr vread_byte_extmem_y
+    sta vera_addrh
+
+    rep #$20
+    tya
+    clc
+    adc ptr0
+    tay
+    sep #$20
+
+    jsr vread_byte_extmem_y
+    sta ptr1 + 1
+    ldx #mult_pointers
+    jsr vread_byte_extmem_y
+    sta ptr1
+
+    rep #$20
+    lda display_x
+    inc A ; + 1 for window border
+    lsr A
+    lsr A
+    lsr A
+    sta mult_pointers
+    clc
+    adc vera_addrl
+    sta vera_addrl
+    sta ptr2
+
+    lda mult_pointers
+    clc
+    adc ptr1
+    sta ptr1
+
+    lda display_width
+    clc
+    adc display_x
+    lsr A
+    lsr A
+    lsr A
+    sta mult_pointers + 2
+
+    lda display_height
+    dec A
+    dec A
+    dec A
+    sec
+    sbc ptr0
+    sta @lines_to_copy
+
+    sep #$30
+    .a8
+    .i8
+
+    vera_set_addrsel
+    lda ptr1
+    sta vera_addrl
+    lda ptr1 + 1
+    sta vera_addrh
+    stz vera_addri
+
+    vera_clear_addrsel
+
+    lda display_x
+    clc
+    adc display_width
+    dec A
+    dec A
+    and #7
+    sta ptr3
+    stz ptr3 + 1
+
+    lda display_x
+    inc A
+    and #7
+    sta ptr4
+    stz ptr4 + 1
+
+    ; ptr0 & ptr1 start & end y
+    ; ptr2 holds vera address
+    ; pointers holds start x, pointers + 2 holds end x
+    ; ptr3 holds end bit offset, ptr4 holds start bit offset
+    rep #$10
+    .i16
+@loop:
+    ldx vera_addrl
+    ; do first write where you need to and/or ; 
+    ldy ptr4
+    lda bit_offset_right_mask, Y
+    pha
+    and vera_data0
+    sta vera_data0
+
+    pla
+    eor #$FF
+    and vera_data1
+    ora vera_data0
+    sta vera_data0
+
+    inx
+    stx vera_addrl
+    inc vera_ctrl
+    inc vera_addrl
+    bne :+
+    inc vera_addrh
+    :
+    dec vera_ctrl
+
+    ldy mult_pointers ; start x
+@horiz_loop:
+    lda vera_data1
+    sta vera_data0
+
+    inx
+    stx vera_addrl
+    inc vera_ctrl
+    inc vera_addrl
+    bne :+
+    inc vera_addrh
+    :
+    dec vera_ctrl
+
+    iny
+    cpy mult_pointers + 2
+    bcc @horiz_loop
+
+    ldy ptr3
+    lda bit_offset_left_mask, Y
+    pha
+    eor #$FF
+    and vera_data0
+    sta vera_data0
+
+    pla
+    and vera_data1
+    ora vera_data0
+    sta vera_data0
+
+    rep #$20
+    .a16
+    lda ptr2
+    clc
+    adc #80
+    sta vera_addrl
+    sta ptr2
+
+    sep #$20
+    .a8
+    inc vera_ctrl
+
+    rep #$20
+    .a16
+    lda ptr1
+    clc
+    adc #80
+    sta ptr1
+    sta vera_addrl
+    
+    dec @lines_to_copy
+    sep #$20
+    .a8
+    php
+    dec vera_ctrl
+    plp
+    beq :+
+    jmp @loop
+    :
+
+    plp
+    rts
+@lines_to_copy:
+    .word 0
+mult_pointers:
+    .res 4
 
 draw_window_border:
     .a8
@@ -849,7 +1098,6 @@ reset_gui_lines:
 
 gui_draw_lines:
     ; calculate some needed vera offsets ;
-
     lda store_shift_bank
     jsr set_extmem_rbank
     
@@ -861,6 +1109,13 @@ gui_draw_lines:
     lda #0
     xba
     lda saved_y_offset_chars
+    inc A
+    cmp term_rows
+    bcc :+
+    lda term_rows
+    :
+    dec A
+
     rep #$20
     .a16
     asl A
@@ -875,13 +1130,10 @@ gui_draw_lines:
     ldx #pointers
     jsr vread_byte_extmem_y
     sta vera_addrl
-
     ldx #pointers + 2
     jsr vread_byte_extmem_y
     sta vera_addrh
 
-    lda next_y_offset_chars
-    sta saved_y_offset_chars
 
     rep #$20
     .a16
@@ -901,11 +1153,31 @@ gui_draw_lines:
     sep #$20
     .a8
 
+    ; sometimes vera_addrl is + 80?
     lda display_x
     inc A
     and #7
     sta display_bit_offset
     
+    lda term_rows
+    sec
+    sbc saved_y_offset_chars
+    sta rollover_line_start
+
+    lda next_y_offset_chars
+    cmp term_rows
+    bcc :+
+    ldy lines_to_draw
+    dey
+    lda gui_lines_to_draw_len, Y
+    cmp #1
+    lda term_rows
+    ; if line length = 0, carry will be clear
+    bcc :+
+    dec A
+    :
+    sta saved_y_offset_chars
+
     stz vera_addri
     lda next_x_offset_chars
     sta saved_x_offset_chars
@@ -945,18 +1217,25 @@ gui_draw_lines:
     jsr set_extmem_rptr
     lda charset_bank
     jsr set_extmem_rbank
-
+    
     ldy #0
 @draw_lines_loop:
     phy
     lda gui_lines_to_draw_len, Y
-    beq :+
+    beq @no_line_to_draw
     sta ptr1 + 1
     
-    jsr gui_draw_line
-    wai
-    :
+    cpy rollover_line_start
+    bcc :+
+    phy
+    jsr scroll_one_term_line
     ply
+    :
+
+    jsr gui_draw_line
+@no_line_to_draw:
+    ply
+    iny
 
     rep #$20
     .a16
@@ -965,9 +1244,13 @@ gui_draw_lines:
     clc
     adc #$0040
     sta ptr0
+    
     lda ptr4
+    cpy rollover_line_start
+    bcs :+  
     clc
     adc #80 * 8 
+    :
     sta ptr4
     sta ptr2
     sta vera_addrl 
@@ -975,16 +1258,24 @@ gui_draw_lines:
     sep #$20
     .a8
 
-    iny
-    cpy #MAX_TERM_WINDOW_LINES
+    cpy lines_to_draw
     bcc @draw_lines_loop
+
     rts
 
-gui_draw_line:
-    sei
+lines_to_draw:
+    .word 0
+rollover_line_start:
+    .word 0
 
+gui_draw_line:
     ldx #charset_addr
     stx ptr3
+
+    lda charset_bank
+    jsr set_extmem_rbank
+    lda #ptr3
+    jsr set_extmem_rptr
 
     ; now: 
     ; ptr0 still holds pointer to text ;
@@ -1079,8 +1370,6 @@ gui_draw_line:
     bcs :+
     jmp @draw_one_line
     :
-
-    cli
 
     rep #$10
     .i16
