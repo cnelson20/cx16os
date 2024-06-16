@@ -155,7 +155,7 @@ custom_irq_816_handler:
 	;
 	; Check for new frame flag on vera
 	;
-	lda $9F27 
+	lda VERA::IRQ_FLAGS
 	and #$01
 	beq jump_default_handler
 
@@ -176,7 +176,7 @@ custom_irq_816_handler:
 	sta irq_already_triggered
 
 	; store vera status
-	lda $9F27 
+	lda VERA::IRQ_FLAGS
 	sta vera_status
 
 	lda RAM_BANK
@@ -260,15 +260,8 @@ irq_re_caller:
 	jmp program_exit
 	:
 
-	; check if vera frame refresh (60 times a sec)
-	lda vera_status
-	and #$01
-	beq :+
+	; check if time up
 	jmp manage_process_time
-	:
-	
-	lda current_program_id
-	jmp return_control_program
 
 .export default_nmi_handler
 default_nmi_handler:
@@ -484,34 +477,34 @@ save_current_process:
 	cmp prog_using_vera_regs
 	bne @not_using_vera_regs
 
-	lda $9F25 ; vera_ctrl
+	lda VERA::CTRL ; vera_ctrl
 	and #$7F
 	sta store_vera_ctrl
 
 	and #$FE ; clear bit 0
 	pha
-	sta $9F25 ; addrsel is now 0
-
-	lda $9F20
+	sta VERA::CTRL ; addrsel is now 0
+	
+	lda VERA::ADDR
 	sta store_vera_addr0
-	lda $9F21
+	lda VERA::ADDR + 1
 	sta store_vera_addr0 + 1
-	lda $9F22
+	lda VERA::ADDR + 2
 	sta store_vera_addr0 + 2
 
 	pla
 	ora #$01 ; set bit 1
-	sta $9F25 ; addrsel is now 1
+	sta VERA::CTRL ; addrsel is now 1
 
-	lda $9F20
-	sta store_vera_addr0
-	lda $9F21
-	sta store_vera_addr0 + 1
-	lda $9F22
-	sta store_vera_addr0 + 2
+	lda VERA::ADDR
+	sta store_vera_addr1
+	lda VERA::ADDR + 1
+	sta store_vera_addr1 + 1
+	lda VERA::ADDR + 2
+	sta store_vera_addr1 + 2
 
 	lda store_vera_ctrl
-	sta $9F25
+	sta VERA::CTRL
 @not_using_vera_regs:
 	
 	ldx #$02
@@ -559,28 +552,28 @@ restore_new_process:
 
 	lda store_vera_ctrl
 	and #$FE
-	sta $9F25
+	sta VERA::CTRL
 
 	lda store_vera_addr0
-	sta $9F20
+	sta VERA::ADDR
 	lda store_vera_addr0 + 1
-	sta $9F21
+	sta VERA::ADDR + 1
 	lda store_vera_addr0 + 2
-	sta $9F22
+	sta VERA::ADDR + 2
 
 	lda store_vera_ctrl
 	ora #$01
-	sta $9F25
+	sta VERA::CTRL
 
-	lda store_vera_addr0
-	sta $9F20
-	lda store_vera_addr0 + 1
-	sta $9F21
-	lda store_vera_addr0 + 2
-	sta $9F22
+	lda store_vera_addr1
+	sta VERA::ADDR
+	lda store_vera_addr1 + 1
+	sta VERA::ADDR + 1
+	lda store_vera_addr1 + 2
+	sta VERA::ADDR + 2
 
 	lda store_vera_ctrl ; write actual saved value to ctrl register
-	sta $9F25
+	sta VERA::CTRL
 @not_using_vera_regs:
 
 	ldx #$02

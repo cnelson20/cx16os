@@ -231,9 +231,13 @@ fgetc:
 	cpx #$FF
 	beq @exit_nsuch_file
 	cpx #2
-	bcs :+
+	bcs :++
 	; reading from stdin
+	lda current_program_id
+	cmp active_process
+	bne :+
 	jsr GETIN
+	:
 	ldx #0
 	restore_p_816
 	rts
@@ -321,10 +325,16 @@ print_str_ext:
 get_process_info:
 	save_p_816_8bitmode
 	tax
+	lda process_parents_table, X
+	sta r0 + 1
+
+	txa
 	jsr is_valid_process
 	bne :+
 	; a is #00 already
 	xba
+	lda return_table, X
+	tax ; get return value of process
 	lda #0
 	restore_p_816
 	rts
@@ -338,11 +348,7 @@ get_process_info:
 	; active ;
 	inc r0 ; r0 now 1 if process is active
 @not_active_process:
-
 	tax
-	lda process_parents_table, X
-	sta r0 + 1
-
 	lda process_priority_table, X
 	tay
 	lda return_table, X
