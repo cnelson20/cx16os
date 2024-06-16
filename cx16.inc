@@ -41,3 +41,23 @@ r5 := $0C
 r6 := $0E
 r7 := $10
 
+;
+; VERA
+;
+
+.scope  VERA
+
+  ; External registers
+  .struct
+  .org    $9F20
+  ADDR          .faraddr        ; Address for data port access
+  DATA0         .byte           ; First data port
+  DATA1         .byte           ; Second data port
+  CTRL          .byte
+  IRQ_EN        .byte           ; Interrupt enable bits
+  IRQ_FLAGS     .byte           ; Interrupt flags
+  IRQ_RASTER    .byte           ; Line where IRQ will occur
+  .endstruct
+
+.endscope
+
