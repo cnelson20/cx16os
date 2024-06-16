@@ -559,8 +559,11 @@ scroll_one_term_line:
 
     plp
     rts
-
-; ptr0 holds y to shift by
+;
+; scroll_window
+;
+; scrolls the window by ptr0 pixels vertically
+;
 scroll_window:   
     php
     sep #$20
@@ -588,11 +591,13 @@ scroll_window:
     sta vera_addrh
 
     rep #$20
+    .a16
     tya
     clc
     adc ptr0
     tay
     sep #$20
+    .a8
 
     jsr vread_byte_extmem_y
     sta ptr1 + 1
@@ -601,6 +606,7 @@ scroll_window:
     sta ptr1
 
     rep #$20
+    .a16
     lda display_x
     inc A ; + 1 for window border
     lsr A
@@ -620,13 +626,14 @@ scroll_window:
     lda display_width
     clc
     adc display_x
+    dec A
+    dec A
     lsr A
     lsr A
     lsr A
     sta mult_pointers + 2
 
     lda display_height
-    dec A
     dec A
     dec A
     sec
@@ -732,21 +739,25 @@ scroll_window:
     sep #$20
     .a8
     inc vera_ctrl
-
     rep #$20
     .a16
+
     lda ptr1
     clc
     adc #80
     sta ptr1
     sta vera_addrl
+
+    sep #$20
+    .a8
+    dec vera_ctrl
     
+
+    rep #$20
+    .a16
     dec @lines_to_copy
     sep #$20
     .a8
-    php
-    dec vera_ctrl
-    plp
     beq :+
     jmp @loop
     :
@@ -758,6 +769,10 @@ scroll_window:
 mult_pointers:
     .res 4
 
+
+;
+; draw_window_border
+;
 draw_window_border:
     .a8
     .i16
@@ -1228,7 +1243,9 @@ gui_draw_lines:
     cpy rollover_line_start
     bcc :+
     phy
+    ;stp
     jsr scroll_one_term_line
+    ;stp
     ply
     :
 
@@ -1277,6 +1294,8 @@ gui_draw_line:
     lda #ptr3
     jsr set_extmem_rptr
 
+    stz vera_ctrl
+    stz vera_addri
     ; now: 
     ; ptr0 still holds pointer to text ;
     ; ptr1 + 1 holds length of text ; 
@@ -1285,9 +1304,11 @@ gui_draw_line:
     sep #$10
     .i8
 @draw_one_line:
+    
+
+
     stz ptr1
     ; write first_byte ;
-
     ldy display_bit_offset
     lda bit_offset_right_mask, Y
     and vera_data0
