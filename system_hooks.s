@@ -137,6 +137,7 @@ CHROUT_screen:
 .export send_byte_chrout_hook
 send_byte_chrout_hook:
     save_p_816
+    accum_index_8_bit
     jsr write_char_chrout_hook_buff
     restore_p_816
     txa
