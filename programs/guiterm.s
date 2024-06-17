@@ -110,10 +110,16 @@ gui_print_loop:
     jsr check_dead_processes
     pla_byte prog_printing
     pla_byte char_printed
+    bra :++
+    :
+    ; process is dead already ;
+    cpx #$80
+    bcs @dont_print ; IF process was NMI'd, KILL'd, etc., don't print rest of output
     :
 
     jsr process_char
 
+@dont_print:
     jmp gui_print_loop
 end:
     jsr release_chrout_hook
