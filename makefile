@@ -30,7 +30,7 @@ build: os.prg programs
 	cp ipsum.txt mnt/
 	cp script.txt mnt/
 
-sd: build copy
+sd: build
 ifeq ($(OS),Windows_NT)
 	-rm /cygdrive/c/x16image.vhdx
 	diskpart < scripts/diskpart_mount.in
