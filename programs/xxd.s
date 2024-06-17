@@ -1,7 +1,7 @@
 .include "routines.inc"
 .segment "CODE"
 
-BYTES_PER_ROW = 16
+BYTES_PER_ROW = 8
 
 r0L := $02
 r0H := $03
