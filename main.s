@@ -238,7 +238,6 @@ irq_re_caller:
 	
 	lda nmi_queued
 	beq :+
-	stz nmi_queued
 	jsr nmi_re_caller
 	:
 
@@ -275,24 +274,45 @@ custom_nmi_handler:
 	pha
 	php
 
-	accum_8_bit
-	
-	lda #1
-	sta nmi_queued
+	accum_8_bit ; only accumulator to not clear .XH and .YH
 
+	lda current_program_id
+	cmp active_process
+	bne :+
+	cmp #$10 ; first process is nmi-able
+	bne @stop_active_process
+
+	:	
+	lda active_process
+	sta nmi_queued ; queue nmi and return
+	jmp @end_nmi
+
+@stop_active_process:
+	; if active process is currently executing, immediately stop execution
+	index_8_bit
+	tsc
+	clc
+	adc #5
+	tax
+	lda #<nmi_re_caller
+	sta $100, X
+	lda #>nmi_re_caller
+	sta $101, X
+
+@end_nmi:
 	plp
 	pla
 	
 	rti
 
 nmi_re_caller:
+	accum_index_8_bit
+	stz nmi_queued
 	ldx active_process
 	lda process_parents_table, X
 	bne :+
-	; if last program, exit to basic using normal nmi handler ;
-	sec
-	xce
-	jmp (default_nmi_handler)
+	; if first program, don't exit ;
+	rts
 	
 	:
 	txa ; active process id now in .A
