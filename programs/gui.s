@@ -11,6 +11,8 @@ vera_data1 := $9F24
 
 vera_ctrl := $9F25
 vera_dc_video := $9F29
+vera_dc_hscale := $9F2A
+vera_dc_vscale := $9F2B
 
 .macro vera_set_addrsel
 lda vera_ctrl
@@ -22,8 +24,6 @@ lda vera_ctrl
 and #$FE
 sta vera_ctrl
 .endmacro
-
-
 
 ; other defines
 
@@ -105,7 +105,15 @@ init:
     ldx #>startup_str
     jsr print_str
 
+    lda #15
+    jsr set_own_priority
+
     jsr load_data_extmem
+
+    stz vera_ctrl
+    lda #128
+    sta vera_dc_hscale
+    sta vera_dc_vscale
 
     lda #%0100
     sta $9F2D
@@ -1235,23 +1243,28 @@ gui_draw_lines:
     
     ldy #0
 @draw_lines_loop:
+    cpy rollover_line_start
+    bcc @dont_scroll
+    iny
+    cpy lines_to_draw
+    dey
+    bcc :+
+    lda gui_lines_to_draw_len, Y
+    beq @dont_scroll
+    :
     phy
+    jsr scroll_one_term_line
+    ply
+@dont_scroll:
+
     lda gui_lines_to_draw_len, Y
     beq @no_line_to_draw
     sta ptr1 + 1
     
-    cpy rollover_line_start
-    bcc :+
     phy
-    ;stp
-    jsr scroll_one_term_line
-    ;stp
-    ply
-    :
-
     jsr gui_draw_line
-@no_line_to_draw:
     ply
+@no_line_to_draw:
     iny
 
     rep #$20
