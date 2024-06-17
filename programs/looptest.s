@@ -6,12 +6,12 @@ init:
 
 	.a16
 	.i16
-	lda #$1241
 	ldx #$5678
 	ldy #$9ABC
 main:
-	wai
-	wai
+	lda #$EA41
 	jsr CHROUT
+	lda #0
+	jsr send_byte_chrout_hook
 	jmp main
 	
