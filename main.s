@@ -332,6 +332,7 @@ program_return_handler:
 	jmp return_to_basic
 
 	:
+	and #$7F ; zero high bit of return value
 	jmp program_exit
 	
 .export kill_process_kernal
