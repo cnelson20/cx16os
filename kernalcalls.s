@@ -351,11 +351,13 @@ get_process_info:
 	tax
 	lda process_priority_table, X
 	tay
+	lda process_table, X
+	pha
 	lda return_table, X
 	tax
 	lda #0
 	xba
-	lda #1 ; already know process is valid
+	pla
 	restore_p_816
 	rts
 

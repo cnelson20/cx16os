@@ -690,14 +690,16 @@ is_valid_process:
 	phx
 	tax
 	lda process_table, X 
-	plx
 
-	cmp #PID_IN_USE
-	bne @fail
+	bpl @fail
+	cmp #$FF ; not a process
+	beq @fail
 	
+	plx
 	lda #1
 	rts
 @fail:
+	plx
 	lda #0
 	rts
 ;
@@ -720,6 +722,7 @@ find_next_process:
 	
 @not_valid_process:	
 	inx
+	inx
 	bra @loop
 @exit_loop:
 	txa
@@ -737,7 +740,6 @@ find_new_process_bank:
 	tax
 @loop:
 	lda process_table, X
-	cmp #0
 	bne @id_taken
 
 @found:
@@ -756,11 +758,21 @@ find_new_process_bank:
 ;
 set_process_bank_used:
 	tax
-	lda #PID_IN_USE
+	lda process_val_to_store
 	sta process_table, X
+	dec A
+	bmi :+
+	lda #PID_IN_USE
+	:
+	sta process_val_to_store
+
+
 	lda #DEFAULT_PRIORITY
 	sta process_priority_table, X
 	rts
+
+process_val_to_store:
+	.byte PID_IN_USE
 
 ;
 ; load new process into memory
