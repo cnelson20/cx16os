@@ -75,6 +75,7 @@ shell_name:
 	.literal "shell", 0
 
 IRQ_816_VECTOR := $0338
+BRK_816_VECTOR := $033A
 
 setup_interrupts:
 	sei
@@ -86,6 +87,16 @@ setup_interrupts:
 	lda #custom_irq_816_handler
 	sta IRQ_816_VECTOR
 	
+	; copy brk handler
+
+	lda BRK_816_VECTOR
+	sta default_brk_handler
+
+	lda #custom_brk_handler
+	sta BRK_816_VECTOR
+
+	; copy nmi handler
+
 	lda $0318
 	sta default_nmi_handler
 
@@ -110,22 +121,25 @@ setup_interrupts:
 
 reset_interrupts:
 	sei 
-	
+	php
+
+	rep #$20
+	.a16
+
 	lda default_816_irq_handler
-	sta $0314
-	lda default_816_irq_handler
-	sta $0315
+	sta IRQ_816_VECTOR
 
 	lda default_nmi_handler
 	sta $0318
-	lda default_nmi_handler + 1
-	sta $0319
 
 	lda default_816_nmi_handler
 	sta $033c
-	lda default_816_nmi_handler + 1
-	sta $033d
 
+	lda default_brk_handler
+	sta BRK_816_VECTOR
+
+	plp
+	.a8
 	cli
 	rts
 
@@ -262,6 +276,37 @@ irq_re_caller:
 	; check if time up
 	jmp manage_process_time
 
+.export default_brk_handler
+default_brk_handler:
+	.word 0
+
+.export custom_brk_handler
+custom_brk_handler:
+	rep #$20
+	sep #$10
+	.a16
+	lda #$01FF
+	tcs
+	ldx #0
+	phx
+	lda #brk_re_caller
+	pha
+	sep #$30
+	.a8
+	php
+	
+
+	lda #1
+	sta irq_already_triggered
+
+	rti
+
+brk_re_caller:
+	; sep #$30
+	lda current_program_id
+	ldx #RETURN_BRK
+	jmp program_exit
+
 .export default_nmi_handler
 default_nmi_handler:
 	.word 0
@@ -298,6 +343,9 @@ custom_nmi_handler:
 	sta $100, X
 	lda #>nmi_re_caller
 	sta $101, X
+
+	lda #1
+	sta irq_already_triggered
 
 @end_nmi:
 	plp
