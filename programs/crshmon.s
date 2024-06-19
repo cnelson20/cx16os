@@ -23,20 +23,23 @@ repeat_check:
     txa
     asl A
     sta process_num
-    jsr get_process_info
-    cmp #0
-    bne @not_dead
-    
+    jsr get_process_info   
+    sta process_status 
     ply
     phy
+    cmp alive_table, Y
+    beq @same_status ; if nothing's changed, dont do anything
+
     lda alive_table, Y
-    beq @not_dead ; was already dead, err message was printed if necessary
+    beq @dont_print ; if process is now alive and was previously not, dont print
 
-    cpx #$80
-    bcc @not_dead
+    cpx #$80 ; if code is < $80 process terminated on its own
+    bcc @dont_print
     jsr print_process_err
+@dont_print:
+    lda process_status
 
-@not_dead:
+@same_status:
     plx
     sta alive_table, X
 
@@ -47,14 +50,9 @@ repeat_check:
 
 print_process_err:
     stx exit_code
-
-    lda #$80
-    sta r0
-
-    ldy process_num
-    lda #<process_name
-    ldx #>process_name
-    jsr get_process_name
+    
+    lda #$d
+    jsr CHROUT
 
     lda #<str_p1
     ldx #>str_p1
@@ -79,7 +77,6 @@ print_process_err:
     lda #$d
     jsr CHROUT
 
-    lda #0
     rts
 
 
@@ -91,6 +88,8 @@ str_p2:
 
 .SEGMENT "BSS"
 
+process_status:
+    .byte 0
 process_num:
     .byte 0
 exit_code:
