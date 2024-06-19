@@ -196,6 +196,15 @@ parse_gui_message:
 ; copy the chars into rows and then draw them
 ;
 display_chars:
+    lda message_body + 1 ; if process is dead and did return on its own, don't do anything ;
+    jsr get_process_info
+    cmp #0
+    beq :+
+    cpx #$80
+    bcc :+
+    rts
+    :  
+
     jsr reset_gui_lines
 
     rep #$20
