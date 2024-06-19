@@ -6,6 +6,7 @@ all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mk
 bindir: ../mnt/bin
 	
 ../mnt/bin:	
+	-mkdir ../mnt/
 	-mkdir ../mnt/bin
 
 #
