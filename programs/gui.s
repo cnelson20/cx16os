@@ -29,6 +29,7 @@ sta vera_ctrl
 
 GUI_HOOK = 0
 COMMAND_DISPLAY_CHARS = 0
+COMMAND_EXIT_GUI = 1
 
 r0 := $02
 r1 := $04
@@ -190,7 +191,29 @@ parse_gui_message:
     bne :+
     jmp display_chars
     :
+	cmp #COMMAND_EXIT_GUI
+	bne :+
+	jmp exit_gui
+	:
+	
     rts
+
+exit_gui:
+	jsr clear_bitmap
+	
+	stz vera_ctrl
+    lda #%00010000
+	eor #$FF
+	and vera_dc_video
+    sta vera_dc_video	
+	
+	lda #$1
+	xba
+	lda #$FD
+	tcs
+	
+	lda #0
+	rts
 
 ;
 ; copy the chars into rows and then draw them
