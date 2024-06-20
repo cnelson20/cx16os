@@ -435,8 +435,11 @@ program_exit:
 	
 	lda KZP0
 	jsr update_parent_processes
+	pha_byte RAM_BANK
 	lda KZP0
+	sta RAM_BANK
 	jsr clear_process_extmem_banks
+	pla_byte RAM_BANK
 	lda KZP0
 	jsr release_all_process_hooks
 	
@@ -708,6 +711,7 @@ is_valid_process:
 ; .A = process
 ; returns next process in .A (if only one program, return same program)
 ;
+.export find_next_process
 find_next_process:
 	tax
 	bra @not_valid_process

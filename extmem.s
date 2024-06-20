@@ -111,17 +111,14 @@ free_extmem_bank:
 	jsr check_process_owns_bank
 	bne :+
 	phx
-
-	tax
+	
 	dec process_table, X
 
 	inc RAM_BANK
-	lda #1
-	sta process_extmem_table, X
+	stz process_extmem_table, X
 	dec RAM_BANK
 
 	plx
-	rts
 	:
 	rts
 
@@ -366,7 +363,6 @@ writef_byte_extmem_y:
 ;
 .export share_extmem_bank
 share_extmem_bank:
-	stp
 	save_p_816_8bitmode
 	jsr check_process_owns_bank
 	bne @failure_return ; doesn't own bank
