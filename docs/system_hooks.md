@@ -104,3 +104,26 @@ Arguments:
 If the calling process has a lock on hook .A, increment that hook's start_offset to point to the next message  
 Returns 0 on success, non-zero on failure in .A
 
+--- 
+
+### lock_vera_regs
+Call Address: $9D93
+Arguments:
+
+- None
+
+If there is no existing lock on VERA registers, the calling process gets the hook to VERA's register set. The OS will preserve VERA's address registers when context switching.
+Returns 0 on success, non-zero on failure to obtain the hook in .A
+
+---
+
+### unlock_vera_regs
+Call Address: $9D96
+Arguments:
+
+- None
+
+Releases the calling process' hook on VERA, if it has the hook
+Returns 0 on success (if the process had the hook), non-zero on failure in .A
+
+
