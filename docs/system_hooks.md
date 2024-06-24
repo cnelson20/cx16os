@@ -1,5 +1,9 @@
 ## System Hooks
 
+### Rationale
+
+The purpose of the various system hooks is to provide access to key system aspects that should not be shared between processes, and to enable inter-process communication.
+
 The chrout hook is a special hook that intercepts all putc/CHROUT calls that would be written to the terminal and sends them to a buffer where another program can process it and perform an action.
 It is setup / released with different calls than the general hooks, and can be sent data by [`send_byte_chrout_hook`](#send_byte_chrout_hook)
 
@@ -12,6 +16,8 @@ It is setup / released with different calls than the general hooks, and can be s
 - Last 2 bytes (end_offset) are an offset into the ringbuffer where the last character is at (offset - 1)
 
 ---
+
+## Functions
 
 ### setup_chrout_hook
 Call Address: $9D75  
