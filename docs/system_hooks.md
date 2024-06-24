@@ -4,14 +4,17 @@
 
 The purpose of the various system hooks is to provide access to key system aspects that should not be shared between processes, and to enable inter-process communication.
 
+### Special hooks 
+
 The chrout hook is a special hook that intercepts all putc/CHROUT calls that would be written to the terminal and sends them to a buffer where another program can process it and perform an action.
 It is setup / released with different calls than the general hooks, and can be sent data by [`send_byte_chrout_hook`](#send_byte_chrout_hook)
 
-The VERA hook is a way for a process to gain exclusive access to VERA registers. the address and addrsel registers will be preserved when context-switching.
+The VERA hook is a way for a process to gain exclusive access to VERA registers. the address and addrsel registers will be preserved when context-switching. It has no associated buffer.
 
----
+### hook ringbuffers
+- $1000 bytes, either or process memory or (recommended) extmem
 
-#### buffer information pointers:
+### buffer information pointers:
 
 - 4 bytes
 - First 2 bytes (start_offset) are an offset into the ringbuffer where the first characters to work with are
