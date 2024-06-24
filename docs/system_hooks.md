@@ -7,6 +7,8 @@ The purpose of the various system hooks is to provide access to key system aspec
 The chrout hook is a special hook that intercepts all putc/CHROUT calls that would be written to the terminal and sends them to a buffer where another program can process it and perform an action.
 It is setup / released with different calls than the general hooks, and can be sent data by [`send_byte_chrout_hook`](#send_byte_chrout_hook)
 
+The VERA hook is a way for a process to gain exclusive access to VERA registers. the address and addrsel registers will be preserved when context-switching.
+
 ---
 
 #### buffer information pointers:
