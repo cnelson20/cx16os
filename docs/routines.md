@@ -40,6 +40,8 @@
 | $9D8A | [`set_own_priority`](#9d8a-set_own_priority) | .A | | .X, .YH |
 | $9D8D | [`surrender_process_time`](#9d8a-surrender_process_time) | | | |
 | $9D90 | [`mark_last_hook_message_received`](system_hooks.md#mark_last_hook_message_received) | .A | | .XY |
+| $9D93 | [`lock_vera_regs`](system_hooks.md#lock_vera_regs) | .A | .XY |
+| $9D96 | [`unlock_vera_regs`](system_hooks.md#unlock_vera_regs) | .A | .XY |
 
 ## Function Reference
 
@@ -283,5 +285,5 @@ Return values:
 ### $9D8D: surrender_process_time
 - Halts execution of calling process and waits for other process to execute
 - Preserves all registers
-
+ 
 
