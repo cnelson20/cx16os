@@ -15,6 +15,10 @@ init:
 
     inx
     bpl @init_loop
+	
+lower_priority:
+	lda #2
+	jsr set_own_priority
 
 repeat_check:
     ldx #$10 / 2
