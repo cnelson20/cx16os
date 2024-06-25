@@ -42,6 +42,7 @@
 | $9D90 | [`mark_last_hook_message_received`](system_hooks.md#mark_last_hook_message_received) | .A | | .XY |
 | $9D93 | [`lock_vera_regs`](system_hooks.md#lock_vera_regs) | .A | .XY |
 | $9D96 | [`unlock_vera_regs`](system_hooks.md#unlock_vera_regs) | .A | .XY |
+| $9D99 | [`bin_to_bcd16`](#9d99-bin_to_bcd16) | .AX | .AXY |
 
 ## Function Reference
 
@@ -285,5 +286,16 @@ Return values:
 ### $9D8D: surrender_process_time
 - Halts execution of calling process and waits for other process to execute
 - Preserves all registers
- 
+
+Return values:
+- None (all registers preserved)
+
+---
+
+### $9D99: bin_to_bcd16
+- Converts a 16-bit binary number to a 24-bit BCD value
+- Number to convert in .AX
+
+Return values:
+- BCD Value in .AXY (lsb in .A, msb in .Y)
 
