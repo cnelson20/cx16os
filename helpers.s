@@ -329,6 +329,50 @@ hex_num_to_string_kernal:
 	rts
 
 ;
+; bin_bcd16_ext
+;
+; converts the 16-bit binary number in .AX to a 24-bit BCD value returned in .AXY
+;
+; convert 16bit binary num to 24 bit BCD value
+.export bin_bcd16_ext
+bin_bcd16_ext:
+		php
+		accum_index_8_bit
+		.a8
+		.i8
+		sta @BIN
+		stx @BIN + 1
+		
+		sed ; Switch to decimal mode
+		rep #$20
+		.a8
+		stz @BCD + 0
+		stz @BCD + 2
+		ldx #16		; The number of source bits
+
+@CNVBIT:		
+		asl @BIN + 0	; Shift out one bit
+		lda @BCD + 0	; And add into result
+		adc @BCD + 0
+		sta @BCD + 0
+		lda @BCD + 2	; ... thru whole result
+		adc @BCD + 2
+		sta @BCD + 2
+		dex		; And repeat for next bit
+		bne @CNVBIT
+				
+		lda @BCD
+		ldx @BCD + 1
+		ldy @BCD + 2
+		
+		plp	; Back to binary mode
+		rts
+@BIN:
+		.res 2
+@BCD:
+		.res 4
+
+;
 ; Read at most first r0.L bytes of the name of the process at .Y
 ; and store into .AX
 ;

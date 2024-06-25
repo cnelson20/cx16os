@@ -18,7 +18,9 @@ PRINT_STR := print_str
 get_process_info := $9D0C
 get_args := $9D0F
 get_process_name := $9D12
+
 parse_num := $9D15
+bin_to_bcd16 := $9D99
 
 hex_num_to_string := $9D18
 GET_HEX_NUM := hex_num_to_string

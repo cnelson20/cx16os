@@ -5,7 +5,7 @@
 
 .SEGMENT "CODE"
 
-.import parse_num_kernal_ext
+.import parse_num_kernal_ext, bin_bcd16_ext
 .import hex_num_to_string_kernal
 
 .import get_process_name_kernal_ext
@@ -87,6 +87,7 @@ call_table:
 	jmp mark_last_hook_message_received ; $9D90
 	jmp lock_vera_regs ; $9D93
 	jmp unlock_vera_regs ; $9D96
+	jmp bin_bcd16_ext ; $9D99
 	.res 3, $FF
 .export call_table_end
 call_table_end:
