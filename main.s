@@ -81,6 +81,9 @@ setup_interrupts:
 	sei
 	accum_16_bit
 	.a16
+	
+	; copy irq handler ;
+	
 	lda IRQ_816_VECTOR
 	sta default_816_irq_handler
 	
@@ -126,14 +129,20 @@ reset_interrupts:
 	rep #$20
 	.a16
 
+	; copy back irq handler ;
+	
 	lda default_816_irq_handler
 	sta IRQ_816_VECTOR
 
+	; copy back nmi handler ;
+	
 	lda default_nmi_handler
 	sta $0318
 
 	lda default_816_nmi_handler
 	sta $033c
+	
+	; brk handler ;
 
 	lda default_brk_handler
 	sta BRK_816_VECTOR
