@@ -1,17 +1,28 @@
 ## System Hooks
 
+### Rationale
+
+The purpose of the various system hooks is to provide access to key system aspects that should not be shared between processes, and to enable inter-process communication.
+
+### Special hooks 
+
 The chrout hook is a special hook that intercepts all putc/CHROUT calls that would be written to the terminal and sends them to a buffer where another program can process it and perform an action.
 It is setup / released with different calls than the general hooks, and can be sent data by [`send_byte_chrout_hook`](#send_byte_chrout_hook)
 
----
+The VERA hook is a way for a process to gain exclusive access to VERA registers. the address and addrsel registers will be preserved when context-switching. It has no associated buffer.
 
-#### buffer information pointers:
+### hook ringbuffers
+- $1000 bytes, either or process memory or (recommended) extmem
+
+### buffer information pointers:
 
 - 4 bytes
 - First 2 bytes (start_offset) are an offset into the ringbuffer where the first characters to work with are
 - Last 2 bytes (end_offset) are an offset into the ringbuffer where the last character is at (offset - 1)
 
 ---
+
+## Functions
 
 ### setup_chrout_hook
 Call Address: $9D75  
@@ -103,4 +114,27 @@ Arguments:
 
 If the calling process has a lock on hook .A, increment that hook's start_offset to point to the next message  
 Returns 0 on success, non-zero on failure in .A
+
+--- 
+
+### lock_vera_regs
+Call Address: $9D93
+Arguments:
+
+- None
+
+If there is no existing lock on VERA registers, the calling process gets the hook to VERA's register set. The OS will preserve VERA's address registers when context switching.
+Returns 0 on success, non-zero on failure to obtain the hook in .A
+
+---
+
+### unlock_vera_regs
+Call Address: $9D96
+Arguments:
+
+- None
+
+Releases the calling process' hook on VERA, if it has the hook
+Returns 0 on success (if the process had the hook), non-zero on failure in .A
+
 
