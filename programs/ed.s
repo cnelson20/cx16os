@@ -327,7 +327,7 @@ parse_user_cmd:
 	
 	cmp #'0'
 	bcc @pl_not_num
-	cmp #'9'
+	cmp #'9' + 1
 	bcs @pl_not_num
 	; have a line number to use for input ;
 	
@@ -430,7 +430,7 @@ parse_cmd_args:
 	beq @maybe_num
 	cmp #'0'
 	bcc @not_num
-	cmp #'9'
+	cmp #'9' + 1
 	bcs @not_num
 	
 	inx
@@ -501,7 +501,7 @@ set_cmd_line_num:
 	lda input, Y
 	cmp #'0'
 	bcc @exit_loop
-	cmp #'9'
+	cmp #'9' + 1
 	bcs @exit_loop
 	bra :-
 @exit_loop:
@@ -1049,8 +1049,13 @@ enter_input_mode:
 print_line_nums:
 	lda input_begin_lineno
 	sta ptr0
-	lda input_begin_lineno + 1
-	sta ptr0 + 1
+	ldx input_begin_lineno + 1
+	stx ptr0 + 1
+	
+	jsr bin_to_bcd16
+	sta ptr1
+	stx ptr1 + 1
+	sty ptr2
 	
 @loop:
 	lda ptr0 + 1
@@ -1063,12 +1068,19 @@ print_line_nums:
 	bne @end
 	
 @print_lineno:
-	lda ptr0 + 1
+	lda ptr2
+	beq :+
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	:
+	
+	lda ptr1 + 1
 	jsr GET_HEX_NUM
 	jsr CHROUT
 	txa
 	jsr CHROUT
-	lda ptr0
+	lda ptr1
 	jsr GET_HEX_NUM
 	jsr CHROUT
 	txa
@@ -1077,7 +1089,21 @@ print_line_nums:
 	lda #$d
 	jsr CHROUT
 	
-	inc_word ptr0	
+	inc_word ptr0
+	
+	sed
+	lda ptr1
+	clc
+	adc #1
+	sta ptr1
+	lda ptr1 + 1
+	adc #0
+	sta ptr1 + 1
+	lda ptr2
+	adc #0
+	sta ptr2	
+	cld
+	
 	jmp @loop
 	
 @end:	
@@ -1105,6 +1131,17 @@ print_lines:
 	sta ptr0
 	stx ptr0 + 1
 	
+	ldy input_cmd
+	cpy #'n'
+	bne :+
+	jsr bin_to_bcd16
+	sta ptr2
+	stx ptr2 + 1
+	sty ptr3
+	:
+	
+	lda ptr0
+	ldx ptr0 + 1
 	jsr get_lines_ordered_offset_alr_decremented
 	sta ptr1
 	stx ptr1 + 1
@@ -1128,18 +1165,34 @@ print_lines:
 	cmp #'n'
 	bne @dont_print_lineno
 	
-	lda ptr0
+	sed
+	lda ptr2
 	clc
 	adc #1
-	pha
-	lda ptr0 + 1
+	sta ptr2
+	lda ptr2 + 1
 	adc #0
+	sta ptr2 + 1
+	lda ptr3
+	adc #0
+	sta ptr3	
+	cld
+	
+	lda ptr3
+	beq :+
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT	
+	:
+	
+	lda ptr2 + 1
 	jsr GET_HEX_NUM
 	jsr CHROUT
 	txa
 	jsr CHROUT
 	
-	pla
+	lda ptr2
 	jsr GET_HEX_NUM
 	jsr CHROUT
 	txa
@@ -2448,6 +2501,9 @@ errno_str_warn_buff_mod:
 	.asciiz "Warning: buffer modified"
 errno_str_cannot_exec_prog:
 	.asciiz "Error executing program"
+	
+
+	
 	
 ; get next avail extmem space ;
 ; args: .AX -> data len ;
