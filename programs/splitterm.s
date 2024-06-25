@@ -437,25 +437,18 @@ write_line_screen:
     stx temp_term_y_offset
     jmp @dont_draw_char
 @not_clr_screen:
-    ;cmp #2 ; SWAP_COLORS
+    ;cmp #1 ; SWAP_COLORS
     ;bne :+
-    ;pha
     ;lda temp_term_color
-    ;pha
-    ;asl
-    ;asl
-    ;asl
-    ;asl
-    ;sta ptr2
-    ;pla
-    ;lsr 
-    ;lsr
-    ;lsr
-    ;lsr
-    ;ora ptr2
+    ;asl  A
+    ;adc  #$80
+    ;rol  A
+    ;asl  A
+    ;adc  #$80
+    ;rol  A ; swap nybbles
     ;sta temp_term_color
     ;jmp @dont_draw_char
-    ; :
+    ;:
     cmp #5 ; WHITE
     bne :+
     lda #COLOR_WHITE
