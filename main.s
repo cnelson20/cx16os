@@ -26,7 +26,7 @@ SWAP_FGBG_COLORS = 1
 
 init:
 	clc
-	xce
+	xce ; enter 816 native mode
 	
 	stz ROM_BANK
 	stz current_program_id
