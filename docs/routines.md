@@ -121,6 +121,7 @@ Return values:
 
 Return values:
 - .AX = the number parsed
+- .Y = 0 if the number was parsed successfully, non-zero otherwise
 
 ---
 
