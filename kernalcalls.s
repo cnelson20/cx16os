@@ -302,6 +302,8 @@ print_str_ext:
 	save_p_816_8bitmode
 	sta r0
 	stx r0 + 1
+	index_16_bit
+	.i16
 	ldy #0
 	:
 	lda (r0), Y
@@ -311,6 +313,7 @@ print_str_ext:
 	bne :-
 	:
 	restore_p_816
+	.i8
 	rts
 
 ;
