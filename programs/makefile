@@ -1,7 +1,7 @@
 CC = cl65
 FLAGS =-t none -C cl65_progs.cfg
 
-all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir cat_slow guiterm gui sendmsg splitterm crshmon color
+all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir cat_slow guiterm gui sendmsg splitterm crshmon color strings
 
 bindir: ../mnt/bin
 	
@@ -15,14 +15,6 @@ bindir: ../mnt/bin
 
 shell: shell.s
 	$(CC) $(FLAGS) -o $@ shell.s
-	cp $@ ../mnt/bin
-
-#
-# ed - based off the program of the same name
-#
-
-ed: ed.s routines.inc
-	$(CC) $(FLAGS) -o $@ ed.s
 	cp $@ ../mnt/bin
 
 #
@@ -42,9 +34,21 @@ splitterm: splitterm.s routines.inc
 	cp $@ ../mnt/bin
 
 #
+# ed - based off the program of the same name
+#
+
+ed: ed.s routines.inc
+	$(CC) $(FLAGS) -o $@ ed.s
+	cp $@ ../mnt/bin
+
+#
 # Rest of the commands
 # (Mostly) named for similar linux commands
 #
+
+strings: strings.s routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
+	cp $@ ../mnt/bin
 
 color: color.s routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
