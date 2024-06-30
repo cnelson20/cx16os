@@ -8,7 +8,7 @@
 | $9D03 | [`putc / CHROUT`](#9d03-putc) | .A | | |
 | $9D06 | [`exec`](#9d09-exec) | .AX, .Y, r0, r2 | .A | r1 |
 | $9D09 | [`print_str`](#9d06-print_str) | .AX | | .Y |
-| $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .X, .Y, r0 | |
+| $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .Y, r0 | .X |
 | $9D0F | [`get_args`](#9d0f-get_args) | | .AX, .Y | |
 | $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | |
 | $9D15 | [`parse_num`](#9d15-parse_num) | .AX | .AX | .Y
@@ -90,7 +90,6 @@ Return values:
 
 Return values:
 - .A = whether process is alive or dead (!= 0 -> alive)
-- .X = last completed process with pid .A's return value
 - .Y = (if .A != 0) process's priority, how much time it gets to run
 - r0.L = 1 if the process is the active process, 0 if not
 - r0.H = the process's ppid
