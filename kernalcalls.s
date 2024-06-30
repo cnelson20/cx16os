@@ -327,7 +327,6 @@ print_str_ext:
 ; r0.H = parent id
 ;
 get_process_info:
-	stp
 	save_p_816_8bitmode
 	cmp #0
 	beq @get_return_val
@@ -352,14 +351,12 @@ get_process_info:
 	; active ;
 	inc r0 ; r0 now 1 if process is active
 @not_active_process:
-	tax
 	lda process_priority_table, X
 	tay
 	lda process_table, X
-	pha
+	xba
 	lda #0
 	xba
-	pla
 	restore_p_816
 	rts
 
