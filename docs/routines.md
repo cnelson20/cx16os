@@ -72,8 +72,8 @@ Return values:
 - Files will be closed for caller if exec is successful
  
 Return values:
-- .A != 0 -> new process has pid .A
-- .A = 0 -> failure
+- If .A != 0 -> new process has pid .A,  instance in .X
+- If .A = 0 -> failure
 
 ---
 
