@@ -327,7 +327,11 @@ print_str_ext:
 ; r0.H = parent id
 ;
 get_process_info:
+	stp
 	save_p_816_8bitmode
+	cmp #0
+	beq @get_return_val
+	
 	tax
 	lda process_parents_table, X
 	sta r0 + 1
@@ -337,15 +341,11 @@ get_process_info:
 	bne :+
 	; a is #00 already
 	xba
-	lda return_table, X
-	tax ; get return value of process
 	lda #0
 	restore_p_816
 	rts
 
 	:
-	txa
-	
 	stz r0 ; zero r0
 	cmp active_process
 	bne @not_active_process
@@ -357,11 +357,23 @@ get_process_info:
 	tay
 	lda process_table, X
 	pha
-	lda return_table, X
-	tax
 	lda #0
 	xba
 	pla
+	restore_p_816
+	rts
+
+@get_return_val:
+	cpx #$80
+	bcc :+
+	lda return_table - $80, X
+	tax
+	lda #$FF
+	bra :++
+	:
+	lda #0 ; return in error
+	ldx #0
+	:
 	restore_p_816
 	rts
 

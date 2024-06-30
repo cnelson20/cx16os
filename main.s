@@ -434,7 +434,11 @@ program_exit:
 
 @clear_prog_data:
 	ldx KZP0 ; pid
+	lda process_table, X ; load instance id
 	stz process_table, X
+	
+	and #$7F
+	tax
 	lda KZP1
 	sta return_table, X
 	
@@ -878,7 +882,10 @@ load_new_process:
 	ldx #>new_prog_args
 	jsr setup_process_info
 	
-	lda @new_bank
+	ldy @new_bank
+	lda process_table, Y
+	tax
+	tya ; pid in .A
 	rts
 @arg_count:
 	.byte 0
@@ -1248,7 +1255,7 @@ PROCESS_PARENTS_SIZE = PROCESS_TABLE_SIZE
 ; holds return values for programs ;
 .export return_table
 return_table = process_parents_table + PROCESS_PARENTS_SIZE
-RETURN_TABLE_SIZE = PROCESS_TABLE_SIZE
+RETURN_TABLE_SIZE = $80
 
 ; for fill operations
 END_PROCESS_TABLES = return_table + RETURN_TABLE_SIZE
