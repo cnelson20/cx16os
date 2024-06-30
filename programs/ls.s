@@ -12,15 +12,75 @@ r2 := $06
 r3 := $08
 
 ptr0 = $30
-ptr0L = $30
-ptr0H = $31
+
+ptr1 = $32
+ptr2 = $34
 
 init:
-	lda #2
-	sta first_run
+	; get pwd ;
+	lda #$80
+	sta r1
+	stz r1 + 1
+	
+	lda #<pwd_buff
+	sta r0
+	lda #>pwd_buff
+	sta r0 + 1
+	jsr get_pwd
 	
 	jsr res_extmem_bank
 	sta extmem_bank
+	
+	jsr get_args
+	sta ptr1
+	stx ptr1 + 1
+	sty ptr2
+	sty ptr2 + 1
+	
+	cpy #1
+	bne :+
+	jmp print_dir ; just print this directory
+	:
+	
+args_loop:
+	dec ptr2 ; argc
+	bne :+
+	lda #0 ; out of args, done printing dirs
+	rts
+	:
+	jsr get_next_arg	
+	
+	lda #<pwd_buff
+	ldx #>pwd_buff
+	jsr chdir
+	
+	; check if that was a success
+	
+	; now cd to arg dir
+	lda ptr1
+	ldx ptr1 + 1
+	jsr chdir
+	
+	lda ptr2 + 1
+	dec A
+	cmp ptr2
+	beq :+
+	lda #$d
+	jsr CHROUT
+	:
+	
+	lda ptr1
+	ldx ptr1 + 1
+	jsr print_str
+	
+	lda #':'
+	jsr CHROUT
+	lda #$d
+	jsr CHROUT	
+	
+print_dir:
+	lda #2
+	sta first_run
 
 	lda #<$A000
 	sta r0
@@ -87,7 +147,7 @@ file_print_loop:
 	bne file_print_loop
 	
 file_out_bytes:
-	rts
+	jmp args_loop
 	
 file_error_read:
 	tya
@@ -109,6 +169,33 @@ file_error:
 	
 	lda #$d
 	jsr CHROUT
+	
+	lda #1
+	rts
+
+get_next_arg:
+	ldy #0
+	:
+	lda (ptr1), Y
+	beq :+
+	iny
+	bra :-
+	: ; \0 found
+	
+	:
+	lda (ptr1), Y
+	bne :+
+	iny
+	bra :-
+	:
+	
+	tya
+	clc
+	adc ptr1
+	sta ptr1
+	lda ptr1 + 1
+	adc #0
+	sta ptr1 + 1
 	
 	rts
 
@@ -171,35 +258,35 @@ next_dir_char:
 
 calc_num_size:
 	lda #10
-	sta ptr0L
-	stz ptr0H
+	sta ptr0
+	stz ptr0 + 1
 	
 	lda #1
 	sta @calc_size
 @calc_loop:
 	lda bin_line_num_hi
-	cmp ptr0H
+	cmp ptr0 + 1
 	bcc @fail
 	bne @pass
 	lda bin_line_num
-	cmp ptr0L
+	cmp ptr0
 	bcc @fail
 @pass:
-	asl ptr0L
-	rol ptr0H ; ptr0 = ptr0 * 2
-	ldx ptr0L
-	ldy ptr0H ; .XY = ptr0 * 2
-	asl ptr0L
-	rol ptr0H
-	asl ptr0L ; ptr0 = ptr0 * 8
-	rol ptr0H
+	asl ptr0
+	rol ptr0 + 1 ; ptr0 = ptr0 * 2
+	ldx ptr0
+	ldy ptr0 + 1 ; .XY = ptr0 * 2
+	asl ptr0
+	rol ptr0 + 1
+	asl ptr0 ; ptr0 = ptr0 * 8
+	rol ptr0 + 1
 	clc
 	txa
-	adc ptr0L
-	sta ptr0L
+	adc ptr0
+	sta ptr0
 	tya
-	adc ptr0H
-	sta ptr0H
+	adc ptr0 + 1
+	sta ptr0 + 1
 	
 	; inc calc size ;
 	lda @calc_size
@@ -270,4 +357,6 @@ error_msg:
 	.asciiz "Error opening directory listing, code #:"
 
 .SEGMENT "BSS"
+pwd_buff:
+	.res $80
 buff:
