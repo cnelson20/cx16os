@@ -72,7 +72,7 @@ Return values:
 - Files will be closed for caller if exec is successful
  
 Return values:
-- If .A != 0 -> new process has pid .A,  instance in .X
+- If .A != 0 -> new process has pid .A,  instance id in .X
 - If .A = 0 -> failure
 
 ---
@@ -86,13 +86,18 @@ Return values:
 ---
 
 ### $9D0C: get_process_info
-- Returns info about process with pid .A
+- Returns info about process with pid .A if .A != 0
 
-Return values:
+Return values (if .A != 0):
 - .A = whether process is alive or dead (!= 0 -> alive)
 - .Y = (if .A != 0) process's priority, how much time it gets to run
 - r0.L = 1 if the process is the active process, 0 if not
 - r0.H = the process's ppid
+
+Return values (if .A = 0):
+
+- .A = $FF if the instance id is valid (>= $80)
+- .X = the process' return value if .A = $FF, 0 otherwise
 
 ---
 
