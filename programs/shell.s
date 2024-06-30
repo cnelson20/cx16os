@@ -110,10 +110,13 @@ wait_for_input:
 	; if char < $20 and not one of above chars, ignore
 	cmp #$20
 	bcc wait_for_input
-	tay
-	and #$80 ; if >= $80, invalid char
-	bne wait_for_input
-	tya
+	cmp #$A1
+	bcs :+
+	
+	cmp #$7F
+	bcs wait_for_input
+	
+	:
 char_entered:
 	sta input, X
 	inx
