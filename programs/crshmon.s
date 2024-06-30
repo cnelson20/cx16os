@@ -33,12 +33,10 @@ repeat_check:
     phy
     cmp alive_table, Y
     beq @same_status ; if nothing's changed, dont do anything
-
+	
     lda alive_table, Y
     beq @dont_print ; if process is now alive and was previously not, dont print
-
-    cpx #$80 ; if code is < $80 process terminated on its own
-    bcc @dont_print
+	
     jsr print_process_err
 @dont_print:
     lda process_status
@@ -53,7 +51,14 @@ repeat_check:
     jmp repeat_check
 
 print_process_err:
-    stx exit_code
+    tax
+	lda #0
+	jsr get_process_info
+	cpx #$80
+	bcs :+
+	rts
+	:
+	stx exit_code
     
     lda #$d
     jsr CHROUT
