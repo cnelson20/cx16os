@@ -54,14 +54,18 @@ args_loop:
 	ldx #>pwd_buff
 	jsr chdir
 	
-	; check if that was a success
-	
 	; now cd to arg dir
 	lda ptr1
 	ldx ptr1 + 1
 	jsr chdir
 	
+	; check if that was a success
+	; not yet implemented
+	
 	lda ptr2 + 1
+	cmp #3
+	bcc print_dir
+	
 	dec A
 	cmp ptr2
 	beq :+
