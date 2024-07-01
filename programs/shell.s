@@ -8,6 +8,7 @@ r2 = $06
 ptr0 = $30
 ptr1 = $32
 ptr2 = $34
+ptr3 = $36
 
 CMD_MAX_SIZE = 128
 
@@ -112,10 +113,9 @@ wait_for_input:
 	bcc wait_for_input
 	cmp #$A1
 	bcs :+
-	
 	cmp #$7F
-	bcs wait_for_input
-	
+	bcc :+
+	jmp wait_for_input
 	:
 char_entered:
 	sta input, X
@@ -242,7 +242,9 @@ narg_not_0:
 @parse_args_loop:	
 	ldx curr_arg
 	cpx num_args
-	bcs @end_parse_args_loop
+	bcc :+
+	jmp @end_parse_args_loop ; if carry set, jump
+	:
 	
 	lda args_offset_arr, X
 	tax
@@ -309,7 +311,14 @@ narg_not_0:
 	jsr copy_back_args
 	jmp @parse_args_loop
 	
-@not_gt:
+@not_gt:	
+	cmp #'$'
+	bne @not_dsign
+		
+	jsr parse_env_var	
+	inc curr_arg
+	jmp @parse_args_loop
+@not_dsign:
 
 @parse_loop_end_cmp:	
 	inc curr_arg
@@ -378,6 +387,182 @@ copy_back_args:
 	sta output, Y
 	sty command_length
 	rts
+
+parse_env_var:
+	ldx curr_arg
+	lda args_offset_arr, X
+	
+	sec ; + 1 to skip the $
+	adc #<output
+	sta ptr2
+	lda #>output
+	adc #0
+	sta ptr2 + 1
+	
+	; compare against different strings
+	lda #<question_str
+	sta ptr3
+	lda #>question_str
+	sta ptr3 + 1
+	jsr strcmp
+	bne @not_q_mark
+	
+	lda #4
+	jsr shift_output
+	
+	ldy curr_arg
+	lda args_offset_arr, Y
+	tay
+	lda #'$'
+	sta output, Y
+	iny
+	phy
+	lda last_return_val
+	jsr GET_HEX_NUM
+	ply
+	sta output, Y
+	iny
+	txa
+	sta output, Y
+	iny
+	lda #0
+	sta output, Y	
+	rts
+@not_q_mark:
+	lda #<editor_str
+	sta ptr3
+	lda #>editor_str
+	sta ptr3 + 1
+	jsr strcmp
+	bne @not_editor_str
+	
+	lda #3
+	jsr shift_output
+	ldy curr_arg
+	lda args_offset_arr, Y
+	tay
+	lda #'e'
+	sta output, Y
+	iny
+	lda #'d'
+	sta output, Y
+	iny
+	lda #0
+	sta output, Y
+	rts
+	
+@not_editor_str:	
+	rts
+	
+question_str:
+	.asciiz "?"
+editor_str:
+	.asciiz "EDITOR"
+
+shift_output:
+	ldy curr_arg
+	iny
+	cpy num_args
+	dey
+	bcc @not_last_arg
+	
+	clc
+	adc	args_offset_arr, Y
+	sta command_length
+	rts
+	
+@not_last_arg:
+	clc
+	adc args_offset_arr, Y
+	sta ptr2
+	stz ptr2 + 1
+	iny
+	lda args_offset_arr, Y
+	sta ptr3
+	stz ptr3 + 1
+	cmp ptr2
+	beq @dont_move
+	bcs @move_back
+@move_forward:
+	; ptr2 > ptr3
+	lda command_length
+	sec
+	sbc ptr3
+	
+	rep #$30
+	.a16
+	.i16
+	and #$00FF
+	pha
+	
+	clc
+	adc ptr3
+	adc #output
+	tax
+	
+	pla
+	pha
+	clc
+	adc ptr2
+	adc #output
+	tay
+	
+	pla
+	mvp #$00, #$00
+	
+	lda ptr2
+	sec
+	sbc ptr3
+	clc
+	adc command_length
+	sta command_length
+	
+	sep #$30
+	.a8
+	.i8
+	rts
+
+@move_back:
+	; ptr3 > ptr2
+	lda command_length
+	sec
+	sbc ptr3
+	
+	rep #$30
+	.a16
+	.i16
+	and #$00FF
+	pha 
+	
+	lda ptr3
+	clc
+	adc #output
+	tax
+	
+	lda ptr2
+	clc
+	adc #output
+	tay	
+	
+	pla
+	mvn #$00, #$00
+	
+	lda ptr3
+	sec
+	sbc ptr2
+	sta ptr3
+	lda command_length
+	sec
+	sbc ptr3
+	sta command_length
+	
+	sep #$30
+	.a8
+	.i8
+@dont_move:
+	rts
+	
+	
 narg_not_0_amp:
 	jsr check_special_cmds
 	beq :+
@@ -549,13 +734,18 @@ cmd_cmp:
 	sta ptr2
 	stx ptr2 + 1
 	
+	lda #<output
+	sta ptr3
+	lda #>output
+	sta ptr3 + 1
+strcmp:		
 	ldy #0
 	:
 	sec
 	lda (ptr2), Y
-	sbc output, Y
+	sbc (ptr3), Y
 	bne @ex ; unequal
-	lda output, Y
+	lda (ptr3), Y
 	beq @ex ; equal
 	iny
 	bra :-
