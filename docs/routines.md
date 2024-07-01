@@ -217,7 +217,9 @@ Return values:
 - Lowers process priority until routine is over (existing priority is restored)
 
 Return values:
-- Returns process return value in .A
+- If process .A was alive when wait_process was first called, returns process return value in .A and 0 in .X
+- Otherwise returns $FF in .X
+  
 
 ---
 
