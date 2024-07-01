@@ -195,12 +195,17 @@ get_user_cmd:
 	
 	; if a special char not one of the ones above, ignore ;
 	pha
-	and #$7F
 	cmp #$20
-	bcs :+
+	bcc @inv_chr
+	cmp #$7F
+	bcc @val_chr
+	cmp #$A1
+	bcs @val_chr
+	
+@inv_chr:	
 	pla
 	jmp @input_loop
-	:
+@val_chr:
 	pla
 	
 	jsr CHROUT
