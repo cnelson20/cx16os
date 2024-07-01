@@ -497,6 +497,18 @@ wait_process:
 	save_p_816_8bitmode
 	sta KZE0
 	
+	jsr get_process_info
+	cmp #0
+	bne :+
+	
+	lda #0
+	ldx #$FF ; process not alive
+	restore_p_816
+	rts
+	
+	:
+	sta KZE2
+	
 	; save priority and set to zero ;
 	ldx current_program_id
 	lda process_priority_table, X
@@ -505,12 +517,13 @@ wait_process:
 	sta process_priority_table, X
 	
 @wait_loop:
+	jsr surrender_process_time
+	
 	lda KZE0
 	jsr get_process_info
 	cmp #0
 	beq @end
 	
-	jsr surrender_process_time
 	jmp @wait_loop
 @end:
 	stx KZE0
@@ -519,7 +532,12 @@ wait_process:
 	ldx current_program_id
 	sta process_priority_table, X
 	
-	lda KZE0
+	lda #$00
+	ldx KZE2
+	jsr get_process_info
+	
+	txa
+	ldx #$00
 	restore_p_816
 	rts
 
