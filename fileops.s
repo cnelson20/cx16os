@@ -779,8 +779,13 @@ close_file_kernal:
 	jmp @close_file_exit
 	:
 	lda #$FF
+	cpy #2
+	bcs :+
+	tya
+	:
 	sta PV_OPEN_TABLE, Y
-	cpx #$2
+
+	cpx #2
 	bcc @close_file_exit ; if stdin/stdout, don't actually need to CLOSE file
 	
 	lda #1
@@ -1138,6 +1143,83 @@ write_stdout:
 	bne @loop
 	inc KZES4 + 1
 	bra @loop
+
+;
+; move_fd
+;
+; moves the internal file associated with an fd to another fd from the same process
+; .A -> .X
+;
+; returns 0 on success, non-zero on failure
+;
+.export move_fd
+move_fd:
+	save_p_816_8bitmode
+
+	cmp #PV_OPEN_TABLE_SIZE
+	bcs @return_failure
+	cpx #PV_OPEN_TABLE_SIZE
+	bcs @return_failure
+
+	sta KZE0
+	stx KZE1
+	inc RAM_BANK
+
+	ldy KZE0
+	lda PV_OPEN_TABLE, Y
+	cmp #$FF
+	beq @return_failure
+	ldx KZE0
+	lda PV_OPEN_TABLE, Y
+
+	dec RAM_BANK
+	cmp #$FF
+	beq @dont_need_close ; don't need close
+
+	; close file ;
+	ldx KZE0
+	inc RAM_BANK
+	lda PV_OPEN_TABLE, X
+	pha
+	lda #$FF
+	sta PV_OPEN_TABLE, X
+	dec RAM_BANK
+	lda KZE1
+	pha
+
+	jsr close_file_kernal
+
+	ply
+	pla
+	inc RAM_BANK
+	bra :+
+
+@dont_need_close:
+	ldx KZE0
+	ldy KZE1
+	inc RAM_BANK
+	lda PV_OPEN_TABLE, X
+	pha
+	lda #$FF
+	sta PV_OPEN_TABLE, X
+	pla
+	:
+	sta PV_OPEN_TABLE, Y
+
+	dec RAM_BANK
+
+@return_success:
+	lda #0
+	restore_p_816
+	rts
+@return_failure:
+	lda RAM_BANK
+	and #$FE
+	sta RAM_BANK
+
+	lda #1
+	restore_p_816
+	rts
 
 ;
 ; returns a fd to the dir listing

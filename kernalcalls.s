@@ -14,7 +14,7 @@
 .import kill_process_kernal
 .import is_valid_process
 
-.import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, load_dir_listing_extmem_ext
+.import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, load_dir_listing_extmem_ext, move_fd
 .import get_pwd_ext, chdir_ext, unlink_ext, rename_ext, copy_file_ext, mkdir_ext, rmdir_ext
 
 .import res_extmem_bank, set_extmem_rbank, set_extmem_wbank, set_extmem_rptr, set_extmem_wptr
@@ -88,6 +88,7 @@ call_table:
 	jmp lock_vera_regs ; $9D93
 	jmp unlock_vera_regs ; $9D96
 	jmp bin_bcd16_ext ; $9D99
+	jmp move_fd ; $9DAC
 	.res 3, $FF
 .export call_table_end
 call_table_end:

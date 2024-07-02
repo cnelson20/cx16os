@@ -33,6 +33,7 @@ write_file := $9D27
 load_dir_listing_extmem := $9D2A
 get_pwd := $9D2D
 chdir := $9D30
+move_fd = $9D9C
 
 ;
 ; Extmem routines ;
