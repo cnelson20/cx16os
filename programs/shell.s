@@ -39,8 +39,15 @@ init:
 new_line:
 	; close these files in case got through
 	lda exit_after_exec
-	beq :+
+	beq :++
+	lda stay_open_file_out
+	bne :+
 	jmp exit_shell
+	:
+	lda #0
+	jsr close_file
+	stz exit_after_exec
+	stz stay_open_file_out
 	:
 
 	lda new_stdin_fileno
@@ -90,11 +97,15 @@ wait_for_input:
 	txy
 	plx
 	cpy #0 ; check for end of input
-	beq :+
+	beq @not_end_of_file_input
 	lda #1
 	sta exit_after_exec
-	lda #$0D ; if eof has been reached, exec what's in buffer
+	cpx #0 ; is buffer empty?
+	bne :+
+	jmp new_line
 	:
+	lda #$0D ; if eof has been reached, exec what's in buffer (unless buffer is empty)
+@not_end_of_file_input:
 	cmp #0
 	beq wait_for_input
 
@@ -462,8 +473,6 @@ parse_env_var:
 @found:
 	phx
 
-	stp
-
 	ldy curr_arg
 	lda args_offset_arr, Y
 	inc A
@@ -484,8 +493,6 @@ parse_env_var:
 	ldy #0
 	cmp #0
 	bne @cont_search_loop
-
-	stp
 
 	lda #$80
 	sta ptr2
@@ -817,7 +824,18 @@ check_special_cmds:
 	lda #0
 	jmp exit_shell
 @not_exit:
-	
+
+	lda #<string_source
+	ldx #>string_source
+	jsr cmd_cmp
+	bne @not_source
+
+	jsr open_shell_file
+
+	lda #1
+	rts
+@not_source:
+
 	lda #0
 	rts
 
@@ -966,6 +984,75 @@ set_env_var:
 
 	rts
 
+open_shell_file:
+	stp
+
+	lda num_args
+	cmp #2
+	bcs :+
+
+	lda #<source_err_string
+	ldx #>source_err_string
+	jmp print_str ; print and return
+	:
+
+	ldy #1
+	lda args_offset_arr, Y
+	clc
+	adc #<output
+	pha
+	lda #>output
+	adc #0
+	tax
+	pla
+
+	ldy #0
+	pha
+	phx
+	jsr open_file
+	cmp #$FF
+	beq @open_error
+
+	ldx #0 ; move to stdin
+	jsr move_fd
+	ldx #$FF
+	cmp #0
+	bne @open_error
+
+	plx
+	plx ; pull two bytes off stack (pha & phx)
+
+	lda #1
+	sta stay_open_file_out
+	rts
+
+@open_error:
+	stx ptr2
+
+	lda #<open_error_p1
+	ldx #>open_error_p1
+	jsr print_str
+
+	plx
+	pla
+	jsr print_str
+
+	lda #<open_error_p2
+	ldx #>open_error_p2
+	jsr print_str
+
+	lda #'$'
+	jsr CHROUT
+	lda ptr2
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+
+	lda #$d
+	jmp CHROUT
+	
+
 ;
 ; Error & intro messages
 ;
@@ -977,6 +1064,10 @@ exec_error_p1_message:
 exec_error_p2_message:
 	.byte "'"
 	.byte $0d, $00
+
+source_err_string:
+	.byte "source: filename argument required"
+	.byte $d, 0
 
 set_env_err_string:
 	.byte "setenv: need name and value argument"
@@ -998,6 +1089,8 @@ string_exit:
 	.asciiz "exit"
 string_setenv:
 	.asciiz "setenv"
+string_source:
+	.asciiz "source"
 
 ; program vars 
 
@@ -1021,7 +1114,10 @@ command_length:
 	.byte 0
 curr_arg:
 	.byte 0
+
 exit_after_exec:
+	.byte 0
+stay_open_file_out:
 	.byte 0
 
 args_offset_arr:
