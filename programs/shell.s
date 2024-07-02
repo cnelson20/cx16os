@@ -40,14 +40,14 @@ new_line:
 	; close these files in case got through
 	lda exit_after_exec
 	beq :++
-	lda stay_open_file_out
+	lda curr_running_script
 	bne :+
 	jmp exit_shell
 	:
 	lda #0
 	jsr close_file
 	stz exit_after_exec
-	stz stay_open_file_out
+	stz curr_running_script
 	:
 
 	lda new_stdin_fileno
@@ -985,7 +985,13 @@ set_env_var:
 	rts
 
 open_shell_file:
-	stp
+	lda curr_running_script
+	beq :+
+	lda #<source_inception_str
+	ldx #>source_inception_str
+	jsr print_str
+	rts
+	:
 
 	lda num_args
 	cmp #2
@@ -1023,7 +1029,7 @@ open_shell_file:
 	plx ; pull two bytes off stack (pha & phx)
 
 	lda #1
-	sta stay_open_file_out
+	sta curr_running_script
 	rts
 
 @open_error:
@@ -1067,6 +1073,9 @@ exec_error_p2_message:
 
 source_err_string:
 	.byte "source: filename argument required"
+	.byte $d, 0
+source_inception_str:
+	.byte "source: no sourception allowed"
 	.byte $d, 0
 
 set_env_err_string:
@@ -1117,7 +1126,7 @@ curr_arg:
 
 exit_after_exec:
 	.byte 0
-stay_open_file_out:
+curr_running_script:
 	.byte 0
 
 args_offset_arr:
