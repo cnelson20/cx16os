@@ -429,35 +429,116 @@ parse_env_var:
 	sta output, Y	
 	rts
 @not_q_mark:
-	lda #<editor_str
-	sta ptr3
-	lda #>editor_str
-	sta ptr3 + 1
-	jsr strcmp
-	bne @not_editor_str
-	
-	lda #3
+	; look in extmem for env vars
+
+	lda env_extmem_bank ; is the bank initialized?
+	bne :+
+	jmp @out_slots
+	:
+
+	lda #<$A000
+	sta ptr2
+	lda #>$A000
+	sta ptr2 + 1
+
+	lda env_extmem_bank
+	jsr set_extmem_rbank
+	lda #<ptr2
+	jsr set_extmem_rptr
+
+	ldy #0
+	ldx #$20
+@search_loop:
+	jsr readf_byte_extmem_y
+	cmp #0
+	bne @found
+
+@cont_search_loop:
+	inc ptr2 + 1
+	dex
+	bne @search_loop
+	jmp @out_slots
+
+@found:
+	phx
+
+	stp
+
+	ldy curr_arg
+	lda args_offset_arr, Y
+	inc A
+	tax
+	ldy #0
+	:
+	jsr readf_byte_extmem_y
+	cmp output, X
+	bne :+
+	lda output, X
+	beq :+
+	iny
+	inx
+	bpl :-
+	lda #1 ; always unequal if > $7F (shouldn't happen)
+	:
+	plx
+	ldy #0
+	cmp #0
+	bne @cont_search_loop
+
+	stp
+
+	lda #$80
+	sta ptr2
+
+	ldy #0
+	:
+	jsr readf_byte_extmem_y
+	cmp #0
+	beq :+
+	iny
+	bpl :-
+	:
+	iny
+
+	lda ptr2 + 1
+	pha
+
+	tya
+	jsr shift_output
+
+	lda #$80
+	sta ptr2
+	pla
+	sta ptr2 + 1
+
+	ldy curr_arg
+	lda args_offset_arr, Y
+	tax
+	ldy #0
+	:
+	jsr readf_byte_extmem_y
+	sta output, X
+	cmp #0
+	beq :+
+	inx
+	iny
+	bne :-
+	:
+
+	rts
+@out_slots:
+	; replace $whatever with empty string
+	lda #1
 	jsr shift_output
 	ldy curr_arg
 	lda args_offset_arr, Y
 	tay
-	lda #'e'
-	sta output, Y
-	iny
-	lda #'d'
-	sta output, Y
-	iny
 	lda #0
 	sta output, Y
 	rts
 	
-@not_editor_str:	
-	rts
-	
 question_str:
 	.asciiz "?"
-editor_str:
-	.asciiz "EDITOR"
 
 shift_output:
 	ldy curr_arg
@@ -699,7 +780,7 @@ check_special_cmds:
 	lda #<string_cd
 	ldx #>string_cd
 	jsr cmd_cmp
-	bne :+
+	bne @not_cd
 	
 	ldx #1
 	lda args_offset_arr, X
@@ -715,17 +796,27 @@ check_special_cmds:
 	
 	lda #1
 	rts
-	:
+@not_cd:
+
+	lda #<string_setenv
+	ldx #>string_setenv
+	jsr cmd_cmp
+	bne @not_setenv
+
+	jsr set_env_var
+
+	lda #1
+	rts
+@not_setenv:
 
 	lda #<string_exit
 	ldx #>string_exit
 	jsr cmd_cmp
-	bne :+
+	bne @not_exit
 
 	lda #0
 	jmp exit_shell
-
-	:
+@not_exit:
 	
 	lda #0
 	rts
@@ -763,6 +854,118 @@ exit_shell:
 	lda ptr0
 	rts
 
+set_env_var:
+	lda num_args
+	cmp #3 ; setenv [name] [value]
+	beq :+
+
+	lda #<set_env_err_string
+	ldx #>set_env_err_string
+	jsr print_str
+	rts
+
+	:
+
+	lda env_extmem_bank
+	bne @already_have_bank
+	jsr res_extmem_bank
+	sta env_extmem_bank
+
+	lda env_extmem_bank
+	jsr set_extmem_wbank
+
+	lda #<ptr2
+	jsr set_extmem_wptr
+
+	lda #<$A000
+	sta ptr2
+	lda #>$A000
+	sta ptr2 + 1
+	lda #0
+	ldx #$20
+	ldy #0
+	:
+	jsr writef_byte_extmem_y
+	inc ptr2 + 1
+	dex
+	bne :- ; zero out $A000, $A100, $A200 ...
+@already_have_bank:
+	lda env_extmem_bank
+	jsr set_extmem_rbank
+
+	lda #<ptr2
+	jsr set_extmem_rptr
+
+	lda #<$A000
+	sta ptr2
+	lda #>$A000
+	sta ptr2 + 1
+	ldx #$20
+	:
+	jsr readf_byte_extmem_y
+	cmp #0
+	beq @found_space
+	inc ptr2 + 1
+	dex
+	bne :-
+
+	lda #<set_env_out_space
+	ldx #>set_env_out_space
+	jsr print_str
+	rts
+
+@found_space:
+	lda env_extmem_bank
+	jsr set_extmem_wbank
+
+	lda #<ptr2
+	jsr set_extmem_wptr
+
+	; write name to extmem
+	ldy #1
+	lda args_offset_arr, Y
+	clc
+	adc #<output
+	sta ptr3
+	lda #>output
+	adc #0
+	sta ptr3 + 1
+
+	ldy #0
+	:
+	lda (ptr3), Y
+	jsr writef_byte_extmem_y
+	cmp #0
+	beq :+
+	iny
+	bpl :-
+	:
+
+	; write value to extmem
+	lda #$80
+	sta ptr2
+
+	ldy #2
+	lda args_offset_arr, Y
+	clc
+	adc #<output
+	sta ptr3
+	lda #>output
+	adc #0
+	sta ptr3 + 1
+
+	ldy #0
+	:
+	lda (ptr3), Y
+	jsr writef_byte_extmem_y
+	cmp #0
+	beq :+
+	iny
+	bpl :-
+	:
+
+	rts
+
 ;
 ; Error & intro messages
 ;
@@ -775,6 +978,13 @@ exec_error_p2_message:
 	.byte "'"
 	.byte $0d, $00
 
+set_env_err_string:
+	.byte "setenv: need name and value argument"
+	.byte $d, 0
+set_env_out_space:
+	.byte "setenv: no memory left for variables"
+	.byte $d, 0
+
 open_error_p1:
 	.asciiz "Error opening file '"
 
@@ -786,6 +996,8 @@ string_cd:
 	.asciiz "cd"
 string_exit:
 	.asciiz "exit"
+string_setenv:
+	.asciiz "setenv"
 
 ; program vars 
 
@@ -794,6 +1006,8 @@ in_quotes:
 do_wait_child:
 	.byte 0
 last_return_val:
+	.byte 0
+env_extmem_bank:
 	.byte 0
 num_args:
 	.byte 0
