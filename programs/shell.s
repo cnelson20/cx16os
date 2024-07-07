@@ -48,6 +48,7 @@ new_line:
 	jsr close_file
 	stz exit_after_exec
 	stz curr_running_script
+	jmp skip_print_prompt
 	:
 
 	lda new_stdin_fileno
@@ -84,6 +85,8 @@ new_line:
 	jsr CHROUT
 	lda #LEFT_CURSOR
 	jsr CHROUT
+
+skip_print_prompt:
 
 	lda #0
 	jsr send_byte_chrout_hook
@@ -875,8 +878,13 @@ exit_shell:
 set_env_var:
 	lda num_args
 	cmp #3 ; setenv [name] [value]
-	beq :+
+	bcc @too_few_args
 
+	ldy args_offset_arr + 1
+	lda output, Y
+	bne :+ ; Not empty string
+
+@too_few_args:
 	lda #<set_env_err_string
 	ldx #>set_env_err_string
 	jsr print_str
@@ -919,13 +927,30 @@ set_env_var:
 	lda #>$A000
 	sta ptr2 + 1
 	ldx #$20
-	:
+	ldy #0
+@find_space_loop:
 	jsr readf_byte_extmem_y
 	cmp #0
 	beq @found_space
+
+	; compare name to this entry in tbl
+	; .Y = 0 already
+	ldx args_offset_arr + 1
+	:
+	jsr readf_byte_extmem_y
+	cmp output, X
+	bne :+ ; branch out if unequal
+	lda output, X
+	beq :+ ; branch out if end of string (equal)
+	inx
+	iny
+	bra :-
+	:
+	beq @found_space
+
 	inc ptr2 + 1
 	dex
-	bne :-
+	bne @find_space_loop
 
 	lda #<set_env_out_space
 	ldx #>set_env_out_space
@@ -940,8 +965,7 @@ set_env_var:
 	jsr set_extmem_wptr
 
 	; write name to extmem
-	ldy #1
-	lda args_offset_arr, Y
+	lda args_offset_arr + 1
 	clc
 	adc #<output
 	sta ptr3
@@ -963,8 +987,7 @@ set_env_var:
 	lda #$80
 	sta ptr2
 
-	ldy #2
-	lda args_offset_arr, Y
+	lda args_offset_arr + 2
 	clc
 	adc #<output
 	sta ptr3
