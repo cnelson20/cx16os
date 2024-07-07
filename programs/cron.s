@@ -152,9 +152,9 @@ parse_line:
 	dey
 	bpl :-
 
-	lda #0
-	ldy #7 ; 127 - 120
-	jsr writef_byte_extmem_y
+	;lda #0
+	;ldy #7 ; 127 - 120
+	;jsr writef_byte_extmem_y
 	
 	; copy command to extmem ;
 	lda #128
@@ -226,15 +226,21 @@ end_parse_line:
 	; done parsing lines ;
 done_populating_entries:
 	; now we want to go through each entry, find the next one that can be executed
-	stp
+	lda #4
+	jsr set_own_priority
+
 	jsr get_time
 find_next_process_loop:
+	;stp
 	rep #$10
 	; r0 + 1 contains month (1 - 12)
 	; r1 contains the day (1-31)
 	; r1 + 1 contains the hour (0 - 23)
 	; r2 contains the minute (0 - 59)
 	; r3 + 1 contains the weekday (0 - 6)
+
+	lda r2 ; minutes
+	sta @store_minute
 
 	lda entry_count
 	sta ptr1
@@ -295,7 +301,7 @@ find_next_process_loop:
 	ldx r1 ; day of month
 	ldy #24 * 2
 	jsr check_interval
-	beq @exec_program
+	bne @exec_program
 	
 	lda field_list_lens + 4
 	ldx r3 + 1 ; day of week
@@ -305,16 +311,9 @@ find_next_process_loop:
 	jmp @not_yet_time
 	:
 @exec_program:
-
-	ldy #127
-	jsr readf_byte_extmem_y
-	cmp #0
-	beq :+
-	jmp @already_execd
-	:
-
 	ldy #128
 	ldx #0
+
 @copy_loop:
 	jsr readf_byte_extmem_y
 	cmp #$00
@@ -359,15 +358,7 @@ find_next_process_loop:
 	stz r2 + 1
 	jsr exec
 
-@already_execd:
-	lda #1
-	bra :+
 @not_yet_time:
-	lda #0
-	:
-	ldy #127
-	jsr writef_byte_extmem_y
-
 	dec ptr1
 	beq @end_check_loop
 
@@ -391,15 +382,15 @@ find_next_process_loop:
 	jmp @check_loop
 @end_check_loop:
 	jsr surrender_process_time
-	lda r2
-	pha
 	jsr get_time
-	pla
+	lda @store_minute
 	cmp r2
 	beq @end_check_loop
 	jmp find_next_process_loop
 
 @extmem_bank_index_using:
+	.byte 0
+@store_minute:
 	.byte 0
 
 check_interval:
