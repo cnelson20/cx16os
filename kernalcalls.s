@@ -88,7 +88,8 @@ call_table:
 	jmp lock_vera_regs ; $9D93
 	jmp unlock_vera_regs ; $9D96
 	jmp bin_bcd16_ext ; $9D99
-	jmp move_fd ; $9DAC
+	jmp move_fd ; $9D9C
+	jmp get_time ; $9D9F
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -577,3 +578,14 @@ surrender_process_time_extwrapper:
 	ply
 	plx
 	rts
+
+;
+; get_time: wrapper for kernal routine
+;
+get_time:
+	save_p_816_8bitmode
+	jsr clock_get_date_time
+	dec r3 + 1
+	restore_p_816
+	rts
+

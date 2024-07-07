@@ -31,6 +31,7 @@ MEMTOP = $FF99
 enter_basic := $FF47
 memory_fill := $FEE4
 memory_copy := $FEE7
+clock_get_date_time := $FF50
 
 r0 := $02
 r1 := $04
