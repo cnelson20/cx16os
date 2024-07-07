@@ -29,6 +29,7 @@ build: os.prg programs
 	cp words.txt mnt/
 	cp ipsum.txt mnt/
 	cp script.txt mnt/
+	cp cron.d mnt/
 
 sd: build
 ifeq ($(OS),Windows_NT)
