@@ -29,10 +29,99 @@ GT = $3E
 LT = $3C
 
 init:
+	jsr get_args
+	sta ptr0
+	stx ptr0 + 1
+	sty argc
+prog_args_loop:
+	jsr get_next_arg
+	cmp #0
+	beq :+
+	jmp welcome
+	:
+
+	lda (ptr0)
+	cmp #'-'
+	bne prog_args_error
+
+	ldy #1
+	lda (ptr0), Y
+	cmp #'s'
+	bne :+
+	stz print_startup_msg_flag
+	bra prog_args_loop
+	:
+	cmp #'c'
+	bne :+
+	jsr get_next_arg
+	cmp #0
+	bne prog_no_args_error
+	lda ptr0
+	sta first_command_addr
+	lda ptr0 + 1
+	sta first_command_addr + 1
+	stz print_startup_msg_flag
+	bra prog_args_loop
+	:
+
+	jmp prog_args_loop
+prog_no_args_error:
+	rep #$20
+	dec ptr0
+	sep #$20
+	:
+	lda (ptr0)
+	bne :+
+	rep #$20
+	dec ptr0
+	sep #$20
+	bra :-
+	:
+	lda (ptr0)
+	beq :+
+	rep #$20
+	dec ptr0
+	sep #$20
+	bra :-
+	:
+	rep #$20
+	inc ptr0
+	sep #$20
+	lda #<no_prog_args_error_str
+	ldx #>no_prog_args_error_str
+	jsr print_str
+prog_args_error:
+	lda #<prog_args_error_str
+	ldx #>prog_args_error_str
+	jsr print_str
+
+	lda #'''
+	jsr CHROUT
+	
+	lda ptr0
+	ldx ptr0 + 1
+	jsr print_str
+
+	lda #'''
+	jsr CHROUT
+	lda #$d
+	jsr CHROUT
+
+	lda #0
+	rts
+no_prog_args_error_str:
+	.asciiz "no command provided: "
+prog_args_error_str:
+	.asciiz "invalid argument"
+
+welcome:
+	lda print_startup_msg_flag
+	beq :+
 	lda #<welcome_string
 	ldx #>welcome_string
 	jsr print_str
-	
+	:
+
 	stz new_stdin_fileno
 	stz new_stdout_fileno
 	
@@ -50,6 +139,9 @@ new_line:
 	stz curr_running_script
 	jmp skip_print_prompt
 	:
+
+	lda first_command_addr + 1
+	bne skip_print_prompt
 
 	lda new_stdin_fileno
 	beq :+
@@ -87,7 +179,24 @@ new_line:
 	jsr CHROUT
 
 skip_print_prompt:
-
+	lda first_command_addr + 1
+	beq @not_auto_command
+	
+	sta ptr0 + 1
+	lda first_command_addr
+	sta ptr0
+	ldy #0
+	:
+	lda (ptr0), Y
+	sta input, Y
+	beq :+
+	iny
+	bra :-
+	:
+	lda #1
+	sta exit_after_exec
+	jmp not_empty_line
+@not_auto_command:
 	lda #0
 	jsr send_byte_chrout_hook
 
@@ -1081,6 +1190,38 @@ open_shell_file:
 	lda #$d
 	jmp CHROUT
 	
+get_next_arg:
+	dec argc
+	bne :+
+	lda #$FF ; out of args
+	rts
+	:
+
+	ldy #0
+	:
+	lda (ptr0), Y
+	beq :+
+	iny
+	bra :-
+	: ; \0 found
+	
+	:
+	lda (ptr0), Y
+	bne :+
+	iny
+	bra :-
+	:
+	
+	tya
+	clc
+	adc ptr0
+	sta ptr0
+	lda ptr0 + 1
+	adc #0
+	sta ptr0 + 1
+	
+	lda #0
+	rts
 
 ;
 ; Error & intro messages
@@ -1150,6 +1291,12 @@ curr_arg:
 exit_after_exec:
 	.byte 0
 curr_running_script:
+	.byte 0
+print_startup_msg_flag:
+	.byte 1
+first_command_addr:
+	.word 0
+argc:
 	.byte 0
 
 args_offset_arr:
