@@ -311,45 +311,30 @@ find_next_process_loop:
 	jmp @not_yet_time
 	:
 @exec_program:
-	ldy #128
+	
 	ldx #0
-
-@copy_loop:
+	:
+	lda shell_str, X
+	sta line_buff, X
+	inx
+	cpx #SHELL_STR_SIZE
+	bcc :-
+	
+	ldy #128
+	:
 	jsr readf_byte_extmem_y
-	cmp #$00
-	beq @end_copy_loop
-	cmp #$20
+	cmp #0
 	beq :+
 	sta line_buff, X
 	iny
 	inx
-	bra @copy_loop
+	cpx #$80 - 1
+	bcc :-
 	:
-	stz line_buff, X
-	inx
-	:
-	iny
-	jsr readf_byte_extmem_y
-	cmp #$00
-	beq :+
-	cmp #$20
-	beq :-
-	jmp @copy_loop
-	:
-	dex
-@end_copy_loop:
 	stz line_buff, X
 
 	; count args ;
-	ldy #0
-	:
-	lda line_buff, X
-	bne :+
-	iny
-	:
-	dex
-	bpl :--
-
+	ldy #3
 	lda #<line_buff
 	ldx #>line_buff
 
@@ -738,6 +723,11 @@ error_msg_p2:
 
 no_filename_err_str:
 	.byte "cron: missing crontab file to open", $d, 0
+
+shell_str:
+	.asciiz "shell"
+	.asciiz "-c"
+SHELL_STR_SIZE = * - shell_str 
 
 buff_offset:
 	.byte 0
