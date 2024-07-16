@@ -126,7 +126,9 @@ file_print_loop:
 	sta bytes_read
 	
 	cpy #0
-	bne file_error_read
+	beq :+
+	jmp file_out_bytes
+	:
 	stz read_again
 	
 	cmp #128
@@ -160,7 +162,6 @@ file_error:
 	stx err_num
 
 @dont_need_close:
-	
 	lda #<error_msg
 	ldx #>error_msg
 	jsr PRINT_STR
@@ -354,7 +355,9 @@ bytes_read:
 	.byte 0
 read_again:
 	.byte 0
-	
+out_bytes:
+	.byte 0
+
 extmem_bank:
 	.byte 0	
 error_msg:
