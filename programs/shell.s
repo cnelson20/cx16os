@@ -114,6 +114,9 @@ no_prog_args_error_str:
 prog_args_error_str:
 	.asciiz "invalid argument"
 
+shrc_filename:
+	.asciiz ".shrc"
+
 welcome:
 	lda print_startup_msg_flag
 	beq :+
@@ -124,7 +127,24 @@ welcome:
 
 	stz new_stdin_fileno
 	stz new_stdout_fileno
-	
+
+	lda curr_running_script
+	bne new_line
+
+	; open .shrc ? ;
+	ldy #0
+	lda #<shrc_filename
+	ldx #>shrc_filename
+	jsr open_file
+	cmp #$FF
+	beq new_line ; not successfully opened, that's fine
+
+	ldx #0 ; move to stdin
+	jsr move_fd
+
+	lda #1
+	sta curr_running_script
+
 new_line:
 	; close these files in case got through
 	lda exit_after_exec
@@ -137,10 +157,11 @@ new_line:
 	jsr close_file
 	stz exit_after_exec
 	stz curr_running_script
-	jmp skip_print_prompt
 	:
 
 	lda first_command_addr + 1
+	bne skip_print_prompt
+	lda curr_running_script
 	bne skip_print_prompt
 
 	lda new_stdin_fileno
@@ -244,6 +265,12 @@ char_entered:
 	sta input, X
 	inx
 	
+	pha
+	lda curr_running_script
+	cmp #1
+	pla
+	bcs :+
+
 	jsr CHROUT
 	
 	lda #UNDERSCORE
@@ -254,7 +281,8 @@ char_entered:
 	phx
 	jsr send_byte_chrout_hook
 	plx
-	
+
+	:	
 	jmp wait_for_input
 	
 backspace:
@@ -281,11 +309,15 @@ backspace_not_empty:
 	jmp wait_for_input
 
 command_entered:
+	lda curr_running_script
+	bne :+
+
 	lda #$20
 	jsr CHROUT
 	lda #$0d
 	jsr CHROUT
 	
+	:
 	stz in_quotes
 	stz input, X	
 	cpx #0
