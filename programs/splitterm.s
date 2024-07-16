@@ -383,6 +383,14 @@ write_line_screen:
     ldx temp_term_x_offset
 @buff_loop:
     jsr readf_byte_extmem_y
+
+    cmp #$20
+    bcc :+
+    cmp #$7F
+    bcs :+
+    jmp @draw_char
+    :
+
 @skip_read_byte:
     cmp #$d ; newline
     bne @not_newline
@@ -425,8 +433,12 @@ write_line_screen:
     cmp #$93 ; clear screen
     bne @not_clr_screen
 
+    phy
     jsr clear_whole_term
+    ply
     lda temp_term_base_y
+    clc
+    adc #$B0
     sta vera_addrh
     lda temp_term_base_x
     asl A
@@ -437,18 +449,18 @@ write_line_screen:
     stx temp_term_y_offset
     jmp @dont_draw_char
 @not_clr_screen:
-    ;cmp #1 ; SWAP_COLORS
-    ;bne :+
-    ;lda temp_term_color
-    ;asl  A
-    ;adc  #$80
-    ;rol  A
-    ;asl  A
-    ;adc  #$80
-    ;rol  A ; swap nybbles
-    ;sta temp_term_color
-    ;jmp @dont_draw_char
-    ;:
+    cmp #1 ; SWAP_COLORS
+    bne :+
+    lda temp_term_color
+    asl  A
+    adc  #$80
+    rol  A
+    asl  A
+    adc  #$80
+    rol  A ; swap nybbles
+    sta temp_term_color
+    jmp @dont_draw_char
+    :
     cmp #5 ; WHITE
     bne :+
     lda #COLOR_WHITE
@@ -470,11 +482,8 @@ write_line_screen:
     jmp @set_term_color
     :
 
-    cmp #$20
-    bcc @dont_draw_char
-    cmp #$7F
-    bcs @dont_draw_char
-
+    jmp @dont_draw_char
+@draw_char:
     sta vera_data0
     lda temp_term_color
     sta vera_data0
