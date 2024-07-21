@@ -20,7 +20,7 @@ The general hooks are FIFO buffers used for program-defined communications
 
 ### buffer information pointers:
 
-- 4 bytes
+Buffer information pointers hold 4 bytes of information about a hook's FIFO ringbuffer:
 
 | Bytes 0-1 | Bytes 2-3 |
 |-|-|
