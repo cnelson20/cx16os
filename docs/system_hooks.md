@@ -11,14 +11,39 @@ It is setup / released with different calls than the general hooks, and can be s
 
 The VERA hook is a way for a process to gain exclusive access to VERA registers. the address and addrsel registers will be preserved when context-switching. It has no associated buffer.
 
+### General hooks
+
+The general hooks are FIFO buffers used for program-defined communications
+
 ### hook ringbuffers
-- $1000 bytes, either or process memory or (recommended) extmem
+- $1000 bytes, either or process memory or extmem
 
 ### buffer information pointers:
 
 - 4 bytes
-- First 2 bytes (start_offset) are an offset into the ringbuffer where the first characters to work with are
-- Last 2 bytes (end_offset) are an offset into the ringbuffer where the last character is at (offset - 1)
+
+| Bytes 0-1 | Bytes 2-3 |
+|-|-|
+| start_offset | end_offset |
+
+- First 2 bytes (start_offset) is the offset of the first character that is part of a message not yet indicated as received
+- Last 2 bytes (end_offset) is the offset of the first non-message byte in the ringbuffer (the last byte of a message is at offset - 1)
+
+### CHROUT hook message format
+
+###
+
+| Byte 0 | Byte 1 |
+|---------|---------------|
+| char printed | printer PID |
+
+### general hook message format
+
+###
+
+| Byte 0 | Byte 1 | Bytes 2-255 |
+|---------|--------|-------|
+| sender pid | message body length | message body |
 
 ---
 
@@ -54,7 +79,7 @@ Arguments:
 - .A holds the hook # to setup
 - .X holds the bank to hold the hook's data ringbuffer
 - r0 holds the address of the same data ringbuffer
-- r1 holds the address where to hold the hook's buffer information in the calling process' bank (see [above](#buffer-information-pointers)
+- r1 holds the address where to hold the hook's buffer information in the calling process' bank (see [above](#buffer-information-pointers))
 
 Sets up general hook # .A based on the provided arguments  
 Returns size of buffer in .AX, 0 on failure (hook already in use)
