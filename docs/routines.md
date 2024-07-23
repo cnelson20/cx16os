@@ -89,7 +89,7 @@ Return values:
 - Returns info about process with pid .A if .A != 0
 
 Return values (if .A != 0):
-- .A = whether process is alive or dead (!= 0 -> alive)
+- .A = 0 if the process is not alive, otherwise its instance id
 - .Y = (if .A != 0) process's priority, how much time it gets to run
 - r0.L = 1 if the process is the active process, 0 if not
 - r0.H = the process's ppid
