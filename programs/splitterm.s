@@ -67,8 +67,29 @@ init:
 
     ldx chrout_buff_size
     bne :+
-    rts ; hook already in use
+    rts ; CHROUT hook already in use
     :
+    
+    ldx #hook1_ringbuff
+    stx r0
+    ldx #hook1_buff_info
+    stx r1
+    lda #0
+    xba
+    lda ringbuff_bank
+    tax
+    lda #1
+    jsr setup_general_hook
+    sep #$10
+    sta hook1_buff_size
+    stx hook1_buff_size + 1
+    rep #$10
+
+    ldx hook1_buff_size
+    bne :+
+    rts ; hook 1 being used
+    :
+
 
     lda #1
     sta terms_active + 0
@@ -101,6 +122,12 @@ init:
     jsr set_own_priority
 
 print_loop:
+    ldy hook1_first_char_offset
+    cpy hook1_last_char_offset
+    beq :+
+    jsr check_hook1_messages
+    :
+
     ldy chrout_first_char_offset
     cpy chrout_last_char_offset
     bne @process_messages_in_buffer
@@ -159,6 +186,69 @@ exit_failure:
     lda #1
     rts
 
+check_hook1_messages:
+    lda ringbuff_bank
+    jsr set_extmem_rbank
+    lda #ptr0
+    jsr set_extmem_rptr
+    ldy #hook1_ringbuff
+    sty ptr0
+
+    ldy hook1_first_char_offset
+    iny
+    cpy hook1_buff_size
+    bcc :+
+    ldy #0
+    :
+    jsr readf_byte_extmem_y
+    iny
+    cpy hook1_buff_size
+    bcc :+
+    ldy #0
+    :
+
+    cmp #2 ; message length should be 2
+    bcs :+
+    jmp @dont_parse_msg
+    :
+
+    jsr readf_byte_extmem_y
+    sta @pid_switch
+    iny
+    cpy hook1_buff_size
+    bcc :+
+    ldy #0
+    :
+    jsr readf_byte_extmem_y
+    sta @term_switch
+
+    ldx @term_switch
+    lda terms_active, X
+    beq @dont_parse_msg
+
+    lda @pid_switch
+    jsr get_process_info
+    cmp #0
+    beq @dont_parse_msg
+
+    lda #0
+    xba
+    lda @pid_switch
+    lsr A
+    tax
+    lda @term_switch
+    sta prog_term_use, X
+    
+@dont_parse_msg:
+    lda #1
+    jsr mark_last_hook_message_received
+
+    rts
+@pid_switch:
+    .word 0
+@term_switch:
+    .word 0
+
 ;
 ; reset_process_term_table
 ;
@@ -178,23 +268,36 @@ reset_process_term_table:
     :
     phx
     txa
+    asl A
+    jsr get_process_info
+    plx
+    cmp #0
+    beq :+
+    sta prog_inst_ids, X
+    phx
     jsr figure_process_term
     plx
-    dex 
-    bpl :-
+    sta prog_term_use, X
+    :
+    dex
+    bpl :--
 
     plp
     rts
 
 figure_process_term:
+    bra @skip_exist_check
+@recursive:
     tax
     lda prog_term_use, X
     cmp #$FF
     beq :+
-    rts ; this is the term to use
+    ; value in .A already
+    rts
     :
-    phx
     txa
+@skip_exist_check:
+    pha
     asl A
     jsr get_process_info
     plx
@@ -206,7 +309,7 @@ figure_process_term:
     :
     phx
     lsr A
-    jsr figure_process_term
+    jsr @recursive
     plx
     sta prog_term_use, X
     rts
@@ -324,8 +427,28 @@ prog_printing:
 
 write_line_screen:
     lda prog_printing
+    asl A
+    jsr get_process_info
 
+    ldx prog_printing
+    cmp #0
+    bne :+
+
+    lda prog_inst_ids, X
+    beq :++
+
+    stz prog_inst_ids, X
+    bra @dont_find_term_use
+
+    :
+    cmp prog_inst_ids, X
+    beq @dont_find_term_use
+    :
+    sta prog_inst_ids, X
+    
+    lda prog_printing
     jsr figure_process_term
+@dont_find_term_use:
 
     ldx prog_printing
     lda prog_buff_lengths, X
@@ -581,7 +704,7 @@ clear_whole_term:
 
     lda temp_term_base_x
     sta ptr0
-    lda terms_base_y
+    lda temp_term_base_y
     sta ptr0 + 1
 
     lda temp_term_width
@@ -694,6 +817,13 @@ chrout_last_char_offset := chrout_buff_info + 2
 chrout_buff_size:
     .res 2
 
+hook1_buff_info:
+    .res 4, 0
+hook1_first_char_offset := hook1_buff_info
+hook1_last_char_offset := hook1_buff_info + 2
+hook1_buff_size:
+    .res 2
+
 ringbuff_bank:
     .byte 0
 gui_prog_bank:
@@ -705,6 +835,9 @@ prog_buff_lengths:
     .res 128, 0
 
 prog_term_use:
+    .res 128, 0
+
+prog_inst_ids:
     .res 128, 0
 
 terms_active_process:   
@@ -731,3 +864,4 @@ PROG_BUFFS_START := $A000
 PROG_BUFF_MAXSIZE = $40
 
 chrout_ringbuff := $A000
+hook1_ringbuff := $B000
