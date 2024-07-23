@@ -420,15 +420,12 @@ program_exit:
 	ldx #0
 	rts
 	:
-	; check that process being killed is not active
-	; if is, increment sp and move thru stack
-	lda active_process
-	cmp KZP0
-	bne @not_active_process
-@new_active_process:
-	tax
+	; check that process being killed is in active list
+	ldx KZP0
 	lda process_parents_table, X
-	sta active_process
+	tay
+	txa
+	jsr replace_active_processes_table
 
 @not_active_process:
 
@@ -988,15 +985,18 @@ setup_process_info:
 	; if is, add calling process to stack
 	ldx active_process
 	cpx #0
-	beq @new_active_process ; the first process is always the first active process
-	lda current_program_id
-	cmp active_process
-	bne @end_active_process_check
-	lda r0 ; if not set to be active, ignore
-	beq @end_active_process_check
-@new_active_process:
-	lda RAM_BANK ; new process' bank
+	bne :+
+	
+	lda RAM_BANK
 	sta active_process
+	sta active_processes_table + 0
+	stz active_processes_table_index
+	bra @end_active_process_check
+	
+	:
+	lda current_program_id
+	ldy RAM_BANK
+	jsr replace_active_processes_table
 	
 @end_active_process_check:	
 	; make sure r2L is a valid file no ;
@@ -1069,6 +1069,66 @@ setup_process_info:
 @end_func:
 	lda RAM_BANK
 	rts
+
+;
+; pass_active_process
+;
+; make next possible active process the active process
+;
+pass_active_process:
+	ldx active_processes_table_index
+	stx @last_index
+	inx
+@loop:
+	lda active_processes_table, X
+	inx
+	cpx #ACTIVE_PROCESSES_TABLE_SIZE
+	bcc :+
+	ldx #0
+	:
+	cpx @last_index 
+	bne @loop
+@no_active_process:
+	stz active_process
+	stz active_processes_table_index
+	rts
+
+@exit_loop:
+	sta active_process
+	stx active_processes_table_index
+	rts
+@last_index:
+	.byte 0
+
+;
+; replace_active_processes_table
+;
+; check if process in .A is in the active process table. if it is, replace it with process in .Y
+;
+replace_active_processes_table:
+	ldx #0
+@find_loop:
+	cmp active_processes_table, X
+	beq @found
+	inx
+	cpx #ACTIVE_PROCESSES_TABLE_SIZE
+	bcc @find_loop
+	rts
+@found:
+	cpy #0
+	beq @replace_pid_zero
+
+	cmp active_process
+	bne :+
+	sty active_process
+	:
+	tya
+	sta active_processes_table, X
+	rts
+@replace_pid_zero:
+	stz active_processes_table, X
+	jmp pass_active_process
+
 
 ;
 ; switch control to program in bank .A
@@ -1257,10 +1317,17 @@ PROCESS_PARENTS_SIZE = PROCESS_TABLE_SIZE
 return_table = process_parents_table + PROCESS_PARENTS_SIZE
 RETURN_TABLE_SIZE = $80
 
+.export active_processes_table
+active_processes_table := return_table + RETURN_TABLE_SIZE
+ACTIVE_PROCESSES_TABLE_SIZE = $80
+
 ; for fill operations
-END_PROCESS_TABLES = return_table + RETURN_TABLE_SIZE
+END_PROCESS_TABLES = active_processes_table + ACTIVE_PROCESSES_TABLE_SIZE
 
 ; pointer to top of above stack ;
 .export active_process
 active_process:
+	.byte 0
+.export active_processes_table_index
+active_processes_table_index:
 	.byte 0
