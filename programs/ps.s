@@ -15,15 +15,53 @@ main_loop:
 	lda loop_pid
 	jsr get_process_info
 	cmp #0
-	beq no_such_process
+	bne :+
+	jmp no_such_process
+	:
 	
+	pha
+
 	; print pid
+	lda #$20 ; space
+	jsr CHROUT
+
+	lda loop_pid
+	ldx #0
+	jsr bin_to_bcd16
+	pha
+
+	cpx #0
+	bne :+
+	lda #$20
+	jsr CHROUT
+	bra :++
+	:
+	txa
+	ora #$30
+	jsr CHROUT
+
+	:
+	pla
+	pha
+	lsr
+	lsr
+	lsr
+	lsr
+	ora #$30
+	jsr CHROUT
+
+	pla
+	and #$0F
+	ora #$30
+	jsr CHROUT
+
+	; print instance id ;
 	lda #$20 ; space
 	jsr CHROUT
 	lda #$24 ; $
 	jsr CHROUT
 	
-	lda loop_pid
+	pla
 	jsr GET_HEX_NUM
 	jsr CHROUT
 	txa
@@ -33,13 +71,42 @@ main_loop:
 	lda #$20
 	jsr CHROUT
 	jsr CHROUT
-	lda #$24 ; $
-	jsr CHROUT
 
 	lda r0H
-	jsr GET_HEX_NUM
+	ldx #0
+	jsr bin_to_bcd16
+	pha
+
+	cpx #0
+	bne :+
+	lda #$20
 	jsr CHROUT
+	bra :++
+	:
 	txa
+	ora #$30
+	jsr CHROUT
+
+	:
+	pla
+	pha
+
+	lsr
+	lsr
+	lsr
+	lsr
+	beq :+
+	ora #$30
+	jsr CHROUT
+	bra :++
+	:
+	lda #$20
+	jsr CHROUT
+	:
+
+	pla
+	and #$0F
+	ora #$30
 	jsr CHROUT
 	
 
@@ -61,13 +128,15 @@ main_loop:
 	
 no_such_process:
 	inc loop_pid
-	bne main_loop
+	beq :+
+	jmp main_loop
+	:
 	rts
 
 loop_pid:
 	.byte 0
 first_line:
-	.byte " PID PPID CMD"
+	.byte " PID IID PPID CMD"
 	.byte $0d, $00
 buffer:
 	.res 128
