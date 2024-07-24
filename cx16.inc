@@ -32,6 +32,7 @@ enter_basic := $FF47
 memory_fill := $FEE4
 memory_copy := $FEE7
 clock_get_date_time := $FF50
+kbdbuf_get_modifiers := $FEC0
 
 r0 := $02
 r1 := $04

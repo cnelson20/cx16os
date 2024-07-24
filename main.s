@@ -111,6 +111,14 @@ setup_interrupts:
 	
 	lda #custom_nmi_handler
 	sta $033c
+
+	; copy keyboard input handler ;
+	lda $032E
+	sta default_keyinput_handler
+
+	lda #custom_keyinput_handler
+	sta $032E 
+
 	accum_8_bit
 	.a8
 
@@ -161,7 +169,10 @@ irq_already_triggered:
 .export atomic_action_st
 atomic_action_st:
 	.byte 0
-	
+
+default_keyinput_handler:
+	.word 0
+
 .export nmi_queued
 nmi_queued:
 	.byte 0
@@ -282,6 +293,12 @@ irq_re_caller:
 	jmp program_exit
 	:
 
+	lda keyhandler_queue_pass_active_process
+	beq :+
+	jsr pass_active_process
+	stz keyhandler_queue_pass_active_process
+	:
+
 	; check if time up
 	jmp manage_process_time
 
@@ -376,6 +393,61 @@ nmi_re_caller:
 	ldx #RETURN_NMI
 	jsr program_exit
 	rts
+
+custom_keyinput_handler:
+	pha
+	php
+	sep #$30
+
+	pha
+	and #$7F
+	
+	cmp #$6E ; ESC
+	beq @esc_pressed_released
+
+	cmp #$10 ; TAB
+	bne :+
+	pla
+	eor #$80
+	and #$80
+	sta keyhandler_tab_pressed
+
+	bra @end_routine
+	:
+	pla
+@end_routine:
+	plp
+	pla
+	rts
+
+@esc_pressed_released:
+	pla
+	ora #$00
+	bpl :+ ; pressed
+
+	stz keyhandler_esc_pressed ; released
+	bra @end_routine
+	:
+	lda keyhandler_esc_pressed
+	beq :+
+	bra @end_routine ; already was pressed
+	:
+	lda keyhandler_tab_pressed
+	beq @end_routine
+
+	; make next possible active process active
+	lda #1
+	sta keyhandler_queue_pass_active_process
+
+	bra @end_routine
+
+keyhandler_tab_pressed:
+	.byte 0
+keyhandler_esc_pressed:
+	.byte 0
+keyhandler_queue_pass_active_process:
+	.byte 0
+
 
 program_return_handler:
 	sep #$30
@@ -1077,10 +1149,11 @@ setup_process_info:
 ;
 pass_active_process:
 	ldx active_processes_table_index
-	stx @last_index
 	inx
+	stx @last_index
 @loop:
 	lda active_processes_table, X
+	bne @exit_loop
 	inx
 	cpx #ACTIVE_PROCESSES_TABLE_SIZE
 	bcc :+
@@ -1100,12 +1173,15 @@ pass_active_process:
 @last_index:
 	.byte 0
 
+
 ;
-; replace_active_processes_table
+; in_active_processes_table
 ;
-; check if process in .A is in the active process table. if it is, replace it with process in .Y
+; checks if process in .X is in active_processes_table
+; returns .A != 0 if in table, w/ .X holding index
 ;
-replace_active_processes_table:
+.export in_active_processes_table
+in_active_processes_table:
 	ldx #0
 @find_loop:
 	cmp active_processes_table, X
@@ -1113,8 +1189,24 @@ replace_active_processes_table:
 	inx
 	cpx #ACTIVE_PROCESSES_TABLE_SIZE
 	bcc @find_loop
+	lda #0
 	rts
 @found:
+	; .A is non-zero
+	ora #$00
+	rts
+
+;
+; replace_active_processes_table
+;
+; check if process in .A is in the active process table. if it is, replace it with process in .Y
+;
+replace_active_processes_table:
+	jsr in_active_processes_table
+	bne :+
+	rts
+	:
+
 	cpy #0
 	beq @replace_pid_zero
 
@@ -1129,6 +1221,25 @@ replace_active_processes_table:
 	stz active_processes_table, X
 	jmp pass_active_process
 
+;
+; add_active_processes_table
+;
+; add process in .A to active_processes_table
+;
+.export add_active_processes_table
+add_active_processes_table:
+	tay
+	ldx #0
+	:
+	lda active_processes_table, X
+	beq :+
+	inx
+	cpx #ACTIVE_PROCESSES_TABLE_SIZE
+	bcc :-
+	:
+	tya
+	sta active_processes_table, X
+	rts
 
 ;
 ; switch control to program in bank .A
