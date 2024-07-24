@@ -1066,6 +1066,9 @@ setup_process_info:
 	bra @end_active_process_check
 	
 	:
+	lda r0 ; do we want this process to be active?
+	beq @end_active_process_check
+
 	lda current_program_id
 	ldy RAM_BANK
 	jsr replace_active_processes_table
