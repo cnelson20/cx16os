@@ -46,12 +46,18 @@ prog_args_loop:
 
 	ldy #1
 	lda (ptr0), Y
-	cmp #'s'
+	cmp #'p' ; persist
+	bne :+
+	lda #1
+	sta stay_alive_after_input_eof
+	bra prog_args_loop
+	:
+	cmp #'s' ; skip
 	bne :+
 	stz print_startup_msg_flag
 	bra prog_args_loop
 	:
-	cmp #'c'
+	cmp #'c' ; command
 	bne :+
 	jsr get_next_arg
 	cmp #0
@@ -150,6 +156,7 @@ new_line:
 	lda exit_after_exec
 	beq :++
 	lda curr_running_script
+	ora stay_alive_after_input_eof
 	bne :+
 	jmp exit_shell
 	:
@@ -157,6 +164,7 @@ new_line:
 	jsr close_file
 	stz exit_after_exec
 	stz curr_running_script
+	stz stay_alive_after_input_eof
 	:
 
 	lda first_command_addr + 1
@@ -979,6 +987,17 @@ check_special_cmds:
 	lda #1
 	rts
 @not_source:
+	lda #<string_detach
+	ldx #>string_detach
+	jsr cmd_cmp
+	bne @not_detach
+
+	lda #1 ; make shell active option
+	jsr detach_self
+
+	lda #1
+	rts
+@not_detach:
 
 	lda #0
 	rts
@@ -1296,6 +1315,8 @@ string_setenv:
 	.asciiz "setenv"
 string_source:
 	.asciiz "source"
+string_detach:
+	.asciiz "detach"
 
 ; program vars 
 
@@ -1323,6 +1344,8 @@ curr_arg:
 exit_after_exec:
 	.byte 0
 curr_running_script:
+	.byte 0
+stay_alive_after_input_eof:
 	.byte 0
 print_startup_msg_flag:
 	.byte 1
