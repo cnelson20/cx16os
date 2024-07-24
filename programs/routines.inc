@@ -86,5 +86,6 @@ mark_last_hook_message_received := $9D90
 
 set_own_priority := $9D8A
 surrender_process_time := $9D8D
+detach_self := $9DA2
 
 
