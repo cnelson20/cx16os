@@ -236,16 +236,9 @@ fgetc:
 	cpx #$FF
 	beq @exit_nsuch_file
 	cpx #2
-	bcs :++
+	bcs :+
 	; reading from stdin
-	lda current_program_id
-	cmp active_process
-	bne :+
-	jsr GETIN
-	:
-	ldx #0
-	restore_p_816
-	rts
+	jmp getc_wait_active_process
 	:
 	lda #1
 	sta RAM_BANK
@@ -297,7 +290,19 @@ fgetc:
 	tax
 	restore_p_816
 	rts
-	
+
+getc_wait_active_process:
+	lda current_program_id
+	cmp active_process
+	beq :+
+	jsr surrender_process_time
+	bra getc_wait_active_process
+	:
+	jsr GETIN
+	ldx #0
+	restore_p_816
+	rts
+
 ;
 ; prints a null terminated string pointed to by .AX
 ;
@@ -593,7 +598,6 @@ get_time:
 
 detach_self:
 	save_p_816_8bitmode
-	stp
 
 	pha
 	lda current_program_id
