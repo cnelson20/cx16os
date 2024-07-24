@@ -24,6 +24,7 @@
 .import setup_chrout_hook, release_chrout_hook, CHROUT_screen, send_byte_chrout_hook
 .import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook, mark_last_hook_message_received
 .import lock_vera_regs, unlock_vera_regs
+.import in_active_processes_table, add_active_processes_table
 
 .import surrender_process_time, schedule_timer
 .import irq_already_triggered
@@ -90,6 +91,7 @@ call_table:
 	jmp bin_bcd16_ext ; $9D99
 	jmp move_fd ; $9D9C
 	jmp get_time ; $9D9F
+	jmp detach_self ; $9DA2
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -586,6 +588,32 @@ get_time:
 	save_p_816_8bitmode
 	jsr clock_get_date_time
 	dec r3 + 1
+	restore_p_816
+	rts
+
+detach_self:
+	save_p_816_8bitmode
+	stp
+
+	pha
+	lda current_program_id
+	jsr in_active_processes_table
+	cmp #$01 ; carry will be set if .A != 0
+	pla ; doesn't overwrite carry
+	bcs @end_function ; is in active_processes_table, cannot detach
+
+	ldx current_program_id
+	pha
+	lda process_parents_table, X
+	stz process_parents_table, X
+
+	plx
+	cpx #0
+	beq @end_function
+
+	lda current_program_id
+	jsr add_active_processes_table
+@end_function:
 	restore_p_816
 	rts
 
