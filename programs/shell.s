@@ -569,7 +569,28 @@ parse_env_var:
 	sta ptr3 + 1
 	jsr strcmp
 	bne @not_q_mark
+
+	lda last_return_val
+	bra @repl_arg_hex_num
 	
+@not_q_mark:
+	lda #<excl_str
+	sta ptr3
+	lda #>excl_str
+	sta ptr3 + 1
+	jsr strcmp
+	bne @not_excl_mark
+
+	; pid of last process put into background
+	lda last_background_pid
+	bra @repl_arg_hex_num
+
+@not_excl_mark:
+	; look in extmem for env vars
+	jmp search_env_vars
+
+@repl_arg_hex_num:
+	pha ; push val
 	lda #4
 	jsr shift_output
 	
@@ -579,8 +600,8 @@ parse_env_var:
 	lda #'$'
 	sta output, Y
 	iny
+	pla ; pull val back
 	phy
-	lda last_return_val
 	jsr GET_HEX_NUM
 	ply
 	sta output, Y
@@ -591,9 +612,8 @@ parse_env_var:
 	lda #0
 	sta output, Y	
 	rts
-@not_q_mark:
-	; look in extmem for env vars
 
+search_env_vars:
 	lda env_extmem_bank ; is the bank initialized?
 	bne :+
 	jmp @out_slots
@@ -698,6 +718,8 @@ parse_env_var:
 	
 question_str:
 	.asciiz "?"
+excl_str:
+	.asciiz "!"
 
 shift_output:
 	ldy curr_arg
@@ -830,6 +852,10 @@ narg_not_0_amp:
 
 	lda do_wait_child
 	bne wait_child
+
+	lda child_id
+	sta last_background_pid
+
 	jmp new_line
 wait_child:	
 	lda child_id
@@ -1325,6 +1351,8 @@ in_quotes:
 do_wait_child:
 	.byte 0
 last_return_val:
+	.byte 0
+last_background_pid:
 	.byte 0
 env_extmem_bank:
 	.byte 0
