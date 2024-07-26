@@ -530,10 +530,8 @@ write_line_screen:
     phy
     phx
     jsr scroll_term_window
-    jsr clear_term_top_row
     plx
     ply
-    wai
     nop
     dec vera_addrh
     dec temp_term_y_offset
@@ -664,39 +662,6 @@ temp_term_height:
 temp_term_color:
     .byte 0
 
-clear_term_top_row:
-    php
-    pei (ptr0)
-    pei (ptr1)
-    rep #$20
-    lda vera_addrl
-    pha
-    sep #$20
-
-    lda temp_term_base_x
-    sta ptr0
-    lda temp_term_base_y
-    clc
-    adc temp_term_height
-    dec A
-    sta ptr0 + 1
-    lda temp_term_width
-    sta ptr1
-    lda #1
-    sta ptr1 + 1
-    jsr clear_rows
-
-    rep #$20
-    pla
-    sta vera_addrl
-    pla
-    sta ptr1
-    pla
-    sta ptr0
-
-    plp
-    rts
-
 clear_whole_term:
     php
     pei (ptr0)
@@ -793,6 +758,18 @@ scroll_term_window:
 
     dey
     bne :-
+
+    ; clear the top line being scrolled ;
+    dec vera_addrh
+    lda vera_addrl
+    and #1
+    bne :+
+    lda #$20 ; SPACE
+    bra :++
+    :
+    lda temp_term_color
+    :
+    sta vera_data0
 
     inc vera_addrl
     lda ptr0 + 1
