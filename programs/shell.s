@@ -586,6 +586,18 @@ parse_env_var:
 	bra @repl_arg_hex_num
 
 @not_excl_mark:
+	lda #<dollar_str
+	sta ptr3
+	lda #>dollar_str
+	sta ptr3 + 1
+	jsr strcmp
+	bne @not_self_pid
+
+	; pid of last process put into background
+	lda $00
+	bra @repl_arg_hex_num
+@not_self_pid:
+
 	; look in extmem for env vars
 	jmp search_env_vars
 
@@ -720,6 +732,8 @@ question_str:
 	.asciiz "?"
 excl_str:
 	.asciiz "!"
+dollar_str:
+	.asciiz "$"
 
 shift_output:
 	ldy curr_arg
