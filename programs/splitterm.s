@@ -719,7 +719,6 @@ clear_whole_term:
     pla
     sta ptr0
 
-
     plp
     rts
 
@@ -784,6 +783,7 @@ scroll_term_window:
     tax
 @outer_loop:
     ldy temp_term_height
+    dey
     :
     lda vera_data0
     dec vera_addrh
