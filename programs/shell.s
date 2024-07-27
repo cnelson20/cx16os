@@ -594,7 +594,7 @@ parse_env_var:
 	bne @not_self_pid
 
 	; pid of last process put into background
-	lda $00
+	lda $00 ; RAM_BANK
 	bra @repl_arg_hex_num
 @not_self_pid:
 
