@@ -118,7 +118,7 @@ init:
     sta terms_colors + 0
     sta terms_colors + 1
 
-    lda #4
+    lda #10
     jsr set_own_priority
 
 print_loop:
