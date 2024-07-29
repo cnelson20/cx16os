@@ -288,6 +288,9 @@ irq_re_caller:
 	cmp #$C0
 	bcs :+
 	; process trampled into another bank, need to kill
+	lda STORE_PROG_RAMBANK
+	ldx #RETURN_PAGE_ENTERED
+	jsr program_exit
 	lda current_program_id
 	ldx #RETURN_PAGE_BREAK
 	jmp program_exit
