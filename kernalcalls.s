@@ -396,6 +396,7 @@ get_process_info:
 ;
 active_table_lookup:
 	save_p_816_8bitmode
+	and #$7F
 	tax
 	lda active_processes_table, X
 	ldx active_processes_table_index
