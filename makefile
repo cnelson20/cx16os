@@ -28,7 +28,7 @@ build: os.prg programs
 	cp os.prg mnt/OS.PRG
 	cp words.txt mnt/
 	cp ipsum.txt mnt/
-	cp script.sh mnt/
+	cp split.sh mnt/
 	cp child.sh mnt/
 
 sd: build
