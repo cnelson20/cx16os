@@ -24,7 +24,7 @@
 .import setup_chrout_hook, release_chrout_hook, CHROUT_screen, send_byte_chrout_hook
 .import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook, mark_last_hook_message_received
 .import lock_vera_regs, unlock_vera_regs
-.import in_active_processes_table, add_active_processes_table
+.import in_active_processes_table, add_active_processes_table, active_processes_table_index, active_processes_table
 
 .import surrender_process_time, schedule_timer
 .import irq_already_triggered
@@ -92,6 +92,7 @@ call_table:
 	jmp move_fd ; $9D9C
 	jmp get_time ; $9D9F
 	jmp detach_self ; $9DA2
+	jmp active_table_lookup ; $9DA5
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -382,6 +383,27 @@ get_process_info:
 	:
 	restore_p_816
 	rts
+
+;
+; active_table_lookup
+;
+; returns parts of the active processes table
+;
+; arguments: .A -> index within active_processes_table to lookup
+; return values: .A -> result of lookup within active_processes_table
+; .X -> index of active process within active_processes_table
+; .Y -> currently active process
+;
+active_table_lookup:
+	save_p_816_8bitmode
+	tax
+	lda active_processes_table, X
+	ldx active_processes_table_index
+	ldy active_process
+
+	restore_p_816
+	rts
+
 
 ;
 ; Return pointer to args in .AX and argc in .Y

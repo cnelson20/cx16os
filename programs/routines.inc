@@ -18,6 +18,7 @@ PRINT_STR := print_str
 get_process_info := $9D0C
 get_args := $9D0F
 get_process_name := $9D12
+active_table_lookup := $9DA5
 
 parse_num := $9D15
 bin_to_bcd16 := $9D99
