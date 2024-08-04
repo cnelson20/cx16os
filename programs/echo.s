@@ -43,4 +43,6 @@ end_word:
 end:
 	lda #$d
 	jsr CHROUT
+
+	lda #0
 	rts 
