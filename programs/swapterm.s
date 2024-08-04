@@ -16,6 +16,17 @@ COLOR_BLUE = 6
 COLOR_RED = 2
 COLOR_BLACK = 0
 COLOR_GREEN = 5
+COLOR_CYAN = 3
+COLOR_PURPLE = 4
+COLOR_YELLOW = 7
+COLOR_ORANGE = 8
+COLOR_BROWN = 9
+COLOR_PINK = 10
+COLOR_DGRAY = 11
+COLOR_MGRAY = 12
+COLOR_LGREEN = 13
+COLOR_LBLUE = 14
+COLOR_LGRAY = 15
 
 TERM_WIDTH = 80
 TERM_HEIGHT = 60
@@ -608,6 +619,56 @@ write_line_screen:
     cmp #$1F ; RED
     bne :+
     lda #COLOR_BLUE
+    jmp @set_term_color
+    :
+    cmp #$81 ; ORANGE
+    bne :+
+    lda #COLOR_ORANGE
+    jmp @set_term_color
+    :
+    cmp #$96 ; PINK
+    bne :+
+    lda #COLOR_PINK
+    jmp @set_term_color
+    :
+    cmp #$97 ; DARK GRAY
+    bne :+
+    lda #COLOR_DGRAY
+    jmp @set_term_color
+    :
+    cmp #$98 ; MEDIUM GRAY
+    bne :+
+    lda #COLOR_MGRAY
+    jmp @set_term_color
+    :
+    cmp #$99 ; LIGHT GREEN
+    bne :+
+    lda #COLOR_LGREEN
+    jmp @set_term_color
+    :
+    cmp #$9A ; LIGHT BLUE
+    bne :+
+    lda #COLOR_LBLUE
+    jmp @set_term_color
+    :
+    cmp #$9B ; LIGHT GRAY
+    bne :+
+    lda #COLOR_LGRAY
+    jmp @set_term_color
+    :
+    cmp #$9C ; PURPLE
+    bne :+
+    lda #COLOR_PURPLE
+    jmp @set_term_color
+    :
+    cmp #$9E ; YELLOW
+    bne :+
+    lda #COLOR_YELLOW
+    jmp @set_term_color
+    :
+    cmp #$9F ; CYAN
+    bne :+
+    lda #COLOR_CYAN
     jmp @set_term_color
     :
 
