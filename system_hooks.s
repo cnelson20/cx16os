@@ -805,6 +805,22 @@ try_unlock_vera_regs:
     rts
 
     :
+    lda VERA::CTRL
+    and #$7E
+    sta VERA::CTRL ; set dcsel & addrsel to zero
+
+    lda VERA::VIDEO
+    and #3
+    ora #$20
+    sta VERA::VIDEO
+
+    ; reset mapbase for layer1
+    lda #$D8 ; mapbase is at $1B000
+    sta VERA::L1::MAP_BASE
+
+    lda #$93
+    jsr CHROUT
+
     stz prog_using_vera_regs
     lda #0
     rts
