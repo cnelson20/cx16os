@@ -60,6 +60,39 @@ r7 := $10
   IRQ_FLAGS     .byte           ; Interrupt flags
   IRQ_RASTER    .byte           ; Line where IRQ will occur
   .endstruct
+  .union
+  .org    $9F29
+    .struct
+    ; These four registers are visible when the DCSEL flag = %0
+      VIDEO       .byte
+      HSCALE      .byte
+      VSCALE      .byte
+      FRAME       .byte
+    .endstruct
+    .struct
+    ; These four registers are visible when the DCSEL flag = %1
+      HSTART      .byte
+      HSTOP       .byte
+      VSTART      .byte
+      VSTOP       .byte
+    .endstruct
+  .endunion
+  .struct       L0              ; Display layer 0
+  .org    $9F2D
+    CONFIG      .byte
+    MAP_BASE    .byte
+    TILE_BASE   .byte
+    HSCROLL     .word
+    VSCROLL     .word
+  .endstruct
+  .struct       L1              ; Display layer 1
+  .org    $9F34
+    CONFIG      .byte
+    MAP_BASE    .byte
+    TILE_BASE   .byte
+    HSCROLL     .word
+    VSCROLL     .word
+  .endstruct
 
 .endscope
 
