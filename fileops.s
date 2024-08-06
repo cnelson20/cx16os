@@ -1222,6 +1222,48 @@ move_fd:
 	rts
 
 ;
+; copy_fd
+;
+; copy a file directory to a new fd
+; marks the original fd as closed
+;
+.export copy_fd
+copy_fd:
+	save_p_816_8bitmode
+	inc RAM_BANK
+
+	sta KZE0
+
+	ldx #3
+	:
+	lda PV_OPEN_TABLE, X
+	cmp #$FF
+	beq :+
+	inx
+	cpx #PV_OPEN_TABLE_SIZE
+	bcc :-
+	bra @error
+	:
+	; found our new fd to use
+	ldy KZE0
+	lda PV_OPEN_TABLE, Y
+	sta PV_OPEN_TABLE, X
+	lda #$FF
+	sta PV_OPEN_TABLE, Y
+
+	txa ; new fd
+	ldx #0
+@exit:
+	dec RAM_BANK
+	restore_p_816
+	rts
+
+@error:
+	lda #0
+	ldx #1
+	bra @exit
+
+;
 ; returns a fd to the dir listing
 ;
 .export load_dir_listing_extmem_ext

@@ -14,7 +14,7 @@
 .import kill_process_kernal
 .import is_valid_process
 
-.import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, load_dir_listing_extmem_ext, move_fd
+.import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, load_dir_listing_extmem_ext, move_fd, copy_fd
 .import get_pwd_ext, chdir_ext, unlink_ext, rename_ext, copy_file_ext, mkdir_ext, rmdir_ext
 
 .import res_extmem_bank, set_extmem_rbank, set_extmem_wbank, set_extmem_rptr, set_extmem_wptr
@@ -93,6 +93,7 @@ call_table:
 	jmp get_time ; $9D9F
 	jmp detach_self ; $9DA2
 	jmp active_table_lookup ; $9DA5
+	jmp copy_fd ; $9DA8
 	.res 3, $FF
 .export call_table_end
 call_table_end:
