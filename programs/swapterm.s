@@ -283,11 +283,17 @@ check_hook1_messages:
     cmp #0
     beq @dont_parse_msg
 
+    pha
+
     lda #0
     xba
     lda @pid_switch
     lsr A
     tax
+    ; store inst id to array
+    pla
+    sta prog_inst_ids, X
+    
     lda @term_switch
     sta prog_term_use, X
 

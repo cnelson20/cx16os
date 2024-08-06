@@ -145,6 +145,18 @@ welcome:
 	cmp #$FF
 	beq new_line ; not successfully opened, that's fine
 
+	pha
+	lda #0
+	jsr copy_fd
+	sta next_fd ; whatever script was beign run can be next
+
+	lda curr_running_script
+	sta next_running_script
+	lda stay_alive_after_input_eof
+	sta next_stay_alive_after_eof
+	stz stay_alive_after_input_eof
+	pla
+
 	ldx #0 ; move to stdin
 	jsr move_fd
 
@@ -154,7 +166,7 @@ welcome:
 new_line:
 	; close these files in case got through
 	lda exit_after_exec
-	beq :++
+	beq @no_exit_after_exec
 	lda curr_running_script
 	ora stay_alive_after_input_eof
 	bne :+
@@ -163,9 +175,21 @@ new_line:
 	lda #0
 	jsr close_file
 	stz exit_after_exec
-	stz curr_running_script
-	stz stay_alive_after_input_eof
+
+	lda next_fd
+	cmp #$FF
+	beq :+
+	ldx #0
+	lda next_fd
+	jsr move_fd
+	lda next_running_script
+	sta curr_running_script
+	stz next_running_script
+	lda next_stay_alive_after_eof
+	sta stay_alive_after_input_eof
+	stz next_stay_alive_after_eof
 	:
+@no_exit_after_exec:
 
 	lda first_command_addr + 1
 	bne skip_print_prompt
@@ -1242,6 +1266,18 @@ open_shell_file:
 	cmp #$FF
 	beq @open_error
 
+	pha
+
+	lda #0
+	jsr copy_fd
+	sta next_fd
+	lda curr_running_script
+	sta next_running_script
+	lda stay_alive_after_input_eof
+	sta next_stay_alive_after_eof
+	stz stay_alive_after_input_eof
+
+	pla
 	ldx #0 ; move to stdin
 	jsr move_fd
 	ldx #$FF
@@ -1383,6 +1419,12 @@ command_length:
 curr_arg:
 	.byte 0
 
+next_fd:
+	.byte $FF
+next_running_script:
+	.byte 0
+next_stay_alive_after_eof:
+	.byte 0
 exit_after_exec:
 	.byte 0
 curr_running_script:
