@@ -612,6 +612,11 @@ write_line_screen:
     lda #COLOR_WHITE
     jmp @set_term_color
     :
+    cmp #$90
+    bne :+
+    lda #COLOR_BLACK
+    jmp @set_term_color
+    :
     cmp #$1C ; RED
     bne :+
     lda #COLOR_RED
