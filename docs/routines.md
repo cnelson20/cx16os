@@ -337,6 +337,24 @@ Return values:
 - r3L: 	jiffies (0-59)
 - r3H: 	weekday (0-6)
 
+### $9DA2: detach_self
+- Removes a process' PPID if it is not an active process
+- If .A != 0, it adds the process to the active process table
+
+Return values:
+- None
+
+### $9DA5: active_table_lookup
+- Returns information about the system active_processes_table
+
+Arguments:
+- .A -> index within active_processes_table to lookup
+
+Return values:
+- .A -> result of lookup within active_processes_table
+- .X -> index of active process within active_processes_table
+- .Y -> currently active process
+
 ### $9DA8: copy_fd
 - Changes the fd associated with the file currently associated with the fd in .A
 
