@@ -46,6 +46,9 @@
 | $9D9C | [`move_fd`](#9d9c-move_fd) | .A, .X | .A | .Y |
 | $9D9F | [`get_time`](#9d9f-get_time) | | r0, r1, r2, r3 | .AXY |
 | $9DA2 | [`detach_self`](#9da2-detach_self) | .A | | .XY |
+| $9DA5 | [`active_table_lookup`](#9da5-active_table_lookup) | .A | .A, .X, .Y | |
+| $9DA8 | [`copy_fd`](#9da8-copy_fd) | .A | .X | .Y |
+
 
 ## Function Reference
 
@@ -308,4 +311,37 @@ Return values:
 
 Return values:
 - BCD Value in .AXY (lsb in .A, msb in .Y)
+
+---
+
+### $9D9C: move_fd
+- Moves the file associated with the fd in .A to fd .X
+- If fd .X is currently associated with an open file, it will be closed
+
+Return values:
+- None
+
+---
+
+### $9D9F: get_time
+- Gets the current time from the RTC
+- Returns time in r0-r3
+
+Return values:
+- r0L: 	year (1900-based)
+- r0H: 	month (1-12)
+- r1L: 	day (1-31)
+- r1H: 	hours (0-23)
+- r2L: 	minutes (0-59)
+- r2H: 	seconds (0-59)
+- r3L: 	jiffies (0-59)
+- r3H: 	weekday (0-6)
+
+### $9DA8: copy_fd
+- Changes the fd associated with the file currently associated with the fd in .A
+
+Return values:
+- New fd for the file in .A
+
+
 
