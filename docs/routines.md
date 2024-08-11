@@ -23,7 +23,7 @@
 | $9D30 | [`chdir`](#9d30-chdir) | .AX | .A | .Y |
 | $9D33-$9D5A | [`Extmem routines`](extmem.md) | | | |
 | $9D5D | [`wait_process`](#9d5d-wait_process) | .A | .A | .XY |
-| $9D60 | [`fgetc`](#9d60-fgetc) | .A | .A, .X | .Y | 
+| $9D60 | [`fgetc`](#9d60-fgetc) | .X | .A, .X | .Y | 
 | $9D63 | [`fputc`](#9d63-fputc) | .A, .X | .Y | .X | 
 | $9D66 | [`unlink`](#9d66-unlink) | .AX | .A | .Y | 
 | $9D69 | [`rename`](#9d69-rename) | r0, r1 | .A | .XY | 
