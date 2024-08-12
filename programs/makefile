@@ -1,7 +1,7 @@
 CC = cl65
 FLAGS =-t none -C cl65_progs.cfg
 
-all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir cat_slow guiterm gui sendmsg splitterm crshmon color strings cron swapterm
+all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir cat_slow guiterm gui sendmsg splitterm crshmon color strings cron swapterm asm
 
 bindir: ../mnt/bin
 	
@@ -46,9 +46,13 @@ ed: ed.s routines.inc
 	cp $@ ../mnt/bin
 
 #
-# Rest of the commands
+# Other commands
 # (Mostly) named for similar linux commands
 #
+
+asm: asm.s routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
+	cp $@ ../mnt/bin
 
 cron: cron.s routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
