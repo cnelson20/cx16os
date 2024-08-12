@@ -1226,6 +1226,7 @@ move_fd:
 ;
 ; copy a file directory to a new fd
 ; marks the original fd as closed
+; argument and return value in .A
 ;
 .export copy_fd
 copy_fd:
