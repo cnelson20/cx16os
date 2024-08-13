@@ -95,6 +95,12 @@ end_parse_args:
     ; do first pass ;
     stz eof_flag
 
+    ldx #$A000
+    stx lines_extmem_ptr
+    stx extmem_data_ptr
+
+    jsr res_extmem_bank
+
 first_parse:
     jsr get_next_line_input
     
@@ -800,7 +806,13 @@ instruction_modes:
 line_buf:
     .res 128 + 1
 
-heap_ptr:
+lines_extmem_bank:
     .word 0
-heap_start:
+lines_extmem_ptr:
+    .word 0
+
+last_extmem_data_bank:
+    .word 0
+extmem_data_ptr:
+    .word 0
 
