@@ -3,6 +3,8 @@
 
 .segment "CODE"
 
+TWO_INPUT_FILES_ERR = 1
+FILE_DOESNT_EXIST_ERR = 2
 
 ptr0 := $30
 ptr1 := $32
@@ -54,7 +56,7 @@ parse_args:
 
     lda input_fd
     beq :+
-    lda #1
+    lda #TWO_INPUT_FILES_ERR
     jmp error
     :
 
@@ -69,7 +71,7 @@ parse_args:
     cmp #$FF
     bne :+
 
-    lda #2
+    lda #FILE_DOESNT_EXIST_ERR
     jmp error
 
     :
@@ -100,20 +102,234 @@ first_parse:
     jsr find_non_whitespace
     stx ptr0
 
+    jsr find_comment
+    stz $00, X
+
+    ldx ptr0
+    jsr find_last_whitespace
+    stz $00, X
+
+    ldx ptr0
     lda $00, X
+    bne :+
+    jmp @end_parse_line ; empty line
+    :
+
     cmp #'.'
-    bne @parse_instruction
+    beq @parse_directive
+
+    jsr strlen
+    ; start of line still in .X
+    dey
+    lda $00, Y
+    cmp #':'
+    bne :+
+    jmp @parse_label
+    :
+    jmp @parse_instruction
 
 @parse_directive:
     inx
 
 
+@parse_label:
+    lda #0
+    sta $00, Y
+    
 
 @parse_instruction:
     stp
+    txy
+    iny
+    iny
+    iny
+    lda $00, Y
+    jsr is_whitespace_char
+    bcs :+
+    ; not whitespace, error
+    jmp first_parse_error
+    :
+    lda $00, Y
+    pha
+    lda #0
+    sta $00, Y
+
+    sty ptr1
+
+    jsr makeupper ; instructions are all in table as uppercase
+
     jsr get_instr_num
+    sta @curr_instr_num
+    cmp #$FF
+    pla ; pull byte off stack
+    bcc :+ ; if num was $FF, carry will be set
+    jmp first_parse_error
+    :
+    
+    ldx ptr1
+    ; byte that was there was in .A
+    sta $00, X
+    jsr find_non_whitespace
+    stx ptr1
+    stp
+@find_addr_mode:
+    lda $00, X
+    bne :+
+    ; implied addressing mode
+    ;stx ptr1
+    lda #MODE_IMP
+    sta @curr_instr_mode
+    jmp @found_addr_mode
+    :
+    cmp #'#'
+    bne :+
+    ; immediate addressing mode
+    inx
+    stx ptr1
+    lda #MODE_IMM
+    sta @curr_instr_mode
+    jmp @found_addr_mode
+    :
+    cmp #'('
+    bne @not_ind_addressing
+@ind_addressing:
+    inx
+    stx ptr1
+    lda #')'
+    jsr strchr
+    cpx #0
+    bne :+
+    jmp first_parse_error ; no matching )
+    :
+    txy
+    ldx ptr1
+    lda #','
+    jsr strchr
+    cpx #0
+    bne :+
 
+    lda #0
+    sta $00, Y
+    lda #MODE_IND
+    sta @curr_instr_mode
+    jmp @found_addr_mode
+    :
+    stp
+    stx ptr2
+    cpy ptr2 ; is ) after the , ?
+    bcc @ind_y_addressing ; either (ind, X) or (ind), Y
+@ind_x_addressing:
+    stz $00, X
 
+    lda #MODE_INX
+    sta @curr_instr_mode
+    jmp @found_addr_mode
+@ind_y_addressing:
+    lda #0
+    sta $00, Y
+    
+    lda #MODE_INY
+    sta @curr_instr_mode
+    jmp @found_addr_mode
+
+@not_ind_addressing:
+    stx ptr1
+    lda #','
+    jsr strchr
+    cpx #0
+    bne @not_abs_addressing
+
+    ldx ptr1
+    jsr strlen
+    cmp #1
+    bne @not_accum_addressing
+
+    lda $00, X
+    cmp #'A'
+    beq :+
+    cmp #'a'
+    bne @not_accum_addressing
+    :
+
+    inx
+    stx ptr1
+
+    lda #MODE_ACC
+    sta @curr_instr_mode
+    jmp @found_addr_mode
+@not_accum_addressing:
+
+    lda #MODE_ABS
+    sta @curr_instr_mode
+    jmp @found_addr_mode
+@not_abs_addressing:
+    stz $00, X
+    inx
+    jsr find_last_whitespace
+    dex
+    jsr makeupper
+    lda $00, X
+    cmp #'Y'
+    bne :+
+    
+    lda #MODE_ABY
+    sta @curr_instr_mode
+    jmp @found_addr_mode
+    :
+    cmp #'X'
+    bne :+
+
+    lda #MODE_ABX
+    sta @curr_instr_mode
+    jmp @found_addr_mode
+    :
+    ; no such addr mode ;
+    jmp first_parse_error
+@found_addr_mode:
+    lda #'$'
+    jsr CHROUT
+
+    lda @curr_instr_num
+    jsr GET_HEX_NUM
+    jsr CHROUT
+    txa
+    jsr CHROUT
+
+    lda #' '
+    jsr CHROUT
+    lda #'$'
+    jsr CHROUT
+    
+    lda @curr_instr_mode
+    jsr GET_HEX_NUM
+    jsr CHROUT
+    txa
+    jsr CHROUT
+
+    lda #' '
+    jsr CHROUT
+    lda #'"'
+    jsr CHROUT
+
+    lda ptr1
+    ldx ptr1 + 1
+    jsr print_str
+
+    lda #'"'
+    jsr CHROUT
+    lda #$d
+    jsr CHROUT
+
+@end_parse_line:
+    lda eof_flag
+    bne :+
+    jmp first_parse
+    :
+
+@curr_instr_num:
+    .byte 0
+@curr_instr_mode:
+    .byte 0
 
 get_next_line_input:
     ldy #0
@@ -153,18 +369,54 @@ eof_flag:
     .word 0
 
 get_instr_num:
-    lda #INSTRUCTION_LIST_SIZE / 2
+    ldy #0
+    sty @min
+    ldy #INSTRUCTION_LIST_SIZE
+    sty @max
 @loop:
+    lda @min
+    cmp @max
+    bcc :+
+    lda #$FF
+    rts ; not found
+    :
+    adc @max
+    lsr A
+    sta @mid
+
     rep #$20
     .a16
     and #$00FF
     asl A
     asl A
-    adc instruction_strs
+    adc #instruction_strs
     tay
     sep #$20
     .a8
     jsr strcmp
+    cmp #0
+    beq @found
+
+    bmi @before_alpha
+@after_alpha:
+    lda @mid
+    inc A
+    sta @min
+    bra @loop
+@before_alpha:
+    lda @mid
+    sta @max
+    bra @loop
+@found:
+    lda @mid
+    rts
+
+@min:
+    .word 0
+@max:
+    .word 0
+@mid:
+    .word 0
 
 
 ;
@@ -173,7 +425,7 @@ get_instr_num:
 strcmp:
     phx
     phy
-    jsr :+
+    jsr @check_loop
     ply
     plx
     rts
@@ -195,21 +447,144 @@ strcmp:
     sbc $00, Y
     rts
 
+strlen:
+    phx
+    ldy #0
+    :
+    lda $00, X
+    beq :+
+    iny
+    inx
+    bne :-
+    :
+    tya
+    txy ; end of string goes into .Y
+    plx
+    rts
+
+strchr:
+    cmp $00, X
+    beq @found
+    pha
+    lda $00, X
+    beq :+
+    pla
+    inx
+    bra strchr
+    :
+    pla
+    ldx #0
+    rts
+@found:
+    rts
+
+is_whitespace_char:
+    pha
+    cmp #' '
+    beq @yes
+    cmp #9 ; \t
+    beq @yes
+    cmp #$a ; \n
+    beq @yes
+    cmp #0
+    beq @yes
+    cmp #$d ; \r
+    beq @yes
+
+    ; no
+    clc
+    pla
+    rts
+@yes:
+    sec
+    pla
+    rts
+
+makeupper:
+    phx
+@loop:
+    lda $00, X
+    beq @done
+    cmp #'a'
+    bcc :+
+    cmp #'z' + 1
+    bcs :+
+    ; carry clear
+    sbc #$20 - 1
+    sta $00, X
+    :
+    inx
+    bne @loop
+@done:
+    plx
+    rts
 
 find_non_whitespace:
     lda $00, X
-    cmp #' '
-    beq @cont
-    cmp #9 ; \t
-    beq @cont
-    cmp #$a ; \n
-    beq @cont
+    beq :+
+    jsr is_whitespace_char
+    bcs @cont
+    :
 
     rts
 @cont:
     inx
     bne find_non_whitespace
     rts
+
+find_comment:
+    lda $00, X
+    bne :+
+    rts
+    :
+    cmp #';'
+    beq :+
+    inx
+    bra find_comment
+
+    :
+    rts
+
+find_last_whitespace:
+    ldy #1
+
+    :
+    lda $00, X
+    beq :+
+    iny
+    inx
+    bne :-
+
+    :
+    dey
+    beq @start_str
+    dex
+    lda $00, X
+    jsr is_whitespace_char
+    bcs :-
+
+    inx
+    rts
+@start_str:
+    rts
+
+first_parse_error:
+    lda #<general_err_str
+    ldx #>general_err_str
+    jsr print_str
+
+    lda #<invalid_line_str
+    ldx #>invalid_line_str
+    jsr print_str
+
+    lda #<line_buf
+    ldx #>line_buf
+    jsr print_str
+
+    lda #'''
+    jsr CHROUT
+
+    jmp print_newline_exit
 
 error:
     pha
@@ -232,12 +607,11 @@ error:
     tyx
     jsr print_str
 
-
+print_newline_exit:
     lda #$d
     jsr CHROUT 
 
-    lda #1
-    stp
+    lda #1   
 
     ldx #$01FD
     txs
@@ -252,6 +626,8 @@ no_such_file_str:
     .asciiz "No such file exists"
 general_err_str:
     .asciiz "Error: "
+invalid_line_str:
+    .asciiz "Invalid line: '"
 
 argc:
     .word 0
@@ -335,6 +711,19 @@ instruction_strs:
     .asciiz "WAI" ; 64
 
 INSTRUCTION_LIST_SIZE = 65
+
+MODE_IMP = 0
+MODE_IMM = 1
+MODE_ZP = 2
+MODE_ZPX = 3
+MODE_ABS = 4
+MODE_ABX = 5
+MODE_ABY = 6
+MODE_IND = 7
+MODE_INX = 8
+MODE_INY = 9
+MODE_ACC = 10
+MODE_REL = 11
 
 ; MODE          IMP, IMM,  ZP, ZPX, ABS, ABX, ABY, IND, INX, INY, ACC, REL
 instruction_modes:

@@ -26,10 +26,14 @@ clean:
 
 build: os.prg programs
 	cp os.prg mnt/OS.PRG
+# Text files to play with
 	cp words.txt mnt/
 	cp ipsum.txt mnt/
+# For split & swapterm
 	cp spawn.sh mnt/
 	cp child.sh mnt/
+# Test program for asm
+	cp test.asm mnt/
 
 sd: build
 ifeq ($(OS),Windows_NT)
