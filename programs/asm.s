@@ -11,6 +11,12 @@ ptr1 := $32
 ptr2 := $34
 ptr3 := $36
 
+C_INSTRUCTION = 0
+C_LABEL = 1
+C_DIRECTIVE = 2
+
+C_DIRECTIVE_DATA = 3
+
 init:
     jsr get_args
     sta ptr0
@@ -100,6 +106,9 @@ end_parse_args:
     stx extmem_data_ptr
 
     jsr res_extmem_bank
+    sta lines_extmem_bank
+    inc A
+    sta last_extmem_data_bank
 
 first_parse:
     jsr get_next_line_input
@@ -135,16 +144,69 @@ first_parse:
     jmp @parse_instruction
 
 @parse_directive:
+    stp
     inx
+    jsr find_whitespace_char
+    lda $00, X
+    bne :+
 
+    jmp first_parse_error
+    
+    :
+    phx
+    inx
+    jsr find_non_whitespace
+    lda $00, X
+    bne :+
+
+    plx
+    jmp first_parse_error
+
+    :
+    stx ptr1
+    plx
+    stz $00, X
+
+
+    jmp @end_parse_line
 
 @parse_label:
     lda #0
     sta $00, Y
-    
+
+    stp
+    ldx ptr0
+    jsr strlen
+    clc
+    adc #2 ; \0 + C_LABEL
+    jsr alloc_extmem_data_space
+
+    stx ptr1
+    jsr set_extmem_wbank
+
+    lda #ptr1
+    jsr set_extmem_wptr
+
+    ldy #0
+    lda #C_LABEL
+    jsr writef_byte_extmem_y
+
+    iny
+    ldx ptr0
+    :
+    stx ptr0
+    lda (ptr0)
+    jsr writef_byte_extmem_y
+    cmp #0
+    beq :+
+    iny
+    inx
+    bne :-
+    :
+
+    jmp @end_parse_line    
 
 @parse_instruction:
-    stp
     txy
     iny
     iny
@@ -177,7 +239,6 @@ first_parse:
     sta $00, X
     jsr find_non_whitespace
     stx ptr1
-    stp
 @find_addr_mode:
     lda $00, X
     bne :+
@@ -220,7 +281,6 @@ first_parse:
     sta @curr_instr_mode
     jmp @found_addr_mode
     :
-    stp
     stx ptr2
     cpy ptr2 ; is ) after the , ?
     bcc @ind_y_addressing ; either (ind, X) or (ind), Y
@@ -326,6 +386,48 @@ first_parse:
     lda #$d
     jsr CHROUT
 
+    stp
+    ldx ptr1
+    jsr strlen
+    clc
+    adc #4 ; \0, instr_mode, inst_num, C_INSTRUCTION
+    jsr alloc_extmem_data_space
+
+
+    stx ptr2
+
+    jsr set_extmem_wbank
+
+    lda #ptr2
+    jsr set_extmem_wptr
+
+    ldy #0
+    lda #C_INSTRUCTION
+    jsr writef_byte_extmem_y
+
+    iny
+    lda @curr_instr_num
+    jsr writef_byte_extmem_y
+
+    iny
+    lda @curr_instr_mode
+    jsr writef_byte_extmem_y
+
+    iny
+    ldx ptr1
+    :
+    lda (ptr1)
+    jsr writef_byte_extmem_y
+    cmp #0
+    beq :+
+    iny
+    inx
+    stx ptr1
+    bne :-
+    :
+
+    jmp @end_parse_line
+
 @end_parse_line:
     lda eof_flag
     bne :+
@@ -372,6 +474,83 @@ get_next_line_input:
     rts
 
 eof_flag:
+    .word 0
+
+next_extmem_data_bank:
+    lda last_extmem_data_bank
+    and #1
+    bne :+
+
+    lda last_extmem_data_bank
+    inc A
+    sta last_extmem_data_bank
+    rts
+
+    :
+    jsr res_extmem_bank
+    sta last_extmem_data_bank
+    rts
+
+
+alloc_extmem_data_space:
+    ; .A = size of data
+    rep #$20
+    .a16
+    and #$00FF
+    sta @data_size
+    clc
+    adc extmem_data_ptr
+    tax
+    sep #$20
+    .a8
+    cpx #$C000
+    
+    lda last_extmem_data_bank
+
+    bcc :+
+    stp
+    ldx #$A000
+    stx extmem_data_ptr
+    jsr next_extmem_data_bank
+    rep #$20
+    .a16
+    lda @data_size
+    clc
+    adc #$A000
+    tax
+    sep #$20
+    .a8
+    lda last_extmem_data_bank
+    :
+
+    phx
+    pha
+
+    lda lines_extmem_bank
+    jsr set_extmem_wbank
+
+    ldx #lines_extmem_ptr
+    ldy #0
+    pla
+    pha
+    jsr vwrite_byte_extmem_y
+
+    iny
+    lda extmem_data_ptr
+    jsr vwrite_byte_extmem_y
+
+    iny
+    lda extmem_data_ptr + 1
+    jsr vwrite_byte_extmem_y
+
+    pla
+    ldx extmem_data_ptr
+
+    ply
+    sty extmem_data_ptr
+    rts
+
+@data_size:
     .word 0
 
 get_instr_num:
@@ -536,6 +715,19 @@ find_non_whitespace:
 @cont:
     inx
     bne find_non_whitespace
+    rts
+
+find_whitespace_char:
+    lda $00, X
+    beq :+
+    jsr is_whitespace_char
+    bcc @cont
+    :
+
+    rts
+@cont:
+    inx
+    bne find_whitespace_char
     rts
 
 find_comment:
