@@ -15,7 +15,7 @@ C_INSTRUCTION = 0
 C_LABEL = 1
 C_DIRECTIVE = 2
 
-C_DIRECTIVE_DATA = 3
+C_DIRECTIVE_PROCESSED = 3
 
 init:
     jsr get_args
@@ -167,6 +167,55 @@ first_parse:
     plx
     stz $00, X
 
+    ldx ptr0
+    inx
+    stx ptr0
+    jsr strlen
+    sta ptr2
+
+    ldx ptr1
+    jsr strlen
+    clc
+    adc ptr2 ; add length of other string
+    adc #3 ; \0, \0, C_DIRECTIVE
+    jsr alloc_extmem_data_space
+
+    stp
+    stx ptr2
+    jsr set_extmem_wbank
+
+    lda #ptr2
+    jsr set_extmem_wptr
+
+    ldy #0
+    lda #C_DIRECTIVE
+    jsr writef_byte_extmem_y
+
+    iny
+    ldx ptr0
+    :
+    stx ptr0
+    lda (ptr0)
+    jsr writef_byte_extmem_y
+    cmp #0
+    beq :+
+    iny
+    inx
+    bne :-
+    :
+
+    iny
+    ldx ptr1
+    :
+    stx ptr1
+    lda (ptr1)
+    jsr writef_byte_extmem_y
+    cmp #0
+    beq :+
+    iny
+    inx
+    bne :-
+    :
 
     jmp @end_parse_line
 
