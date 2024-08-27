@@ -732,15 +732,8 @@ find_label_value:
 
     ldx tmp_label
     ldy #0
-    :
-    jsr readf_byte_extmem_y
-    cmp $00, X
-    bne @check_loop ; not equal, go to next loop
-    cmp #0
-    beq @found_label ; we found it!
-    inx
-    iny
-    bne :- ; check other characters in string
+    jsr strcmp_mainmem_extmem
+    bne @check_loop
 
 @found_label:
     ldy #30
@@ -775,6 +768,29 @@ labels_values_banks_last_index:
     .word 0
 labels_values_banks:
     .res 128
+
+;
+; compares a string in prog mem in .X to a string in extmem that has its bank/ptr calls already set up
+; .Y should also be set by caller
+;
+strcmp_mainmem_extmem:
+    :
+    jsr readf_byte_extmem_y
+    sec
+    sbc $00, X
+    bne :++ ; not equal, exit early
+    lda $00, X
+    beq :+ ; strings are equal
+    inx
+    iny
+    bne :- ; check other characters in string
+
+    :
+    lda #0
+    :
+    rts
+
+
 
 get_next_line_input:
     ldy #0
