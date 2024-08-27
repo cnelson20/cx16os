@@ -488,6 +488,12 @@ second_parse:
     ldx starting_pc
     stx current_pc
     
+    jsr res_extmem_bank
+    sta labels_values_banks + 0
+
+    ldx #0
+    stx labels_values_banks_size
+
     stp
     lda lines_extmem_bank
     ldx lines_extmem_ptr
@@ -505,6 +511,11 @@ second_parse:
     ldx ptr0
     ldy #0
     jsr readf_byte_extmem_y
+    pha
+    
+    inx
+    stx ptr0
+    jsr readf_byte_extmem_y
     sta ptr1
 
     inx
@@ -514,17 +525,16 @@ second_parse:
 
     inx
     stx ptr0
-    jsr readf_byte_extmem_y
 
-    inx
-    stx ptr0
+    stp
+    pla
     jsr set_extmem_rbank
 
     lda #ptr1
     jsr set_extmem_rptr
 
     ; get type of command (instruction / directive / label)
-    stp
+    
     ldy #0
     jsr readf_byte_extmem_y
     cmp #C_INSTRUCTION
@@ -553,7 +563,23 @@ second_parse:
 
 @second_parse_label:
     ; set value of label
+    ldx #line_buf
+    ldy #1
+    :
+    jsr readf_byte_extmem_y
+    sta $00, X
+    cmp #0
+    beq :+
+    inx
+    iny
+    bne :-
+    :
 
+    ldx #line_buf
+    ldy current_pc
+    jsr set_label_value
+
+    jmp @end_second_parse_loop_iter
 
 @second_parse_directive:
     ; decipher if directive has data
@@ -566,6 +592,99 @@ second_parse:
     jmp @second_parse_loop
     :
 
+;
+; str in .X, value as int in .Y
+;
+set_label_value:
+    stp
+
+    stx @tmp_label
+    sty @tmp_value
+
+    ldx labels_values_banks_size
+    lda labels_values_banks, X
+    jsr set_extmem_wbank
+
+    lda #ptr0
+    jsr set_extmem_wptr
+
+    ldx ptr0
+    phx ; save ptr0
+
+    ldx labels_values_ptr
+    stx ptr0
+
+    ldy #30
+    rep #$20
+    .a16
+    lda @tmp_value
+    jsr writef_byte_extmem_y
+    sep #$20
+    .a8
+
+    ldy #0
+    ldx @tmp_label
+    :
+    lda $00, X
+    beq :+
+    jsr writef_byte_extmem_y
+    inx
+    iny
+    cpy #29
+    bcc :- ; loop back if not \0 or reached label length limit
+    :
+    lda #0
+    jsr writef_byte_extmem_y
+
+    plx
+    stx ptr0
+    ; increment labels_values_ptr by $20
+    
+    rep #$21
+    .a16
+    lda labels_values_ptr
+    ; carry cleared from 
+    adc #$20
+    sta labels_values_ptr
+    sep #$20
+    .a8
+    ldx labels_values_ptr
+    cpx #$C000
+    bcs :+
+    rts
+    :   
+
+    ldx labels_values_banks_size
+    lda labels_values_banks, X
+    and #1
+    beq :+
+
+    jsr res_extmem_bank
+    ldx labels_values_banks_size
+    sta labels_values_banks, X
+
+    bra :++
+    :
+
+    inc A
+    inx
+    sta labels_values_banks, X
+
+    :
+    inc labels_values_banks_size
+    rts
+
+@tmp_label:
+    .word 0
+@tmp_value:
+    .word 0
+
+labels_values_ptr:
+    .word $A000
+labels_values_banks_size:
+    .word 0
+labels_values_banks:
+    .res 128
 
 get_next_line_input:
     ldy #0
