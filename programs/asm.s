@@ -144,7 +144,6 @@ first_parse:
     jmp @parse_instruction
 
 @parse_directive:
-    stp
     inx
     jsr find_whitespace_char
     lda $00, X
@@ -180,7 +179,6 @@ first_parse:
     adc #3 ; \0, \0, C_DIRECTIVE
     jsr alloc_extmem_data_space
 
-    stp
     stx ptr2
     jsr set_extmem_wbank
 
@@ -223,7 +221,6 @@ first_parse:
     lda #0
     sta $00, Y
 
-    stp
     ldx ptr0
     jsr strlen
     clc
@@ -435,7 +432,6 @@ first_parse:
     lda #$d
     jsr CHROUT
 
-    stp
     ldx ptr1
     jsr strlen
     clc
@@ -487,6 +483,89 @@ first_parse:
     .byte 0
 @curr_instr_mode:
     .byte 0
+
+second_parse:
+    ldx starting_pc
+    stx current_pc
+    
+    stp
+    lda lines_extmem_bank
+    ldx lines_extmem_ptr
+
+    ldx #$A000
+    stx ptr0
+
+@second_parse_loop:
+    lda lines_extmem_bank
+    jsr set_extmem_rbank
+
+    lda #ptr0
+    jsr set_extmem_rptr
+
+    ldx ptr0
+    ldy #0
+    jsr readf_byte_extmem_y
+    sta ptr1
+
+    inx
+    stx ptr0
+    jsr readf_byte_extmem_y
+    sta ptr1 + 1
+
+    inx
+    stx ptr0
+    jsr readf_byte_extmem_y
+
+    inx
+    stx ptr0
+    jsr set_extmem_rbank
+
+    lda #ptr1
+    jsr set_extmem_rptr
+
+    ; get type of command (instruction / directive / label)
+    stp
+    ldy #0
+    jsr readf_byte_extmem_y
+    cmp #C_INSTRUCTION
+    bne @not_directive
+
+    ; C_INSTR INSTR_NUM INSTR_MODE
+    ldy #2
+    jsr readf_byte_extmem_y
+    rep #$20
+    .a16
+    and #$00FF
+    tax
+    lda instruction_mode_lengths, X
+    and #$00FF
+    clc
+    adc current_pc
+    sta current_pc
+    
+    sep #$20
+    .a8
+    jmp @end_second_parse_loop_iter
+
+@not_directive:
+    cmp #C_LABEL
+    bne @second_parse_directive
+
+@second_parse_label:
+    ; set value of label
+
+
+@second_parse_directive:
+    ; decipher if directive has data
+
+
+@end_second_parse_loop_iter:
+    ldx ptr0 ; lines_extmem_ptr through loop
+    cpx lines_extmem_ptr
+    bcs :+
+    jmp @second_parse_loop
+    :
+
 
 get_next_line_input:
     ldy #0
@@ -557,7 +636,6 @@ alloc_extmem_data_space:
     lda last_extmem_data_bank
 
     bcc :+
-    stp
     ldx #$A000
     stx extmem_data_ptr
     jsr next_extmem_data_bank
@@ -591,6 +669,12 @@ alloc_extmem_data_space:
     iny
     lda extmem_data_ptr + 1
     jsr vwrite_byte_extmem_y
+
+    ldx lines_extmem_ptr
+    inx 
+    inx
+    inx
+    stx lines_extmem_ptr
 
     pla
     ldx extmem_data_ptr
@@ -887,6 +971,9 @@ output_filename_pointer:
 starting_pc:
     .word 0
 
+current_pc:
+    .word 0
+
 ;
 ; Instruction data ;
 ;
@@ -972,7 +1059,10 @@ MODE_INY = 9
 MODE_ACC = 10
 MODE_REL = 11
 
-; MODE          IMP, IMM,  ZP, ZPX, ABS, ABX, ABY, IND, INX, INY, ACC, REL
+instruction_mode_lengths:
+/* length */ .byte 1,   2,   2,   2,   3,   3,   3,   2,   2,   2,   1,   2
+
+; MODE             IMP, IMM,  ZP, ZPX, ABS, ABX, ABY, IND, INX, INY, ACC, REL
 instruction_modes:
 /*  0 ADC */ .byte $ff, $69, $65, $75, $6d, $7d, $79, $72, $61, $71, $ff, $ff
 /*  1 AND */ .byte $ff, $29, $25, $35, $2d, $3d, $39, $32, $21, $31, $ff, $ff
