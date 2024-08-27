@@ -5,6 +5,7 @@
 
 TWO_INPUT_FILES_ERR = 1
 FILE_DOESNT_EXIST_ERR = 2
+OPEN_WRITE_FAIL_ERR = 3
 
 ptr0 := $30
 ptr1 := $32
@@ -63,7 +64,7 @@ parse_args:
     lda input_fd
     beq :+
     lda #TWO_INPUT_FILES_ERR
-    jmp error
+    jmp gen_error
     :
 
     lda #0
@@ -78,7 +79,7 @@ parse_args:
     bne :+
 
     lda #FILE_DOESNT_EXIST_ERR
-    jmp error
+    jmp gen_error
 
     :
     jmp parse_args
@@ -542,20 +543,42 @@ second_parse:
     bne @not_directive
 
     ; C_INSTR INSTR_NUM INSTR_MODE
-    ldy #2
-    jsr readf_byte_extmem_y
+    ldy #1
     rep #$20
     .a16
-    and #$00FF
+    jsr readf_byte_extmem_y ; get INSTR_NUM and INSTR_MODE
+    sta ptr2 ; write to ptr2
+    and #$FF00 ; we want INSTR_MODE
+    xba
     tax
     lda instruction_mode_lengths, X
     and #$00FF
     clc
     adc current_pc
     sta current_pc
-    
+
     sep #$20
     .a8
+    ; Most indirect addressing instructions use 2 bytes, but JMP and JSR (ind) and (ind,x) use 3.
+    lda ptr2 + 1 ; INSTR_MODE
+    cmp #MODE_IND
+    beq :+
+    cmp #MODE_INX
+    beq :+
+    jmp @end_second_parse_loop_iter
+    :
+
+    lda ptr2 ; INSTR_NUM
+    cmp #INSTR_JMP
+    beq :+
+    cmp #INSTR_JSR
+    bne :++
+    :
+    ldx current_pc ; increment pc if INSTR_MODE = MODE_IND or MODE_INX, INSTR_NUM = jmp or jsr
+    inx
+    stx current_pc
+    :
+
     jmp @end_second_parse_loop_iter
 
 @not_directive:
@@ -608,19 +631,110 @@ second_parse:
     bne :-
     :
 
-    stp
     ldx #line_buf
     jsr get_directive_num
+    xba
+    lda #0
+    xba
+    tax
+    lda directive_data_lens, X
+    beq @end_second_parse_loop_iter ; these have no data
 
+    cmp #$FF
+    beq @determine_data_size
+
+    ; data size = ( # of entries ) << (.A - 1)
+    ; # of entries = # of commas + 1
+    ; count commas in str
+    sta @data_size_shifts
+
+    ldx #line_buf
+    jsr strlen
+    iny ; point to data part of directive
+    ; now we can count commas in rest of the string
+    ldx #1
+@count_comma_loop:
+    lda $00, Y
+    beq @end_count_comma_loop
+    cmp #','
+    bne :+
+    inx ; found a comma
+    :
+    iny
+    bne @count_comma_loop
+@end_count_comma_loop:
+    rep #$20
+    .a16
+    txa ; number of commas
+    
+    ; shift .A left (@data_size_shifts - 1) times
+    :
+    dec @data_size_shifts
+    beq :+ ; end of loop
+    asl A
+    bra :-
+    :
+
+    clc
+    adc current_pc
+    sta current_pc
+
+    sep #$20
+    .a8
+
+    bra @end_second_parse_loop_iter
+@data_size_shifts:
+    .word 0
+
+@determine_data_size:
+    stp
+    ; TODO
 
 @end_second_parse_loop_iter:
+    lda #'$'
+    jsr CHROUT
+    
+    lda current_pc + 1
+    jsr GET_HEX_NUM
+    jsr CHROUT
+    txa
+    jsr CHROUT
+
+    lda current_pc
+    jsr GET_HEX_NUM
+    jsr CHROUT
+    txa
+    jsr CHROUT
+    
+    lda #$d
+    jsr CHROUT
+
     ldx ptr0 ; lines_extmem_ptr through loop
     cpx lines_extmem_ptr
     bcs :+
     jmp @second_parse_loop
     :
 
+third_parse:
+    ; open file for output
     stp
+    lda output_filename_pointer
+    ldx output_filename_pointer + 1
+    ldy #'W' ; open file for writing
+    jsr open_file
+    cmp #$FF
+    bne :+
+    ; error occurred
+    lda #OPEN_WRITE_FAIL_ERR
+    jmp gen_error
+    :
+    sta output_fd
+
+    stp
+    lda output_fd
+    jsr close_file
+
+    lda #0
     rts
 
 ;
@@ -816,6 +930,10 @@ strcmp_mainmem_extmem:
     :
     rts
 
+;
+; gets the directive num for a string passed in .X
+; .A = $FF if the directive is invalid, otherwise returns the number
+;
 get_directive_num:
     ; .X stays preserved throughout function
 
@@ -849,8 +967,9 @@ get_directive_num:
     sta ptr1
     sep #$20
     .a8    
-
-
+    
+    bra @compare_loop
+    
 @found_dir:
     lda @directive_strs_index
     rts
@@ -1056,6 +1175,10 @@ strcmp:
     sbc $00, Y
     rts
 
+;
+; takes string in .X, returns length in .A and pointer to \0 at end of string in .Y
+; preserves .X
+;
 strlen:
     phx
     ldy #0
@@ -1232,7 +1355,7 @@ first_parse_error:
 
     jmp print_newline_exit
 
-error:
+gen_error:
     pha
 
     lda #<general_err_str
@@ -1270,6 +1393,8 @@ two_inputs_str:
     .asciiz "Input file already provided"
 no_such_file_str:
     .asciiz "No such file exists"
+open_write_fail_str:
+    .asciiz "Couldn't open output file for writing"
 general_err_str:
     .asciiz "Error: "
 invalid_line_str:
@@ -1314,9 +1439,9 @@ DIRECTIVE_STRSIZE = 5
 ; 1+ (excl. $FF) means data is in multiples of that many bytes
 ; $FF means data size varies (needs to calc'd)
 directive_data_lens:
-    .byte 1 ; byte
-    .byte 2 ; word
-    .byte 4 ; dw
+    .byte 1 ; byte, * 1 = << (1 - 1)
+    .byte 2 ; word, * 2 = << (2 - 1)
+    .byte 3 ; dw, * 4 = << (3 - 1)
     .byte $FF ; res
     .byte 0 ; equ
     .byte $FF ; str
@@ -1394,6 +1519,12 @@ instruction_strs:
 
 INSTRUCTION_LIST_SIZE = 65
 
+;
+; jsr & jmp have different lengths of IND & INX addressing so they need specific definitions
+;
+INSTR_JMP = 27
+INSTR_JSR = 28
+
 MODE_IMP = 0
 MODE_IMM = 1
 MODE_ZP = 2
@@ -1436,11 +1567,11 @@ instruction_modes:
 /* 21 DEX */ .byte $ca, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 /* 22 DEY */ .byte $88, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 /* 23 EOR */ .byte $ff, $49, $45, $55, $4d, $5d, $59, $52, $41, $51, $ff, $ff
-/* 24 INC */ .byte $ff, $ff, $e6, $f6, $ee, $fe, $ff, $ff, $ff, $ff, $1a, $ff
+/* 24 INC */ .byte $ff, $ff, $e6, $f6, $EE, $FE, $ff, $ff, $ff, $ff, $1a, $ff
 /* 25 INX */ .byte $e8, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 /* 26 INY */ .byte $c8, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-/* 27 JMP */ .byte $ff, $ff, $ff, $ff, $4c, $ff, $ff, $6c, $ff, $ff, $ff, $ff
-/* 28 JSR */ .byte $ff, $ff, $ff, $ff, $20, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+/* 27 JMP */ .byte $ff, $ff, $ff, $ff, $4C, $ff, $ff, $6C, $7C, $ff, $ff, $ff
+/* 28 JSR */ .byte $ff, $ff, $ff, $ff, $20, $ff, $ff, $ff, $FC, $ff, $ff, $ff
 /* 29 LDA */ .byte $ff, $a9, $a5, $b5, $ad, $bd, $b9, $b2, $a1, $b1, $ff, $ff
 /* 30 LDX */ .byte $ff, $a2, $a6, $b6, $ae, $ff, $be, $ff, $ff, $ff, $ff, $ff ; Note: zp,Y addressing not supported. you can use abs,Y though
 /* 31 LDY */ .byte $ff, $a0, $a4, $b4, $ac, $bc, $ff, $ff, $ff, $ff, $ff, $ff
