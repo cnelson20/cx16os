@@ -275,14 +275,16 @@ first_parse:
     jsr get_instr_num
     sta @curr_instr_num
     cmp #$FF
-    pla ; pull byte off stack
+    
+    pla
+    ldx ptr1 ; byte that was there was in .A
+    sta $00, X
+    
     bcc :+ ; if num was $FF, carry will be set
     jmp first_parse_error
     :
-    
-    ldx ptr1
-    ; byte that was there was in .A
-    sta $00, X
+
+    ; ptr1 in .X
     jsr find_non_whitespace
     stx ptr1
 @find_addr_mode:
@@ -492,7 +494,7 @@ second_parse:
     sta labels_values_banks + 0
 
     ldx #0
-    stx labels_values_banks_size
+    stx labels_values_banks_last_index
 
     stp
     lda lines_extmem_bank
@@ -526,7 +528,6 @@ second_parse:
     inx
     stx ptr0
 
-    stp
     pla
     jsr set_extmem_rbank
 
@@ -592,16 +593,29 @@ second_parse:
     jmp @second_parse_loop
     :
 
+    stp
+    rts
+
 ;
 ; str in .X, value as int in .Y
 ;
 set_label_value:
     stp
+    phx
+    phy
+    jsr find_label_value
+    ply
+    plx
+    cmp #0
+    beq :+ 
+    ; label already defined
+    jmp label_already_defined_err
+    :
 
-    stx @tmp_label
-    sty @tmp_value
+    stx tmp_label
+    sty tmp_value
 
-    ldx labels_values_banks_size
+    ldx labels_values_banks_last_index
     lda labels_values_banks, X
     jsr set_extmem_wbank
 
@@ -617,13 +631,13 @@ set_label_value:
     ldy #30
     rep #$20
     .a16
-    lda @tmp_value
+    lda tmp_value
     jsr writef_byte_extmem_y
     sep #$20
     .a8
 
     ldy #0
-    ldx @tmp_label
+    ldx tmp_label
     :
     lda $00, X
     beq :+
@@ -644,7 +658,7 @@ set_label_value:
     .a16
     lda labels_values_ptr
     ; carry cleared from 
-    adc #$20
+    adc #32
     sta labels_values_ptr
     sep #$20
     .a8
@@ -654,13 +668,13 @@ set_label_value:
     rts
     :   
 
-    ldx labels_values_banks_size
+    ldx labels_values_banks_last_index
     lda labels_values_banks, X
     and #1
     beq :+
 
     jsr res_extmem_bank
-    ldx labels_values_banks_size
+    ldx labels_values_banks_last_index
     sta labels_values_banks, X
 
     bra :++
@@ -671,17 +685,93 @@ set_label_value:
     sta labels_values_banks, X
 
     :
-    inc labels_values_banks_size
+    inc labels_values_banks_last_index
     rts
 
-@tmp_label:
+find_label_value:
+    stx tmp_label
+
+    ldx ptr0
+    phx
+
+    ldx labels_values_banks_last_index
+    stx @label_values_banks_index
+
+    lda labels_values_banks, X
+    jsr set_extmem_rbank
+
+    ldx labels_values_ptr
+    stx ptr0
+
+    lda #ptr0
+    jsr set_extmem_rptr
+
+@check_loop:
+    rep #$20
+    .a16
+    lda ptr0
+    sec
+    sbc #32
+    sta ptr0
+    sep #$20
+    .a8
+    ldx ptr0
+    cpx #$A000
+    bcs :+
+
+    dec @label_values_banks_index
+    bmi @end_check_loop
+    ldx @label_values_banks_index
+    lda labels_values_banks, X
+    jsr set_extmem_rbank
+
+    ldx #$C000 - 32
+    stx ptr0
+
+    :
+
+    ldx tmp_label
+    ldy #0
+    :
+    jsr readf_byte_extmem_y
+    cmp $00, X
+    bne @check_loop ; not equal, go to next loop
+    cmp #0
+    beq @found_label ; we found it!
+    inx
+    iny
+    bne :- ; check other characters in string
+
+@found_label:
+    ldy #30
+    rep #$20
+    .a16
+    jsr readf_byte_extmem_y ; get value
+    tax
+    sep #$20
+    .a8
+    lda #1
+    bra @pull_off_stack
+
+@end_check_loop:
+    lda #0
+
+@pull_off_stack:
+    ply
+    sty ptr0
+    rts
+
+@label_values_banks_index:
     .word 0
-@tmp_value:
+
+tmp_label:
+    .word 0
+tmp_value:
     .word 0
 
 labels_values_ptr:
     .word $A000
-labels_values_banks_size:
+labels_values_banks_last_index:
     .word 0
 labels_values_banks:
     .res 128
@@ -1018,6 +1108,30 @@ find_last_whitespace:
 @start_str:
     rts
 
+label_already_defined_err:
+    phx
+
+    lda #<label_already_defined_str_p1
+    ldx #>label_already_defined_str_p1
+    jsr print_str
+
+    plx
+    rep #$20
+    .a16
+    txa
+    sep #$20
+    .a8
+    xba
+    tax
+    xba
+    jsr print_str
+
+    lda #<label_already_defined_str_p2
+    ldx #>label_already_defined_str_p2
+    jsr print_str
+
+    jmp print_newline_exit
+
 first_parse_error:
     lda #<general_err_str
     ldx #>general_err_str
@@ -1078,6 +1192,11 @@ general_err_str:
     .asciiz "Error: "
 invalid_line_str:
     .asciiz "Invalid line: '"
+
+label_already_defined_str_p1:
+    .asciiz "Error: label '"
+label_already_defined_str_p2:
+    .asciiz "' already defined"
 
 argc:
     .word 0
