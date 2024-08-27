@@ -253,8 +253,9 @@ skip_print_prompt:
 	lda #0
 	jsr send_byte_chrout_hook
 
+	stz flicker_tick
 	stz input
-	ldx #0	
+	ldx #0
 wait_for_input:
 	phx
 	ldx #0
@@ -272,7 +273,19 @@ wait_for_input:
 	lda #$0D ; if eof has been reached, exec what's in buffer (unless buffer is empty)
 @not_end_of_file_input:
 	cmp #0
-	beq wait_for_input
+	bne :+
+	inc flicker_tick
+	bne wait_for_input
+	lda #UNDERSCORE
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+	lda #0
+	phx
+	jsr send_byte_chrout_hook
+	plx
+	bra wait_for_input
+	:
 
 	cmp #$0D ; return
 	beq command_entered
@@ -1417,6 +1430,8 @@ output:
 command_length:
 	.byte 0
 curr_arg:
+	.byte 0
+flicker_tick:
 	.byte 0
 
 next_fd:
