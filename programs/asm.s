@@ -584,6 +584,33 @@ second_parse:
 
 @second_parse_directive:
     ; decipher if directive has data
+    ; first copy data to prog mem to make stuff easier ;
+    ldx #line_buf
+    ldy #1
+    :
+    jsr readf_byte_extmem_y
+    sta $00, X
+    cmp #0
+    beq :+
+    inx
+    iny
+    bne :-
+    :
+    inx
+    iny ; increment .X & .Y so string isn't appended
+    :
+    jsr readf_byte_extmem_y
+    sta $00, X
+    cmp #0
+    beq :+
+    inx
+    iny
+    bne :-
+    :
+
+    stp
+    ldx #line_buf
+    jsr get_directive_num
 
 
 @end_second_parse_loop_iter:
@@ -600,7 +627,6 @@ second_parse:
 ; str in .X, value as int in .Y
 ;
 set_label_value:
-    stp
     phx
     phy
     jsr find_label_value
@@ -790,7 +816,47 @@ strcmp_mainmem_extmem:
     :
     rts
 
+get_directive_num:
+    ; .X stays preserved throughout function
 
+    ldy #directive_strs
+    sty ptr1
+
+    ldy #0
+    sty @directive_strs_index
+
+@compare_loop:
+    ldy ptr1
+    jsr strcmp
+    cmp #0
+    beq @found_dir
+
+    ; not equal
+    lda @directive_strs_index
+    inc A
+    cmp #DIRECTIVES_STRS_LEN
+    bcc :+
+
+    lda #$FF ; not found
+    rts
+    :
+    sta @directive_strs_index
+
+    rep #$21 ; clear carry
+    .a16
+    lda ptr1
+    adc #DIRECTIVE_STRSIZE
+    sta ptr1
+    sep #$20
+    .a8    
+
+
+@found_dir:
+    lda @directive_strs_index
+    rts
+
+@directive_strs_index:
+    .word 0
 
 get_next_line_input:
     ldy #0
@@ -1227,6 +1293,34 @@ starting_pc:
 
 current_pc:
     .word 0
+
+;
+; strings for diff directives
+;
+directive_strs:
+/* 0s equal to 5 - strlen */
+    .byte "byte", 0
+    .byte "word", 0
+    .byte "dw", 0, 0, 0
+    .byte "res", 0, 0
+    .byte "equ", 0, 0
+    .byte "str", 0, 0
+    .byte "strz", 0
+
+DIRECTIVES_STRS_LEN = 7
+DIRECTIVE_STRSIZE = 5
+
+; 0 means directive outputs no data into final program
+; 1+ (excl. $FF) means data is in multiples of that many bytes
+; $FF means data size varies (needs to calc'd)
+directive_data_lens:
+    .byte 1 ; byte
+    .byte 2 ; word
+    .byte 4 ; dw
+    .byte $FF ; res
+    .byte 0 ; equ
+    .byte $FF ; str
+    .byte $FF ; strz
 
 ;
 ; Instruction data ;
