@@ -18,6 +18,9 @@ C_DIRECTIVE = 2
 
 C_DIRECTIVE_PROCESSED = 3
 
+; format for C_DIRECTIVE_PROCESSED
+; C_DIRECTIVE_PROCESSED | 2 bytes SIZE | SIZE bytes DATA |
+
 init:
     jsr get_args
     sta ptr0
@@ -633,6 +636,10 @@ second_parse:
 
     ldx #line_buf
     jsr get_directive_num
+    cmp #$FF ; is this a valid directive
+    bne :+
+    jmp invalid_directive_err
+    :
     xba
     lda #0
     xba
@@ -687,8 +694,62 @@ second_parse:
     .word 0
 
 @determine_data_size:
-    stp
+    txa
+    sta @data_size_shifts ; store DIR_NUM to tmp variable if needed
+
+    cmp #DIR_STR
+    beq :+
+    cmp #DIR_STRZ
+    beq :+
+    bra @not_str_directive ; if matches neither, branch ahead
+    :
+    ; find quotes
+    ldx #line_buf
+    jsr strlen
+    tyx
+    inx ; go to first char of data
+    stx ptr1
+    jsr find_non_whitespace
+    lda $00, X
+    cmp #'"'
+    beq :+
+    jmp str_not_quoted_error
+    :
+    stx ptr1
+    jsr find_last_whitespace
+    dex
+    lda $00, X
+    cmp #'"'
+    beq :+
+    jmp str_not_quoted_error
+    :
+    stz $00, X
+    ldx ptr1
+    inx ; go past quote
+    jsr strlen
+    ldy @data_size_shifts
+    cpy #DIR_STRZ
+    bne :+
+    inc A ; add one for \0 byte
+    :
+    rep #$21 ; clear carry
+    .a16
+    and #$00FF
+    adc current_pc
+    sta current_pc
+    sep #$20
+    .a8
+
+    ; .X holds pointer to string
+    ; we are going to set entry in lines table to include data, so we don't have to do it later
     ; TODO
+    stp
+    
+    bra @end_second_parse_loop_iter
+
+@not_str_directive:
+    ; error here, invalid directive
+    jmp invalid_directive_err
 
 @end_second_parse_loop_iter:
     lda #'$'
@@ -736,6 +797,8 @@ third_parse:
 
     lda #0
     rts
+
+LABEL_VALUE_SIZE = 32
 
 ;
 ; str in .X, value as int in .Y
@@ -798,7 +861,7 @@ set_label_value:
     .a16
     lda labels_values_ptr
     ; carry cleared from 
-    adc #32
+    adc #LABEL_VALUE_SIZE
     sta labels_values_ptr
     sep #$20
     .a8
@@ -851,7 +914,7 @@ find_label_value:
     .a16
     lda ptr0
     sec
-    sbc #32
+    sbc #LABEL_VALUE_SIZE
     sta ptr0
     sep #$20
     .a8
@@ -1251,6 +1314,9 @@ makeupper:
     plx
     rts
 
+;
+; returns pointer to first non-whitespace character in .X, otherwise returns pointer to null terminator if there are none
+;
 find_non_whitespace:
     lda $00, X
     beq :+
@@ -1264,6 +1330,9 @@ find_non_whitespace:
     bne find_non_whitespace
     rts
 
+;
+; returns pointer to first whitespace character in .X (returns null terminator if there are none)
+;
 find_whitespace_char:
     lda $00, X
     beq :+
@@ -1316,8 +1385,10 @@ find_last_whitespace:
 label_already_defined_err:
     phx
 
-    lda #<label_already_defined_str_p1
-    ldx #>label_already_defined_str_p1
+    jsr print_gen_err_str
+
+    lda #<@label_already_defined_str_p1
+    ldx #>@label_already_defined_str_p1
     jsr print_str
 
     plx
@@ -1331,21 +1402,40 @@ label_already_defined_err:
     xba
     jsr print_str
 
-    lda #<label_already_defined_str_p2
-    ldx #>label_already_defined_str_p2
+    lda #<@label_already_defined_str_p2
+    ldx #>@label_already_defined_str_p2
     jsr print_str
 
     jmp print_newline_exit
 
+@label_already_defined_str_p1:
+    .asciiz "label '"
+@label_already_defined_str_p2:
+    .asciiz "' already defined"
+
+invalid_directive_err:
+    jsr print_gen_err_str
+    
+    lda #<@invalid_dir_str
+    ldx #>@invalid_dir_str
+    jsr print_str
+
+    bra print_line_buf_quote_terminate
+@invalid_dir_str:
+    .asciiz "Invalid directive: '"
+
 first_parse_error:
-    lda #<general_err_str
-    ldx #>general_err_str
+    jsr print_gen_err_str
+
+    lda #<@invalid_line_str
+    ldx #>@invalid_line_str
     jsr print_str
 
-    lda #<invalid_line_str
-    ldx #>invalid_line_str
-    jsr print_str
+    bra print_line_buf_quote_terminate
+@invalid_line_str:
+    .asciiz "Invalid line: '"
 
+print_line_buf_quote_terminate:
     lda #<line_buf
     ldx #>line_buf
     jsr print_str
@@ -1355,13 +1445,48 @@ first_parse_error:
 
     jmp print_newline_exit
 
+
+
+str_not_quoted_error:
+    jsr print_gen_err_str
+
+    lda #<@str_not_quoted_str_p1
+    ldx #>@str_not_quoted_str_p1
+    jsr print_str    
+
+    lda #<line_buf
+    ldx #>line_buf
+    jsr print_str
+
+    lda #<@str_not_quoted_str_p2
+    ldx #>@str_not_quoted_str_p2
+    jsr print_str
+
+    lda ptr1
+    ldx ptr1 + 1
+    jsr print_str
+
+    lda #'''
+    jsr CHROUT
+
+    jmp print_newline_exit
+
+@str_not_quoted_str_p1:
+    .asciiz "Directive '"
+@str_not_quoted_str_p2:
+    .asciiz "' must be followed by double-quoted string literal, instead followed by '"
+
+print_gen_err_str:
+    lda #<general_err_str
+    ldx #>general_err_str
+    jmp print_str
+
+
 gen_error:
     pha
 
-    lda #<general_err_str
-    ldx #>general_err_str
-    jsr print_str
-
+    jsr print_gen_err_str
+    
     lda #0
     xba
     pla
@@ -1387,7 +1512,7 @@ print_newline_exit:
     rts
 
 error_str_list:
-    .word $FFFF, two_inputs_str, no_such_file_str
+    .word $FFFF, two_inputs_str, no_such_file_str, open_write_fail_str
 
 two_inputs_str:
     .asciiz "Input file already provided"
@@ -1397,13 +1522,6 @@ open_write_fail_str:
     .asciiz "Couldn't open output file for writing"
 general_err_str:
     .asciiz "Error: "
-invalid_line_str:
-    .asciiz "Invalid line: '"
-
-label_already_defined_str_p1:
-    .asciiz "Error: label '"
-label_already_defined_str_p2:
-    .asciiz "' already defined"
 
 argc:
     .word 0
@@ -1431,6 +1549,14 @@ directive_strs:
     .byte "equ", 0, 0
     .byte "str", 0, 0
     .byte "strz", 0
+
+DIR_BYTE = 0
+DIR_WORD = 1
+DIR_DW = 2
+DIR_RES = 3
+DIR_EQU = 4
+DIR_STR = 5
+DIR_STRZ = 6
 
 DIRECTIVES_STRS_LEN = 7
 DIRECTIVE_STRSIZE = 5
