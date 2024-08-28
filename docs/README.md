@@ -5,7 +5,7 @@
 
 - Multitasking OS for the Commander X16
 
- - Linux-esque, terminal-based
+ - Unix-esque, terminal-based
  - Trying to take advantage of the X16's features
 
 ### Features
