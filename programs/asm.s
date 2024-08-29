@@ -515,7 +515,7 @@ second_parse:
     cmp #C_INSTRUCTION
     bne @not_directive
 
-    ; C_INSTR INSTR_NUM INSTR_MODE
+    ; C_INSTRUCTION INSTR_NUM INSTR_MODE
     ldy #1
     rep #$20
     .a16
@@ -782,7 +782,6 @@ second_parse:
 	
 	ldx #0
 	pla ; pull data size back off stack
-	stp
 	jsr memmove_extmem
     
     bra @end_second_parse_loop_iter
@@ -836,9 +835,11 @@ third_parse:
 
 @third_parse_loop:
 	; this code identical to start of second_parse_loop
+	stp
     jsr start_second_third_parse_loop_iter
 	; have type of command (instruction / directive / label) in .A
 	; ptr1 contains entry and extmem rbank & rptr calls are done
+	cmp #C_INSTRUCTION
 
 @end_third_parse_loop_iter:
 	ldx ptr0 ; lines_extmem_ptr through loop
@@ -891,6 +892,42 @@ start_second_third_parse_loop_iter:
     
     ldy #0
     jmp readf_byte_extmem_y ; return to caller after fetching byte from extmem
+
+;
+; determine_label_value
+; returns the value (in .X) of a label. if there are errors parsing, will not return
+;
+determine_label_value:
+	lda $00, X
+	cmp #'<'
+	bne @not_low_byte
+	; take low byte of rest
+	inx
+	jsr determine_label_value
+	txa
+	rep #$20
+	.a16
+@clear_high_byte_tax_return:
+	and #$00FF
+	tax
+	sep #$20
+	.a8
+	rts	
+@not_low_byte:
+	cmp #'>'
+	bne @not_high_byte
+	; take low byte of rest
+	inx
+	jsr determine_label_value
+	rep #$20
+	txa
+	xba ; dont .a16 here so nothing gets screwed up in below code
+	bra @clear_high_byte_tax_return
+@not_high_byte:
+	; $ means hex
+	; 0-9 means number
+	; otherwise means label
+
 
 ;
 ; str in .X, value as int in .Y
@@ -1546,8 +1583,6 @@ print_line_buf_quote_terminate:
 
     jmp print_newline_exit
 
-
-
 str_not_quoted_error:
     jsr print_gen_err_str
 
@@ -1631,12 +1666,15 @@ input_fd:
 output_fd:
     .word 0
 output_filename_pointer:
-    .word 0
+    .word a_out_str
 starting_pc:
     .word 0
 
 current_pc:
     .word 0
+
+a_out_str:
+	.asciiz "a.out"
 
 ;
 ; strings for diff directives
