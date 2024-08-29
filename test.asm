@@ -1,6 +1,6 @@
 lda #0  ; hello monitor
 test_label:
-.strz "hello
+.strz "hello"
 .word 0, 2
 .equ value 5
 lda $0000
