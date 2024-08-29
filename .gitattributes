@@ -1,2 +1,2 @@
-*.txt eol=crlf
-*.asm eol=crlf
+*.txt text eol=crlf
+*.asm text eol=crlf
