@@ -7,6 +7,13 @@ TWO_INPUT_FILES_ERR = 1
 FILE_DOESNT_EXIST_ERR = 2
 OPEN_WRITE_FAIL_ERR = 3
 
+SINGLE_QUOTE = 39
+
+r0 := $02
+r1 := $04
+r2 := $06
+r3 := $08
+
 ptr0 := $30
 ptr1 := $32
 ptr2 := $34
@@ -181,7 +188,7 @@ first_parse:
     clc
     adc ptr2 ; add length of other string
     adc #3 ; \0, \0, C_DIRECTIVE
-    jsr alloc_extmem_data_space
+    jsr alloc_extmem_space_for_line
 
     stx ptr2
     jsr set_extmem_wbank
@@ -229,7 +236,7 @@ first_parse:
     jsr strlen
     clc
     adc #2 ; \0 + C_LABEL
-    jsr alloc_extmem_data_space
+    jsr alloc_extmem_space_for_line
 
     stx ptr1
     jsr set_extmem_wbank
@@ -442,7 +449,7 @@ first_parse:
     jsr strlen
     clc
     adc #4 ; \0, instr_mode, inst_num, C_INSTRUCTION
-    jsr alloc_extmem_data_space
+    jsr alloc_extmem_space_for_line
 
 
     stx ptr2
@@ -500,48 +507,11 @@ second_parse:
     ldx #0
     stx labels_values_banks_last_index
 
-    stp
-    lda lines_extmem_bank
-    ldx lines_extmem_ptr
-
     ldx #$A000
     stx ptr0
 
 @second_parse_loop:
-    lda lines_extmem_bank
-    jsr set_extmem_rbank
-
-    lda #ptr0
-    jsr set_extmem_rptr
-
-    ldx ptr0
-    ldy #0
-    jsr readf_byte_extmem_y
-    pha
-    
-    inx
-    stx ptr0
-    jsr readf_byte_extmem_y
-    sta ptr1
-
-    inx
-    stx ptr0
-    jsr readf_byte_extmem_y
-    sta ptr1 + 1
-
-    inx
-    stx ptr0
-
-    pla
-    jsr set_extmem_rbank
-
-    lda #ptr1
-    jsr set_extmem_rptr
-
-    ; get type of command (instruction / directive / label)
-    
-    ldy #0
-    jsr readf_byte_extmem_y
+    jsr start_second_third_parse_loop_iter
     cmp #C_INSTRUCTION
     bne @not_directive
 
@@ -691,7 +661,7 @@ second_parse:
     sep #$20
     .a8
 
-    bra @end_second_parse_loop_iter
+    jmp @end_second_parse_loop_iter
 @data_size_shifts:
     .word 0
 
@@ -703,7 +673,7 @@ second_parse:
     beq :+
     cmp #DIR_STRZ
     beq :+
-    bra @not_str_directive ; if matches neither, branch ahead
+    jmp @not_str_directive ; if matches neither, branch ahead
     :
     ; find quotes
     ldx #line_buf
@@ -728,24 +698,92 @@ second_parse:
     stz $00, X
     ldx ptr1
     inx ; go past quote
+	stx ptr1
     jsr strlen
     ldy @data_size_shifts
     cpy #DIR_STRZ
     bne :+
     inc A ; add one for \0 byte
     :
-    rep #$21 ; clear carry
+    pha
+	rep #$21 ; clear carry
     .a16
     and #$00FF
     adc current_pc
     sta current_pc
     sep #$20
     .a8
-
-    ; .X holds pointer to string
+	pla
+	pha ; push data size back to stack
+	clc
+	adc #3 ; 3 bytes: C_DIRECTIVE_PROCESSED & 2 bytes for size of data
     ; we are going to set entry in lines table to include data, so we don't have to do it later
-    ; TODO
-    stp
+    jsr alloc_extmem_data_space
+	; pointer in .X
+	stx ptr2
+	sta r2 ; for memmove_extmem later, dest bank
+	pha ; push data bank
+	
+	lda #ptr0
+	jsr set_extmem_wptr
+	lda lines_extmem_bank
+	jsr set_extmem_wbank
+	
+	ldy ptr0
+	dey
+	dey
+	dey
+	sty ptr0 ; ptr0 -= 3 so points to this line's entry in mem
+	
+	pla ; pull data bank
+	ldy #0
+	jsr writef_byte_extmem_y
+	
+	iny ; y = 1
+	rep #$20
+	.a16
+	lda ptr2
+	jsr writef_byte_extmem_y
+	clc
+	adc #3 ; add three for same reason
+	sta r0 ; dest ptr
+	
+	lda ptr0 ; add 3 back so next line pulled is the actual next line
+	clc
+	adc #3
+	sta ptr0
+	sep #$20
+	.a8
+	
+	lda #ptr2
+	jsr set_extmem_wptr
+	lda r2 ; dest bank
+	jsr set_extmem_wbank
+	
+	ldy #0
+	lda #C_DIRECTIVE_PROCESSED
+	jsr writef_byte_extmem_y
+	
+	pla
+	pha ; pull data size off stack and push back
+	iny
+	rep #$20
+	.a16
+	and #$00FF
+	jsr writef_byte_extmem_y
+	sep #$20
+	.a8
+	
+	lda #0
+	sta r3 ; src bank
+	
+	ldx ptr1
+	stx r1 ; src ptr
+	
+	ldx #0
+	pla ; pull data size back off stack
+	stp
+	jsr memmove_extmem
     
     bra @end_second_parse_loop_iter
 
@@ -793,6 +831,22 @@ third_parse:
     :
     sta output_fd
 
+	ldx #$A000
+    stx ptr0
+
+@third_parse_loop:
+	; this code identical to start of second_parse_loop
+    jsr start_second_third_parse_loop_iter
+	; have type of command (instruction / directive / label) in .A
+	; ptr1 contains entry and extmem rbank & rptr calls are done
+
+@end_third_parse_loop_iter:
+	ldx ptr0 ; lines_extmem_ptr through loop
+    cpx lines_extmem_ptr
+    bcs :+
+    jmp @third_parse_loop
+    :
+@end_third_parse:
     stp
     lda output_fd
     jsr close_file
@@ -801,6 +855,42 @@ third_parse:
     rts
 
 LABEL_VALUE_SIZE = 32
+
+start_second_third_parse_loop_iter:
+	lda lines_extmem_bank
+    jsr set_extmem_rbank
+
+    lda #ptr0
+    jsr set_extmem_rptr
+
+    ldx ptr0
+    ldy #0
+    jsr readf_byte_extmem_y
+    pha
+    
+    inx
+    stx ptr0
+    jsr readf_byte_extmem_y
+    sta ptr1
+
+    inx
+    stx ptr0
+    jsr readf_byte_extmem_y
+    sta ptr1 + 1
+
+    inx
+    stx ptr0
+
+    pla
+    jsr set_extmem_rbank
+
+    lda #ptr1
+    jsr set_extmem_rptr
+
+    ; get type of command (instruction / directive / label)
+    
+    ldy #0
+    jmp readf_byte_extmem_y ; return to caller after fetching byte from extmem
 
 ;
 ; str in .X, value as int in .Y
@@ -1095,6 +1185,21 @@ next_extmem_data_bank:
     rts
 
 
+alloc_extmem_space_for_line:
+	jsr alloc_extmem_data_space
+	pha ; preserve bank
+	
+	rep #$21 ; clear carry
+	.a16
+	lda lines_extmem_ptr
+    adc #3
+    sta lines_extmem_ptr
+	sep #$20
+	.a8
+	
+	pla
+	rts
+	
 alloc_extmem_data_space:
     ; .A = size of data
     rep #$20
@@ -1144,12 +1249,6 @@ alloc_extmem_data_space:
     iny
     lda extmem_data_ptr + 1
     jsr vwrite_byte_extmem_y
-
-    ldx lines_extmem_ptr
-    inx 
-    inx
-    inx
-    stx lines_extmem_ptr
 
     pla
     ldx extmem_data_ptr
@@ -1442,7 +1541,7 @@ print_line_buf_quote_terminate:
     ldx #>line_buf
     jsr print_str
 
-    lda #'''
+    lda #SINGLE_QUOTE
     jsr CHROUT
 
     jmp print_newline_exit
@@ -1468,7 +1567,7 @@ str_not_quoted_error:
     ldx ptr1 + 1
     jsr print_str
 
-    lda #'''
+    lda #SINGLE_QUOTE
     jsr CHROUT
 
     jmp print_newline_exit
