@@ -645,8 +645,10 @@ second_parse:
     xba
     tax
     lda directive_data_lens, X
-    beq @end_second_parse_loop_iter ; these have no data
-
+    bne :+
+    jmp @end_second_parse_loop_iter ; these have no data
+    :
+    
     cmp #$FF
     beq @determine_data_size
 
