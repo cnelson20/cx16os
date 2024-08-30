@@ -839,7 +839,50 @@ third_parse:
     jsr start_second_third_parse_loop_iter
 	; have type of command (instruction / directive / label) in .A
 	; ptr1 contains entry and extmem rbank & rptr calls are done
+	
+	ldy #3
+	ldx line_buf
+	:
+	jsr readf_byte_extmem_y
+	sta $00, X
+	cmp #0
+	beq :+
+	inx
+	iny
+	bne :-
+	:
+	
+	ldy #0
+	jsr readf_byte_extmem_y
 	cmp #C_INSTRUCTION
+	beq @third_parse_directive
+	
+	; Error, one of the following branches should have occured
+	jmp @end_third_parse_loop_iter
+	brk
+@third_parse_directive:
+	ldy #1
+	rep #$20
+	.a16
+	jsr readf_byte_extmem_y
+	sta ptr2
+	and #$00FF
+	sep #$20
+	.a8
+	lda ptr2 + 1 ; INSTR_MODE
+	tax
+	lda instruction_mode_lengths, X
+	cmp #1
+	bne @not_implied_instruction
+@implied_addressing_instruction:
+	jsr get_instruction_opcode
+	ldx output_fd
+	jsr fputc
+	jmp @end_third_parse_loop_iter
+	
+@not_implied_instruction:
+	jmp @end_third_parse_loop_iter
+	
 
 @end_third_parse_loop_iter:
 	ldx ptr0 ; lines_extmem_ptr through loop
@@ -892,12 +935,75 @@ start_second_third_parse_loop_iter:
     
     ldy #0
     jmp readf_byte_extmem_y ; return to caller after fetching byte from extmem
+	
+
+get_instruction_opcode:
+	ldx ptr2
+	phx
+	
+	lda #0
+	xba
+	lda ptr2 + 1
+	tax
+	
+	stz ptr2 + 1
+	rep #$20
+	.a16
+	asl ptr2
+	asl ptr2
+	lda ptr2
+	asl A
+	clc
+	adc ptr2
+	stx ptr2
+	adc ptr2
+	tax
+	.a8
+	sep #$20
+	
+	lda instruction_modes, X
+	plx
+	stx ptr2
+	cmp #$FF
+	; if $FF, invalid addressing mode, error
+	beq :+
+	rts
+	:
+	
+	jsr print_gen_err_str
+	
+	lda #<@invalid_addr_mode_str
+	ldx #>@invalid_addr_mode_str
+	jsr print_str
+	
+	lda ptr2
+	rep #$20
+	.a16
+	and #$00FF
+	asl A
+	asl A
+	adc #instruction_strs
+	xba
+	tax
+	xba
+	sep #$20
+	.a8
+
+	jsr print_str
+	
+	;
+	
+	jmp print_quote_terminate
+
+@invalid_addr_mode_str:
+	.asciiz "Invalid addressing mode '"
 
 ;
 ; determine_label_value
 ; returns the value (in .X) of a label. if there are errors parsing, will not return
 ;
 determine_label_value:
+	stp
 	lda $00, X
 	cmp #'<'
 	bne @not_low_byte
@@ -927,10 +1033,44 @@ determine_label_value:
 	; $ means hex
 	; 0-9 means number
 	; otherwise means label
-
+	cmp #'$'
+	beq @parse_number
+	cmp #'0'
+	bcc @not_number
+	cmp #'9' + 1
+	bcs @not_number
+@parse_number:
+	rep #$20
+	.a16
+	txa
+	sep #$20
+	.a8
+	xba
+	tax
+	xba
+	jsr parse_num
+	xba
+	txa ; lower byte of .X to .A
+	xba ;switch back
+	tax ; transfer all 16 bits of .C to .X
+	rts ; return
+	
+@not_number:
+	; try looking for label
+	phx
+	jsr find_label_value
+	cmp #0
+	beq :+
+	ply
+	rts ; if it was found, just return value in .X
+	:
+	; Error!
+	plx ; pull symbol that is undefined
+	jmp undefined_symbol_err
 
 ;
 ; str in .X, value as int in .Y
+; errors if label is already defined
 ;
 set_label_value:
     phx
@@ -1020,6 +1160,10 @@ set_label_value:
     inc labels_values_banks_last_index
     rts
 
+;
+; finds the value of a label passed in .X
+; on return, .A holds whether it was found and .X holds the value (if it was)
+;
 find_label_value:
     stx tmp_label
 
@@ -1079,7 +1223,8 @@ find_label_value:
     bra @pull_off_stack
 
 @end_check_loop:
-    lda #0
+    ldx #0
+	txa ; lda #0
 
 @pull_off_stack:
     ply
@@ -1551,6 +1696,20 @@ label_already_defined_err:
 @label_already_defined_str_p2:
     .asciiz "' already defined"
 
+undefined_symbol_err:
+	stx ptr0
+	
+	lda #<@undefined_symbol_err_str
+	ldx #>@undefined_symbol_err_str
+	
+	lda ptr0
+	ldx ptr0 + 1
+	jsr print_str
+	
+	jmp print_quote_terminate
+@undefined_symbol_err_str:
+	.asciiz "Encountered undefined symbol '"
+
 invalid_directive_err:
     jsr print_gen_err_str
     
@@ -1578,6 +1737,7 @@ print_line_buf_quote_terminate:
     ldx #>line_buf
     jsr print_str
 
+print_quote_terminate:
     lda #SINGLE_QUOTE
     jsr CHROUT
 
