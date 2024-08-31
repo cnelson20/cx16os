@@ -188,6 +188,7 @@ parse_hex:
 	dey
 	bmi @end
 	lda (KZE0), Y
+	jsr @get_hex_digit
 	jsr @mult_16
 	ora KZE1
 	sta KZE1
@@ -200,6 +201,7 @@ parse_hex:
 	dey
 	bmi @end
 	lda (KZE0), Y
+	jsr @get_hex_digit
 	jsr @mult_16
 	ora KZE1 + 1
 	sta KZE1 + 1
@@ -259,23 +261,23 @@ parse_num_kernal_ext:
 	
 	ldy #0
 	lda (KZE0), Y
-    cmp #$24 ; '$'
+    cmp #'$' ; '$'
     beq @base_16
     
 	; check for 0x ;
-	cmp #$30 ; '0' 
+	cmp #'0' ; '0' 
     bne @base_10	
 	iny
 	lda (KZE0), Y
-	cmp #$58
+	cmp #'x'
 	beq @base_16
-	cmp #$78
+	cmp #'X'
 	beq @base_16
 	
 	dey
 @base_10:
 	ldx #10
-	jmp @store_base
+	bra @store_base
 @base_16:
 	iny
 	ldx #16
