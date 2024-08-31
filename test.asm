@@ -1,13 +1,14 @@
-lda #0  ; hello monitor
-test_label:
-.strz "hello"
-.word 0, 2
-.equ value 5
-lda $0000
+.byte $ea, $EA
+ldx #0
+loop:
 lda hello, X
-lda array, Y
+beq end
+jsr $9D03
+inx
+bne loop
+end:
 rts
-jmp (label)
-inc A
-lda (welcome, X)
-sta (goodbye), Y
+
+hello:
+.str "hello"
+.byte $d, 0

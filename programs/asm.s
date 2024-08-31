@@ -121,6 +121,8 @@ end_parse_args:
     inc A
     sta last_extmem_data_bank
 
+	lda #1
+	jsr print_parse_msg
 first_parse:
     jsr get_next_line_input
     
@@ -311,6 +313,7 @@ first_parse:
     bne :+
     ; immediate addressing mode
     inx
+	jsr find_non_whitespace
     stx ptr1
     lda #MODE_IMM
     sta @curr_instr_mode
@@ -383,7 +386,15 @@ first_parse:
     sta @curr_instr_mode
     jmp @found_addr_mode
 @not_accum_addressing:
+	lda @curr_instr_num
+	jsr is_branching_instruction
+	beq :+
+	
+	lda #MODE_REL
+	sta @curr_instr_mode
+	jmp @found_addr_mode
 
+	:
     lda #MODE_ABS
     sta @curr_instr_mode
     jmp @found_addr_mode
@@ -491,6 +502,7 @@ first_parse:
     bne :+
     jmp first_parse
     :
+	bra second_parse
 
 @curr_instr_num:
     .byte 0
@@ -498,6 +510,9 @@ first_parse:
     .byte 0
 
 second_parse:
+	lda #2
+	jsr print_parse_msg
+
     ldx starting_pc
     stx current_pc
     
@@ -787,7 +802,12 @@ second_parse:
     bra @end_second_parse_loop_iter
 
 @not_str_directive:
-    ; error here, invalid directive
+	cmp #DIR_RES
+	bne @not_res_directive
+	
+	bra @end_second_parse_loop_iter
+@not_res_directive:
+	; error here, invalid directive
     jmp invalid_directive_err
 
 @end_second_parse_loop_iter:
@@ -816,8 +836,10 @@ second_parse:
     :
 
 third_parse:
+	lda #3
+	jsr print_parse_msg
+	
     ; open file for output
-    stp
     lda output_filename_pointer
     ldx output_filename_pointer + 1
     ldy #'W' ; open file for writing
@@ -829,19 +851,43 @@ third_parse:
     jmp gen_error
     :
     sta output_fd
-
+	
+	ldx starting_pc
+	stx current_pc
+	
 	ldx #$A000
     stx ptr0
 
 @third_parse_loop:
 	; this code identical to start of second_parse_loop
-	stp
     jsr start_second_third_parse_loop_iter
 	; have type of command (instruction / directive / label) in .A
-	; ptr1 contains entry and extmem rbank & rptr calls are done
+	; ptr1 contains entry and extmem rbank & rptr calls are done	
+	;ldy #0
+	;jsr readf_byte_extmem_y
+	cmp #C_LABEL
+	bne :+
+	jmp @end_third_parse_loop_iter ; don't need to touch labels
+	:	
+	cmp #C_DIRECTIVE_PROCESSED
+	bne :+
+	jmp @third_parse_processed_directive
+	:
+	cmp #C_DIRECTIVE
+	bne :+
+	jmp @third_parse_unprocessed_directive
+	:
 	
+	cmp #C_INSTRUCTION
+	beq @third_parse_instruction
+	
+	; Error, one of the following branches should have occured
+	; TODO maybe handle this better?
+	jmp @end_third_parse_loop_iter
+	
+@third_parse_instruction:
 	ldy #3
-	ldx line_buf
+	ldx #line_buf
 	:
 	jsr readf_byte_extmem_y
 	sta $00, X
@@ -852,15 +898,6 @@ third_parse:
 	bne :-
 	:
 	
-	ldy #0
-	jsr readf_byte_extmem_y
-	cmp #C_INSTRUCTION
-	beq @third_parse_directive
-	
-	; Error, one of the following branches should have occured
-	jmp @end_third_parse_loop_iter
-	brk
-@third_parse_directive:
 	ldy #1
 	rep #$20
 	.a16
@@ -869,36 +906,300 @@ third_parse:
 	and #$00FF
 	sep #$20
 	.a8
+	
+	jsr get_instruction_opcode
+	jsr write_byte_output
+	
+	lda #0
+	xba
 	lda ptr2 + 1 ; INSTR_MODE
 	tax
 	lda instruction_mode_lengths, X
 	cmp #1
 	bne @not_implied_instruction
-@implied_addressing_instruction:
-	jsr get_instruction_opcode
-	ldx output_fd
-	jsr fputc
-	jmp @end_third_parse_loop_iter
-	
+	jmp @end_third_parse_loop_iter ; instruction is just 1 byte of opcode
 @not_implied_instruction:
+	phx
+	ldx #line_buf
+	jsr determine_symbol_value
+	
+	ply
+	lda instruction_mode_lengths, Y
+	cmp #3
+	beq :+
+	lda ptr2 
+	cmp #INSTR_JMP
+	beq :+
+	cmp #INSTR_JSR
+	beq :+
+	bra @two_byte_instruction
+	:
+	; absolute / absolute, X / absolute, Y / (absolute) / (absolute, X)
+	jsr write_word_output
+	jmp @end_third_parse_loop_iter
+
+@two_byte_instruction:
+	; Either zp or relative addressing
+	lda ptr2 + 1
+	cmp #MODE_REL
+	bne @not_relative_addressing
+	
+	; range error possibly
+	; lda #127
+	rep #$21 ; clear carry
+	.a16
+	lda current_pc ; already wrote one byte, so - 1 this
+	adc #2 - 1 ; branching zero takes you to start of next instruction, 2 bytes ahead
+	sta ptr2
+	txa ; instruction argument
+	sec
+	sbc ptr2
+	cmp #$0080
+	bcc :+ ; in range [FF80 - 007F]
+	cmp #$FF80
+	bcs :+	
+	sep #$20
+	.a8
+	lda #127
+	ldx #line_buf
+	jmp range_error
+	:
+	sep #$20
+	.a8
+	jsr write_byte_output
 	jmp @end_third_parse_loop_iter
 	
+@not_relative_addressing:	
+	cpx #$0100
+	bcc :+
+	; range error
+	lda #255
+	ldx #line_buf
+	jmp range_error
+	:
+	txa
+	jsr write_byte_output
+	jmp @end_third_parse_loop_iter
+
+@third_parse_processed_directive:
+	stp
+	iny
+	rep #$20
+	.a16
+	jsr readf_byte_extmem_y
+	tax
+	sep #$20
+	.a8
+	ldy #3
+@write_loop:
+	cpx #0
+	bne :+
+	jmp @end_third_parse_loop_iter
+	:
+	jsr readf_byte_extmem_y
+	phx
+	phy
+	jsr write_byte_output
+	ply
+	plx
+	iny
+	dex
+	bra @write_loop
+	
+@third_parse_unprocessed_directive:
+	; first copy data to prog mem to make stuff easier ;
+    ldx #line_buf
+    ldy #1
+    :
+    jsr readf_byte_extmem_y
+    sta $00, X
+    cmp #0
+    beq :+
+    inx
+    iny
+    bne :-
+    :
+    inx
+    iny ; increment .X & .Y so string isn't appended
+    :
+    jsr readf_byte_extmem_y
+    sta $00, X
+    cmp #0
+    beq :+
+    inx
+    iny
+    bne :-
+    :
+	; a lot of this code is copied from second_parse_directive ;
+	; let's look at the directive ;
+	ldx #line_buf
+    jsr get_directive_num
+    cmp #$FF ; Has been checked before but why not do it again
+    bne :+
+    jmp invalid_directive_err
+    :
+	xba
+    lda #0
+    xba
+    tax
+    lda directive_data_lens, X
+    beq :+
+	cmp #$FF ; $FF's should have been parsed already
+	bne :++
+	:
+    jmp @end_third_parse_loop_iter ; these have no data, can ignore
+    :
+	jsr handle_fixed_len_directives_data
+	jmp @end_third_parse_loop_iter
 
 @end_third_parse_loop_iter:
+	stp
+	lda current_pc
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	lda #$d
+	jsr CHROUT
+	
 	ldx ptr0 ; lines_extmem_ptr through loop
     cpx lines_extmem_ptr
     bcs :+
     jmp @third_parse_loop
     :
 @end_third_parse:
-    stp
     lda output_fd
     jsr close_file
 
+	stp
     lda #0
     rts
 
 LABEL_VALUE_SIZE = 32
+
+handle_fixed_len_directives_data:
+	sta @data_size
+	
+	lda #1
+	sta @expecting_value
+	sta @first_element
+	
+	ldx #line_buf
+	jsr strlen
+	iny
+	tyx
+	stx ptr1
+@data_loop:
+	jsr find_non_whitespace
+	lda $00, X
+	beq @end_data_loop
+	stx ptr2
+	
+	cmp #','
+	bne @search_for_symbols
+@found_comma:
+	lda @expecting_value
+	beq :+
+	jmp invalid_directive_err
+	:
+	inx
+	lda $00, X
+	beq @end_data_loop
+	jsr is_whitespace_char
+	bne :+
+	jmp invalid_directive_err
+	:
+	lda #1
+	sta @expecting_value
+	bra @data_loop
+@search_for_symbols:
+	lda @expecting_value
+	bne :+
+	jmp invalid_directive_err
+	:
+	phx
+	jsr find_whitespace_char_or_comma
+	txy
+	plx
+	lda $00, Y
+	pha
+	phy
+	lda #0
+	sta $00, Y
+	jsr determine_symbol_value
+	ply
+	pla
+	sta $00, Y
+	phy
+	
+	;stp
+	lda @data_size
+	cmp #1
+	bne :++
+	cpx #$0100
+	bcc :+
+	; range error
+	lda #0
+	sta $00, Y
+	ldx ptr2
+	lda #255
+	jmp range_error
+	:
+	txa
+	jsr write_byte_output
+	bra @done_writing_directive_data
+	:
+	jsr write_word_output
+	lda @data_size
+	cmp #4 ; either 2 or 4 bytes
+	bne @done_writing_directive_data
+	ldx #0
+	jsr write_byte_output ; 2 blank padding bytes
+@done_writing_directive_data:
+	stz @expecting_value
+	stz @first_element
+	plx
+	jmp @data_loop
+	
+@end_data_loop:
+	lda @first_element
+	beq :+
+	jmp invalid_directive_err ; need at least one element
+	:
+	
+	rts
+	
+@data_size:
+	.word 0
+@expecting_value:
+	.word 0
+@first_element:
+	.word 0
+
+write_word_output:
+	phx
+	txa
+	jsr write_byte_output
+	
+	plx
+	rep #$20
+	.a16
+	txa
+	sep #$20
+	.a8
+	xba
+	jmp write_byte_output
+	
+write_byte_output:
+	;stp
+	nop
+	ldx output_fd
+	jsr fputc
+	
+	ldx current_pc
+	inx
+	stx current_pc
+	rts
 
 start_second_third_parse_loop_iter:
 	lda lines_extmem_bank
@@ -969,7 +1270,7 @@ get_instruction_opcode:
 	beq :+
 	rts
 	:
-	
+@invalid_addressing_mode:
 	jsr print_gen_err_str
 	
 	lda #<@invalid_addr_mode_str
@@ -991,25 +1292,94 @@ get_instruction_opcode:
 
 	jsr print_str
 	
-	;
+	lda ptr2 + 1
+	cmp #MODE_IMP
+	beq :+
+	
+	lda #' '
+	jsr CHROUT
+	
+	:
+	lda ptr2 + 1
+	cmp #MODE_IMM
+	bne :+
+	lda #'#'
+	jsr CHROUT
+	:
+	lda ptr2 + 1
+	cmp #MODE_ACC
+	bne :+
+	lda #'A'
+	jsr CHROUT
+	:
+	
+	lda #0
+	xba
+	lda ptr2 + 1
+	tax
+	lda @print_paren_flags, X
+	beq :+
+	lda #'('
+	jsr CHROUT
+	:	
+	phx
+	
+	lda ptr2 + 1
+	cmp #MODE_IMP
+	beq :+
+	cmp #MODE_ACC
+	beq :+
+	lda #<line_buf
+	ldx #>line_buf
+	jsr print_str
+	:
+	
+	plx
+	lda @print_x_flags, X
+	beq :+
+	lda #','
+	jsr CHROUT
+	lda #'X'
+	jsr CHROUT
+	:
+	
+	lda @print_paren_flags, X
+	beq :+
+	lda #')'
+	jsr CHROUT
+	:
+	
+	lda @print_y_flags, X
+	beq :+
+	lda #','
+	jsr CHROUT
+	lda #'Y'
+	jsr CHROUT
+	:
 	
 	jmp print_quote_terminate
+
+@print_paren_flags:
+	.byte 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0
+@print_x_flags:
+	.byte 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0
+@print_y_flags:
+	.byte 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0
 
 @invalid_addr_mode_str:
 	.asciiz "Invalid addressing mode '"
 
 ;
-; determine_label_value
+; determine_symbol_value
 ; returns the value (in .X) of a label. if there are errors parsing, will not return
 ;
-determine_label_value:
-	stp
+determine_symbol_value:
 	lda $00, X
 	cmp #'<'
 	bne @not_low_byte
 	; take low byte of rest
 	inx
-	jsr determine_label_value
+	jsr determine_symbol_value
 	txa
 	rep #$20
 	.a16
@@ -1024,7 +1394,7 @@ determine_label_value:
 	bne @not_high_byte
 	; take low byte of rest
 	inx
-	jsr determine_label_value
+	jsr determine_symbol_value
 	rep #$20
 	txa
 	xba ; dont .a16 here so nothing gets screwed up in below code
@@ -1629,6 +1999,9 @@ find_whitespace_char:
     bne find_whitespace_char
     rts
 
+;
+; finds first ';' in a string
+;
 find_comment:
     lda $00, X
     bne :+
@@ -1640,6 +2013,24 @@ find_comment:
     bra find_comment
 
     :
+    rts
+
+;
+; find_whitespace_char_or_comma
+;
+find_whitespace_char_or_comma:
+    lda $00, X
+    beq :+
+	cmp #','
+	beq :+
+    jsr is_whitespace_char
+    bcc @cont
+    :
+
+    rts
+@cont:
+    inx
+    bne find_whitespace_char_or_comma
     rts
 
 find_last_whitespace:
@@ -1664,6 +2055,101 @@ find_last_whitespace:
     rts
 @start_str:
     rts
+
+is_branching_instruction:
+	cmp #INSTR_BCC
+	beq @yes
+	cmp #INSTR_BCS
+	beq @yes
+	cmp #INSTR_BEQ
+	beq @yes
+	cmp #INSTR_BMI
+	beq @yes
+	cmp #INSTR_BNE
+	beq @yes
+	cmp #INSTR_BPL
+	beq @yes
+	cmp #INSTR_BVC
+	beq @yes
+	cmp #INSTR_BVS
+	beq @yes
+@no:	
+	lda #0
+	rts
+@yes:
+	lda #1
+	rts
+
+;
+;
+; Error functions
+;
+;
+
+range_error:
+	pha
+	phx
+	
+	jsr print_gen_err_str
+	
+	plx
+	phx
+	
+	lda $00, X
+	cmp #'$'
+	beq @value
+	cmp #'0'
+	bcc @symbol
+	cmp #'9' + 1
+	bcs @symbol
+@value:
+	lda #<@range_err_str_p1_value
+	ldx #>@range_err_str_p1_value
+	bra @print_symbol_value
+@symbol:
+	lda #<@range_err_str_p1_symbol
+	ldx #>@range_err_str_p1_symbol
+@print_symbol_value:
+	jsr print_str
+	
+	rep #$20
+	.a16
+	pla
+	xba
+	tax
+	xba
+	.a8
+	sep #$20
+	jsr print_str
+	
+	lda #<@range_err_str_p2
+	ldx #>@range_err_str_p2
+	jsr print_str
+	
+	pla
+	cmp #255
+	bne :+
+	
+	lda #<@range_err_255
+	ldx #>@range_err_255
+	bra :++
+	:
+	lda #<@range_err_127
+	ldx #>@range_err_127
+	:
+	jsr print_str
+	jmp print_newline_exit
+
+@range_err_str_p1_symbol:
+	.asciiz "Symbol '"	
+@range_err_str_p1_value:
+	.asciiz "Value '"
+@range_err_str_p2:
+	.asciiz "' is out of range "
+@range_err_255:
+	.asciiz "[0,255]"
+@range_err_127:
+	.asciiz "for a branch instruction"
 
 label_already_defined_err:
     phx
@@ -1699,8 +2185,11 @@ label_already_defined_err:
 undefined_symbol_err:
 	stx ptr0
 	
+	jsr print_gen_err_str
+	
 	lda #<@undefined_symbol_err_str
 	ldx #>@undefined_symbol_err_str
+	jsr print_str
 	
 	lda ptr0
 	ldx ptr0 + 1
@@ -1716,10 +2205,27 @@ invalid_directive_err:
     lda #<@invalid_dir_str
     ldx #>@invalid_dir_str
     jsr print_str
-
-    bra print_line_buf_quote_terminate
+	
+	jsr print_line_buf
+	
+	lda #' '
+	jsr CHROUT
+	
+	ldx #line_buf
+	jsr strlen
+	iny
+	rep #$20
+	.a16
+	tya
+	sep #$20
+	.a8
+	xba
+	tax
+	xba
+	jsr print_str
+    jsr print_quote_terminate
 @invalid_dir_str:
-    .asciiz "Invalid directive: '"
+    .asciiz "Invalid directive: '."
 
 first_parse_error:
     jsr print_gen_err_str
@@ -1732,11 +2238,13 @@ first_parse_error:
 @invalid_line_str:
     .asciiz "Invalid line: '"
 
-print_line_buf_quote_terminate:
-    lda #<line_buf
+print_line_buf:
+	lda #<line_buf
     ldx #>line_buf
-    jsr print_str
-
+    jmp print_str
+	
+print_line_buf_quote_terminate:
+    jsr print_line_buf
 print_quote_terminate:
     lda #SINGLE_QUOTE
     jsr CHROUT
@@ -1771,6 +2279,29 @@ str_not_quoted_error:
     .asciiz "Directive '"
 @str_not_quoted_str_p2:
     .asciiz "' must be followed by double-quoted string literal, instead followed by '"
+
+print_parse_msg:
+	xba
+	lda #0
+	xba
+	asl A
+	tax
+	lda parse_strs, X
+	pha
+	inx
+	lda parse_strs, X
+	tax
+	pla
+	
+	jsr print_str
+	
+	lda #<@parse_str_literal
+	ldx #>@parse_str_literal
+	jmp print_str
+
+@parse_str_literal:
+	.byte " parse:"
+	.byte $d, 0
 
 print_gen_err_str:
     lda #<general_err_str
@@ -1818,6 +2349,15 @@ open_write_fail_str:
     .asciiz "Couldn't open output file for writing"
 general_err_str:
     .asciiz "Error: "
+
+parse_strs:
+	.word 0, first_str, second_str, third_str
+first_str:
+	.asciiz "first"
+second_str:
+	.asciiz "second"
+third_str:
+	.asciiz "third"	
 
 argc:
     .word 0
@@ -1949,6 +2489,17 @@ INSTRUCTION_LIST_SIZE = 65
 ;
 INSTR_JMP = 27
 INSTR_JSR = 28
+
+INSTR_BCC = 3
+INSTR_BCS = 4
+INSTR_BEQ = 5
+;INSTR_BIT = 6
+INSTR_BMI = 7
+INSTR_BNE = 8
+INSTR_BPL = 9
+;INSTR_BRK = 10
+INSTR_BVC = 11
+INSTR_BVS = 12
 
 MODE_IMP = 0
 MODE_IMM = 1
