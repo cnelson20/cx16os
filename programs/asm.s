@@ -982,7 +982,6 @@ third_parse:
 	jmp @end_third_parse_loop_iter
 
 @third_parse_processed_directive:
-	stp
 	iny
 	rep #$20
 	.a16
@@ -1052,16 +1051,7 @@ third_parse:
 	jsr handle_fixed_len_directives_data
 	jmp @end_third_parse_loop_iter
 
-@end_third_parse_loop_iter:
-	stp
-	lda current_pc
-	jsr GET_HEX_NUM
-	jsr CHROUT
-	txa
-	jsr CHROUT
-	lda #$d
-	jsr CHROUT
-	
+@end_third_parse_loop_iter:	
 	ldx ptr0 ; lines_extmem_ptr through loop
     cpx lines_extmem_ptr
     bcs :+
@@ -1070,8 +1060,7 @@ third_parse:
 @end_third_parse:
     lda output_fd
     jsr close_file
-
-	stp
+	
     lda #0
     rts
 
@@ -1132,7 +1121,6 @@ handle_fixed_len_directives_data:
 	sta $00, Y
 	phy
 	
-	;stp
 	lda @data_size
 	cmp #1
 	bne :++
@@ -1191,8 +1179,6 @@ write_word_output:
 	jmp write_byte_output
 	
 write_byte_output:
-	;stp
-	nop
 	ldx output_fd
 	jsr fputc
 	
