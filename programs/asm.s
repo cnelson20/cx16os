@@ -42,6 +42,9 @@ init:
     ; default settings
     ldx #$A300
     stx starting_pc
+	
+	ldx #a_out_str
+	stx output_filename_pointer
 
     ldx ptr0
 parse_args:
@@ -54,14 +57,22 @@ parse_args:
     ldx ptr0
     jsr next_arg
     stx ptr0
-
-    lda $00, X
+	
+	; -o flag ;
+    stp
+	lda $00, X
     cmp #'-'
-    bne :+
-    lda $00, X
-    cmp #'o'
-    bne :+
-
+    bne @not_output_flag
+    inx
+	lda $00, X
+	cmp #'o'
+    bne @not_output_flag
+@output_flag:	
+	dec argc
+	bne :+
+	jmp flag_invalid_argument
+	:
+	
     ldx ptr0
     jsr next_arg
     stx ptr0
@@ -69,7 +80,7 @@ parse_args:
     stx output_filename_pointer
 
     jmp parse_args
-    :
+@not_output_flag:
 
     lda input_fd
     beq :+
@@ -77,10 +88,7 @@ parse_args:
     jmp gen_error
     :
 
-    lda #0
-    xba
-    lda ptr0 + 1
-    tax
+    ldx ptr0 + 1
     lda ptr0
     ldy #0
     jsr open_file
@@ -2072,6 +2080,65 @@ is_branching_instruction:
 ;
 ;
 
+flag_invalid_argument:
+	phx
+	
+	jsr print_gen_err_str
+	
+	plx
+	lda argc
+	beq :+
+	
+	phx
+	lda #<@invalid_arg_str
+	ldx #>@invalid_arg_str
+	jsr print_str
+	
+	plx
+	rep #$20
+	.a16
+	txa
+	xba
+	tax
+	xba
+	sep #$20
+	.a8
+	jsr print_str
+	
+	lda #<@for_flag_str
+	ldx #>@for_flag_str
+	jsr print_str
+	
+	lda ptr0
+	ldx ptr0 + 1
+	jsr print_str
+	
+	jmp print_quote_terminate
+	
+	:
+	lda #<@flag_str
+	ldx #>@flag_str
+	jsr print_str
+	
+	lda ptr0
+	ldx ptr0 + 1
+	jsr print_str
+	
+	lda #<@needs_arg_str
+	ldx #>@needs_arg_str
+	jsr print_str
+	
+	jmp print_newline_exit
+	
+@flag_str:
+	.asciiz "Flag '"
+@needs_arg_str:
+	.asciiz "' needs argument, none provided"
+@invalid_arg_str:
+	.asciiz "Invalid argument '"
+@for_flag_str:
+	.asciiz "' for flag '"
+	
 range_error:
 	pha
 	phx
@@ -2352,7 +2419,7 @@ input_fd:
 output_fd:
     .word 0
 output_filename_pointer:
-    .word a_out_str
+    .word 0
 starting_pc:
     .word 0
 
