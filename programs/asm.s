@@ -59,10 +59,11 @@ parse_args:
     stx ptr0
 	
 	; -o flag ;
-    stp
 	lda $00, X
-    cmp #'-'
-    bne @not_output_flag
+	cmp #'-'
+	beq :+
+	jmp @file_input
+	:  
     inx
 	lda $00, X
 	cmp #'o'
@@ -80,8 +81,39 @@ parse_args:
     stx output_filename_pointer
 
     jmp parse_args
-@not_output_flag:
 
+@not_output_flag:
+	ldx ptr0
+	inx
+	lda $00, X
+	cmp #'p'
+	bne @not_set_pc_flag
+	inx
+	lda $00, X
+	cmp #'c'
+	bne @not_set_pc_flag
+	
+	dec argc
+	bne :+
+	jmp flag_invalid_argument
+	:
+	
+    ldx ptr0
+    jsr next_arg
+    stx ptr0
+	
+	lda ptr0
+	ldx ptr0 + 1
+    jsr parse_num
+	sta starting_pc
+	txa
+	sta starting_pc + 1
+	jmp parse_args
+@not_set_pc_flag:
+	; invalid flag
+	brk
+
+@file_input:
     lda input_fd
     beq :+
     lda #TWO_INPUT_FILES_ERR
