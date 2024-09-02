@@ -1246,12 +1246,13 @@ set_env_var:
 
 open_shell_file:
 	lda curr_running_script
-	beq :+
+	beq @not_within_script
+	
 	lda #<source_inception_str
 	ldx #>source_inception_str
 	jsr print_str
 	rts
-	:
+@not_within_script:
 
 	lda num_args
 	cmp #2
@@ -1379,7 +1380,7 @@ source_err_string:
 	.byte "source: filename argument required"
 	.byte $d, 0
 source_inception_str:
-	.byte "source: no sourception allowed"
+	.byte "source: cannot run another script within a script"
 	.byte $d, 0
 
 set_env_err_string:
