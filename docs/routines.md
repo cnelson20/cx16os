@@ -93,6 +93,7 @@ Return values:
 
 ### $9D0C: get_process_info
 - Returns info about process with pid .A if .A != 0
+- If .A = 0, returns info about the process with instance id in .X
 
 Return values (if .A != 0):
 - .A = 0 if the process is not alive, otherwise its instance id
