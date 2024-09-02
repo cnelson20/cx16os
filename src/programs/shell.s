@@ -179,7 +179,16 @@ new_line:
 	stz next_stay_alive_after_eof
 	:
 @no_exit_after_exec:
-
+	lda last_background_alive
+	beq :+
+	lda last_background_pid
+	jsr get_process_info
+	cmp last_background_instance
+	bne :+
+	
+	stz last_background_alive
+	:
+	
 	lda first_command_addr + 1
 	bne skip_print_prompt
 	lda curr_running_script
@@ -262,7 +271,11 @@ wait_for_input:
 	lda #$0D ; if eof has been reached, exec what's in buffer (unless buffer is empty)
 @not_end_of_file_input:
 	cmp #0
-	bne :+
+	bne @key_buff_not_empty
+	
+	lda last_background_alive
+	bne wait_for_input
+	; if there is no alive background proc, flicker underscore every so often
 	inc flicker_tick
 	bne wait_for_input
 	lda #UNDERSCORE
@@ -274,7 +287,9 @@ wait_for_input:
 	jsr send_byte_chrout_hook
 	plx
 	bra wait_for_input
-	:
+	
+@key_buff_not_empty:
+
 
 	cmp #$0D ; return
 	beq command_entered
@@ -889,12 +904,18 @@ narg_not_0_amp:
 	stz new_stdout_fileno
 	
 	sta child_id
+	stx child_instance
 
 	lda do_wait_child
 	bne wait_child
 
 	lda child_id
 	sta last_background_pid
+	lda child_instance
+	sta last_background_instance
+
+	lda #1
+	sta last_background_alive
 
 	jmp new_line
 wait_child:	
@@ -1464,13 +1485,19 @@ do_wait_child:
 	.byte 0
 last_return_val:
 	.byte 0
+last_background_alive:
+	.byte 0
 last_background_pid:
+	.byte 0
+last_background_instance:
 	.byte 0
 env_extmem_bank:
 	.byte 0
 num_args:
 	.byte 0
 child_id:
+	.byte 0
+child_instance:
 	.byte 0
 input:
 	.res CMD_MAX_SIZE, 0
