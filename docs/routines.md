@@ -335,7 +335,6 @@ Return values:
 - r1H: 	hours (0-23)
 - r2L: 	minutes (0-59)
 - r2H: 	seconds (0-59)
-- r3L: 	jiffies (0-59)
 - r3H: 	weekday (0-6)
 
 ### $9DA2: detach_self
