@@ -28,6 +28,7 @@ clean:
 
 build: os.prg programs
 	cp os.prg mnt/OS.PRG
+	cp AUTOBOOT.X16 mnt/
 # Text files to play with
 	cp words.txt mnt/
 	cp ipsum.txt mnt/
