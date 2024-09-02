@@ -23,16 +23,21 @@ MCIOUT := $FEB1
 REAL_CLRCHN := $FFCC
 READST := $FFB7
 
-RAM_BANK := $00
-ROM_BANK := $01
-
-MEMTOP = $FF99
+MEMTOP := $FF99
+RDTIM  := $FFDE
 
 enter_basic := $FF47
 memory_fill := $FEE4
 memory_copy := $FEE7
 clock_get_date_time := $FF50
 kbdbuf_get_modifiers := $FEC0
+
+;
+; RAM addresses
+;
+
+RAM_BANK := $00
+ROM_BANK := $01
 
 r0 := $02
 r1 := $04
