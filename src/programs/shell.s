@@ -161,6 +161,10 @@ new_line:
 	
 	lda curr_script_is_bootrc
 	beq :+ ; wasn't bootrc
+	stz curr_script_is_bootrc
+	stz curr_running_script
+	stz stay_alive_after_input_eof
+	
 	jsr try_open_shrc
 	bne :++ ; if was opened, branchtr
 	:
