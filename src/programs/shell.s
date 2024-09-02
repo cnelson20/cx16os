@@ -16,6 +16,7 @@ UNDERSCORE = $5F
 LEFT_CURSOR = $9D
 DOLLAR_SIGN = $24
 SPACE = $20
+SINGLE_QUOTE = 39
 
 COLOR_WHITE = 5
 COLOR_GREEN = $1E
@@ -101,14 +102,14 @@ prog_args_error:
 	ldx #>prog_args_error_str
 	jsr print_str
 
-	lda #'''
+	lda #SINGLE_QUOTE
 	jsr CHROUT
 	
 	lda ptr0
 	ldx ptr0 + 1
 	jsr print_str
 
-	lda #'''
+	lda #SINGLE_QUOTE
 	jsr CHROUT
 	lda #$d
 	jsr CHROUT
@@ -122,6 +123,8 @@ prog_args_error_str:
 
 shrc_filename:
 	.asciiz ".shrc"
+bootrc_filename:
+	.asciiz ".bootrc"
 
 welcome:
 	lda print_startup_msg_flag
@@ -138,30 +141,10 @@ welcome:
 	bne new_line
 
 	; open .shrc ? ;
-	ldy #0
-	lda #<shrc_filename
-	ldx #>shrc_filename
-	jsr open_file
-	cmp #$FF
-	beq new_line ; not successfully opened, that's fine
-
-	pha
-	lda #0
-	jsr copy_fd
-	sta next_fd ; whatever script was beign run can be next
-
-	lda curr_running_script
-	sta next_running_script
-	lda stay_alive_after_input_eof
-	sta next_stay_alive_after_eof
-	stz stay_alive_after_input_eof
-	pla
-
-	ldx #0 ; move to stdin
-	jsr move_fd
-
-	lda #1
-	sta curr_running_script
+	jsr try_open_bootrc
+	bne new_line ; file was opened
+	
+	jsr try_open_shrc
 
 new_line:
 	; close these files in case got through
@@ -175,7 +158,13 @@ new_line:
 	lda #0
 	jsr close_file
 	stz exit_after_exec
-
+	
+	lda curr_script_is_bootrc
+	beq :+ ; wasn't bootrc
+	jsr try_open_shrc
+	bne :++ ; if was opened, branchtr
+	:
+	
 	lda next_fd
 	cmp #$FF
 	beq :+
@@ -1103,6 +1092,65 @@ strcmp:
 @ex:	
 	rts
 
+;
+; both try_open_bootrc and try_open_shrc return 1 when the file is opened, 0 otherwise
+;
+try_open_bootrc:
+	lda $00
+	jsr get_process_info
+	lda r0 + 1
+	bne :+ ; if process has parent, don't open bootrc
+
+	ldy #0
+	lda #<bootrc_filename
+	ldx #>bootrc_filename
+	jsr open_file
+	cmp #$FF
+	beq :+
+	; file was opened ;
+	jsr set_script_fd_stdin
+	
+	lda #1
+	sta curr_script_is_bootrc
+	rts
+	:
+	lda #0
+	rts
+
+try_open_shrc:
+	ldy #0
+	lda #<shrc_filename
+	ldx #>shrc_filename
+	jsr open_file
+	cmp #$FF
+	bne :+
+	lda #0
+	rts
+	:
+	jsr set_script_fd_stdin
+	lda #1
+	rts
+
+set_script_fd_stdin:
+	pha
+	lda #0
+	jsr copy_fd
+	sta next_fd ; whatever script was being run can be next
+
+	lda curr_running_script
+	sta next_running_script
+	lda stay_alive_after_input_eof
+	sta next_stay_alive_after_eof
+	stz stay_alive_after_input_eof
+	pla
+
+	ldx #0 ; move to stdin
+	jsr move_fd
+
+	lda #1
+	sta curr_running_script
+	rts
+
 exit_shell:
 	sta ptr0
 	lda #>$01FD
@@ -1444,6 +1492,8 @@ next_stay_alive_after_eof:
 exit_after_exec:
 	.byte 0
 curr_running_script:
+	.byte 0
+curr_script_is_bootrc:
 	.byte 0
 stay_alive_after_input_eof:
 	.byte 0
