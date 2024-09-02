@@ -18,7 +18,9 @@ programs: FORCE
 
 FORCE:
 
-copy:
+copy: cx16os.img
+	
+cx16os.img:
 	cp blank_sd.img cx16os.img
 
 clean:
@@ -35,7 +37,7 @@ build: os.prg programs
 # Test program for asm
 	cp test.asm mnt/
 
-sd: build
+sd: copy build
 ifeq ($(OS),Windows_NT)
 	-rm /cygdrive/c/x16image.vhdx
 	diskpart < scripts/diskpart_mount.in
