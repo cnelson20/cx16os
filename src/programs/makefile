@@ -3,6 +3,9 @@ FLAGS =-t none -C cl65_progs.cfg
 
 all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir cat_slow guiterm gui sendmsg splitterm crshmon color strings cron swapterm asm
 
+clean:
+	rm *.o
+
 bindir: ../mnt/bin
 	
 ../mnt/bin:	

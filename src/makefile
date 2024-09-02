@@ -1,7 +1,5 @@
 CC = cl65.exe
 
-CASM = ../xasm16/xasm
-
 PROGRAM = OS.PRG
 
 SOURCES = main.s kernalcalls.s helpers.s helpers_int.s fileops.s extmem.s system_hooks.s
@@ -24,19 +22,15 @@ cx16os.img:
 	cp blank_sd.img cx16os.img
 
 clean:
-	rm programs/[A-Z]*[A-Z]
+	make -C programs/ clean
+	rm *.lbl
+	rm *.map
 
 build: os.prg programs
 	cp os.prg mnt/OS.PRG
 	cp AUTOBOOT.X16 mnt/
-# Text files to play with
-	cp words.txt mnt/
-	cp ipsum.txt mnt/
-# For split & swapterm
-	cp spawn.sh mnt/
-	cp child.sh mnt/
-# Test program for asm
-	cp test.asm mnt/
+	
+	cp osfiles/* mnt/
 
 sd: copy build
 ifeq ($(OS),Windows_NT)
