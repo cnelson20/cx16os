@@ -120,10 +120,13 @@ release_chrout_hook:
 ;
 try_release_chrout_hook:
     cmp chrout_prog_bank
-    beq :+
-    lda chrout_prog_bank ; non-zero means failure
-    rts
+    beq @success
+    lda chrout_prog_bank
+    bne :+
+    lda #$FF ; non-zero means failure, so need to make sure not zero
     :
+    rts
+@success:
     stz chrout_prog_bank
     lda #0 ; success
     rts
