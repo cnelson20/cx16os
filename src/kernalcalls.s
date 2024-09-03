@@ -311,17 +311,18 @@ getc_wait_active_process:
 .export print_str_ext
 print_str_ext:
 	save_p_816_8bitmode
-	sta r0
-	stx r0 + 1
+	xba
+	txa
+	xba
 	index_16_bit
 	.i16
-	ldy #0
+	tax
 	:
-	lda (r0), Y
+	lda $00, X
 	beq :+
 	jsr putc
-	iny
-	bne :-
+	inx
+	bra :-
 	:
 	restore_p_816
 	.i8
