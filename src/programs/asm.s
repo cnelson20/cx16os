@@ -851,7 +851,6 @@ second_parse:
     jmp invalid_directive_err
 
 @second_parse_no_data_directive:
-    stp
     txa
     sta @data_size_shifts
     cmp #DIR_EQU
