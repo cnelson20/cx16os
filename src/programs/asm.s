@@ -671,7 +671,7 @@ second_parse:
     tax
     lda directive_data_lens, X
     bne :+
-    jmp @end_second_parse_loop_iter ; these have no data
+    jmp @second_parse_no_data_directive ; these have no data
     :
     
     cmp #$FF
@@ -848,6 +848,51 @@ second_parse:
 	bra @end_second_parse_loop_iter
 @not_res_directive:
 	; error here, invalid directive
+    jmp invalid_directive_err
+
+@second_parse_no_data_directive:
+    stp
+    txa
+    sta @data_size_shifts
+    cmp #DIR_EQU
+    beq :+
+    jmp @not_equ_directive
+    :
+    ; set label equal to value after the space ;
+    ldx #line_buf
+    jsr strlen
+    tyx
+    inx ; go to first char of data
+    stx ptr1
+    jsr find_whitespace_char
+    lda $00, X
+    bne :+
+    ; there is no whitespace
+    jmp invalid_directive_err
+    :
+    sta @data_size_shifts ; tmp storage
+    stz $00, X
+    stx ptr2
+    inx
+    jsr find_non_whitespace
+    lda $00, X
+    bne :+
+    ldx ptr2 ; there is nothing after the whitespace !
+    lda @data_size_shifts
+    sta $00, X
+    jmp invalid_directive_err
+    :
+    ldy ptr1
+    phy
+    jsr determine_symbol_value
+    txy
+    plx
+    jsr set_label_value 
+    
+    bra @end_second_parse_loop_iter
+
+@not_equ_directive:
+    ; error here, invalid directive
     jmp invalid_directive_err
 
 @end_second_parse_loop_iter:
