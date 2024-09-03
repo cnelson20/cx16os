@@ -11,6 +11,8 @@
 .import hex_num_to_string_kernal
 .import setup_system_hooks, release_all_process_hooks
 
+.import setup_scheduler, scheduler_get_next_task, scheduler_add_task, scheduler_remove_task
+
 .import check_channel_status, load_process_entry_pt
 .import file_table_count
 .import prog_using_vera_regs
@@ -42,6 +44,7 @@ init:
 	jsr CHROUT ; turn on ascii mode
 	
 	jsr setup_kernal
+	jsr setup_scheduler
 	jsr setup_interrupts
 	
 	lda #<shell_name ; load shell as first program
@@ -502,8 +505,6 @@ program_exit:
 	txa
 	jsr replace_active_processes_table
 
-@not_active_process:
-
 @clear_prog_data:
 	ldx KZP0 ; pid
 	lda process_table, X ; load instance id
@@ -527,6 +528,9 @@ program_exit:
 	pla_byte RAM_BANK
 	lda KZP0
 	jsr release_all_process_hooks
+	
+	lda KZP0
+	jsr scheduler_remove_task
 	
 @check_process_switch:	
 	ldx KZP0
@@ -557,12 +561,9 @@ manage_process_time:
 switch_next_program:
 	stz atomic_action_st
 	lda current_program_id
-	jsr find_next_process
-	
-	tax
-	lda process_priority_table, X
-	sta schedule_timer
-	txa
+	jsr scheduler_get_next_task
+	; .A holds pid of next task, .X holds jiffies it gets to run
+	stx schedule_timer
 	
 	cmp current_program_id
 	bne :+
@@ -790,32 +791,6 @@ is_valid_process:
 	plx
 	lda #0
 	rts
-;
-; find next alive process in table
-;
-; .A = process
-; returns next process in .A (if only one program, return same program)
-;
-.export find_next_process
-find_next_process:
-	tax
-	bra @not_valid_process
-	
-@loop: 
-	txa
-	jsr is_valid_process
-	beq @not_valid_process
-	
-	lda process_priority_table, X
-	bne @exit_loop
-	
-@not_valid_process:	
-	inx
-	inx
-	bra @loop
-@exit_loop:
-	txa
-	rts
 
 ;
 ; find next open process id in table
@@ -855,9 +830,11 @@ set_process_bank_used:
 	:
 	sta process_val_to_store
 
-
 	lda #DEFAULT_PRIORITY
 	sta process_priority_table, X
+	
+	txa
+	jsr scheduler_add_task
 	rts
 
 process_val_to_store:
