@@ -115,10 +115,13 @@ release_chrout_hook:
 ;
 ; release prog with bank .A's hook on chrout, if it has one
 ;
+; on success, returns 0
+; on error, returns the pid of the process that has the chrout hook
+;
 try_release_chrout_hook:
     cmp chrout_prog_bank
     beq :+
-    lda #1 ; failure
+    lda chrout_prog_bank ; non-zero means failure
     rts
     :
     stz chrout_prog_bank
