@@ -68,7 +68,7 @@ Arguments:
 - None
 
 Releases the calling program's hook on CHROUT calls, if it has one  
-Returns 0 on success, non-zero on failure in .A
+Returns 0 on success, returns the pid of the process with the chrout hook (non-zero) on failure in .A
 
 ---
 
@@ -93,7 +93,7 @@ Arguments:
 - .A holds the hook # to release
 
 Releases the calling process' lock on hook # .A, if it has one  
-Returns 0 on success, returns the pid of the process with the chrout hook in .A (non-zero) on failure
+Returns 0 on success, non-zero on failure in .A
 
 ---
 
