@@ -4,6 +4,7 @@
 r0 = $02
 r1 = $04
 r2 = $06
+r3 = $08
 
 ptr0 = $30
 ptr1 = $32
@@ -12,22 +13,15 @@ ptr3 = $36
 
 CMD_MAX_SIZE = 128
 
-UNDERSCORE = $5F
 LEFT_CURSOR = $9D
-DOLLAR_SIGN = $24
-SPACE = $20
 SINGLE_QUOTE = 39
 
 COLOR_WHITE = 5
 COLOR_GREEN = $1E
 COLOR_BLUE = $1F
 
-MODE_R = $52
-MODE_W = $57
-
-AMPERSAND = $26
-GT = $3E
-LT = $3C
+MODE_R = 'R'
+MODE_W = 'W'
 
 init:
 	jsr get_args
@@ -223,12 +217,12 @@ new_line:
 
 	lda #COLOR_WHITE ; white color
 	jsr CHROUT
-	lda #DOLLAR_SIGN ; '$'
+	lda #'$' ; '$'
 	jsr CHROUT
 	lda #$20 ; space
 	jsr CHROUT
 	
-	lda #UNDERSCORE
+	lda #'_'
 	jsr CHROUT
 	lda #LEFT_CURSOR
 	jsr CHROUT
@@ -282,7 +276,7 @@ wait_for_input:
 	; if there is no alive background proc, flicker underscore every so often
 	inc flicker_tick
 	bne wait_for_input
-	lda #UNDERSCORE
+	lda #'_'
 	jsr CHROUT
 	lda #LEFT_CURSOR
 	jsr CHROUT
@@ -326,7 +320,7 @@ char_entered:
 
 	jsr CHROUT
 	
-	lda #UNDERSCORE
+	lda #'_'
 	jsr CHROUT
 	lda #LEFT_CURSOR
 	jsr CHROUT
@@ -347,7 +341,7 @@ backspace_not_empty:
 	lda #LEFT_CURSOR
 	jsr CHROUT
 	
-	lda #UNDERSCORE
+	lda #'_'
 	jsr CHROUT
 	lda #$20
 	jsr CHROUT
@@ -458,7 +452,7 @@ narg_not_0:
 	tax
 	lda output, X
 	
-	cmp #AMPERSAND
+	cmp #'&'
 	bne @not_ampersand
 	
 	inx
@@ -471,7 +465,7 @@ narg_not_0:
 	jmp @parse_args_loop
 	
 @not_ampersand:
-	cmp #LT
+	cmp #'<'
 	bne @not_lt
 	inx
 	lda output, X
@@ -495,7 +489,7 @@ narg_not_0:
 	jmp @parse_args_loop
 	
 @not_lt:
-	cmp #GT
+	cmp #'>'
 	bne @not_gt
 	inx
 	lda output, X
