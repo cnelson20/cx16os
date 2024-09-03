@@ -1037,7 +1037,14 @@ check_special_cmds:
 	tya
 	
 	jsr chdir
+	cmp #0
+	beq :+
 	
+	lda #<cd_error_string
+	ldx #>cd_error_string
+	jsr print_str	
+	
+	:
 	lda #1
 	rts
 @not_cd:
@@ -1455,6 +1462,10 @@ set_env_err_string:
 	.byte $d, 0
 set_env_out_space:
 	.byte "setenv: no memory left for variables"
+	.byte $d, 0
+
+cd_error_string:
+	.byte "cd: error changing directory"
 	.byte $d, 0
 
 open_error_p1:

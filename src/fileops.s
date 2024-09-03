@@ -689,7 +689,6 @@ check_channel_status:
 	cmp #$31
 	beq @success
 	
-	lda #1
 	rts
 @success:
 	lda #0
@@ -1555,8 +1554,9 @@ chdir_ext:
 @cd_error:
 	clear_atomic_st
 	
+	ply_word KZES5
 	ply_word KZES4
-	lda #1
+	; non-zero value already in .A
 	rts
 
 ; appends KZES4 & KZES5 to the cmd in PV_TMP_FILENAME and opens channel 15 ;	
@@ -1673,21 +1673,23 @@ do_dos_cmd:
 	jsr SETLFS
 	
 	jsr OPEN
-	php 
-	
-	jsr free_dos_channel
-	
-	plp
 	bcs dos_cmd_open_error
 	
 	lda #15
 	jsr CLOSE
 	
+	jsr check_channel_status
+	bne dos_cmd_open_error ; if an error occured, exit with non-zero return value
+	
+	jsr free_dos_channel
+	
 	lda #0
 	rts	
 	
 dos_cmd_open_error:
-	lda #1
+	pha
+	jsr free_dos_channel
+	pla
 	rts
 
 ;
@@ -1780,7 +1782,7 @@ single_arg_dos_cmd:
 	ply_word KZES5
 	ply_word KZES4
 @scratch_error:
-	lda #1
+	; non-zero value already in .A
 	rts
 
 ;
@@ -1797,18 +1799,18 @@ copy_file_ext:
 	bra copy_rename_file
 
 copy_rename_file:
-	sty KZE0
 	push_zp_word KZES4
 	push_zp_word KZES5
-	
-	ldy KZE0
+	phy
 	
 	ldsta_word r0, KZES4
 	ldsta_word r1, KZES5
 	
-	set_atomic_st
+	lda r0
+	ldx r0 + 1
+	jsr unlink_ext
 	
-	phy ; preserve copy / rename (C vs R)
+	set_atomic_st
 	
 	; cd to process' current pwd ;
 	jsr cd_process_pwd
@@ -1848,7 +1850,7 @@ copy_rename_file:
 	ply_word KZES5
 	ply_word KZES4
 @rename_error:
-	lda #1
+	; non-zero value already in .A
 	rts
 
 
