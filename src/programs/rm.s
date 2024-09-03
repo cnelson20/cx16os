@@ -39,8 +39,6 @@ continue:
 	
 found_end_word:
 	inc_word ptr0
-	lda ptr0
-	ldx ptr0 + 1
 	
 	ldy #'R'
 	lda ptr0
@@ -52,6 +50,8 @@ found_end_word:
 	:
 	jsr close_file
 	
+	lda ptr0
+	ldx ptr0 + 1
 	jsr unlink	
 	cmp #0
 	bne file_error
