@@ -2,7 +2,7 @@
 .segment "CODE"
 
 ptr0 = $02
-ptr1 = $03
+ptr1 = $04
 
 .macro inc_word addr
 	inc addr
@@ -42,6 +42,16 @@ found_end_word:
 	lda ptr0
 	ldx ptr0 + 1
 	
+	ldy #'R'
+	lda ptr0
+	ldx ptr0 + 1
+	jsr open_file
+	cmp #$FF
+	bne :+
+	jmp no_such_file
+	:
+	jsr close_file
+	
 	jsr unlink	
 	cmp #0
 	bne file_error
@@ -63,6 +73,21 @@ file_error:
 	
 	jmp main
 
+no_such_file:
+	lda #<error_msg_p1
+	ldx #>error_msg_p1
+	jsr PRINT_STR
+	
+	lda ptr0
+	ldx ptr0 + 1
+	jsr PRINT_STR
+	
+	lda #<no_such_file_str
+	ldx #>no_such_file_str
+	jsr PRINT_STR
+	
+	jmp main
+	
 print_no_args:
 	lda #<no_args_str
 	ldx #>no_args_str
@@ -75,10 +100,14 @@ argc:
 	.byte 0
 	
 error_msg_p1:
-	.asciiz "Error deleting file '"
+	.asciiz "rm: error removing '"
 
 error_msg_p2:
-	.byte "'", $d, 0
+	.byte "': Unknown error", $d, 0
+
+no_such_file_str:
+	.byte "': No such file"
+	.byte $d, 0
 
 no_args_str:
 	.byte "rm: missing operand", $d, 0
