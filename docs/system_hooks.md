@@ -68,7 +68,10 @@ Arguments:
 - None
 
 Releases the calling program's hook on CHROUT calls, if it has one  
-Returns 0 on success, returns the pid of the process with the chrout hook (non-zero) on failure in .A
+
+Return values:
+- Returns 0 on success to release the hook in .A
+- On failure to release the hook, returns the pid of the process with the chrout hook (non-zero) in .A. If the hook is not being used, returns $FF.
 
 ---
 
