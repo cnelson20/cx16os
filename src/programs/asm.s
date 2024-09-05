@@ -1136,6 +1136,20 @@ third_parse:
 	jmp @end_third_parse_loop_iter
 
 @end_third_parse_loop_iter:	
+	lda current_pc + 1
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	lda current_pc
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT	
+	
+	lda #$d
+	jsr CHROUT
+	
 	ldx ptr0 ; lines_extmem_ptr through loop
     cpx lines_extmem_ptr
     bcs :+
@@ -1444,6 +1458,68 @@ get_instruction_opcode:
 ; returns the value (in .X) of a label. if there are errors parsing, will not return
 ;
 determine_symbol_value:
+	phx
+	jsr find_whitespace_char
+	lda $00, X
+	beq @not_complex_expression
+	jsr find_non_whitespace
+	lda $00, X
+	beq @not_complex_expression
+	; we have a complex expression ;
+	ply	
+	pei (ptr1)
+	pei (ptr2)
+	pei (ptr3)
+	sty ptr1 ; pointer to first identifier
+	stx ptr2 ; pointer to operation (hopefully)
+	
+	inx
+	lda $00, X
+	bne :+
+	ldx ptr1
+	jmp undefined_symbol_err
+	:
+	jsr is_whitespace_char
+	bne :+
+	jsr find_whitespace_char
+	stz $00, X
+	ldx ptr2
+	jmp undefined_symbol_err
+	:
+	stz $00, X
+	inx
+	jsr find_non_whitespace
+	lda $00, X
+	bne :+
+	ldx ptr1
+	jmp undefined_symbol_err
+	:
+	
+	jsr determine_symbol_value
+	stx ptr3 ; now holds value, if didn't error
+	ldx ptr1
+	jsr find_whitespace_char
+	stz $00, X
+	ldx ptr1
+	jsr determine_symbol_value
+	
+	ldy ptr2
+	lda $00, Y
+	ldy ptr3
+	jsr perform_operation
+	; return value in .X
+	
+	ply
+	sty ptr3
+	ply
+	sty ptr2
+	ply
+	sty ptr1
+	rts
+	
+@not_complex_expression:	
+	plx
+	
 	lda $00, X
 	cmp #'<'
 	bne @not_low_byte
@@ -1496,6 +1572,34 @@ determine_symbol_value:
 	rts ; return
 	
 @not_number:
+	lda $00, X
+	cmp #SINGLE_QUOTE
+	bne @not_single_quoted_char
+	
+	inx
+	lda $00, X
+	bne :+
+	dex
+	jmp undefined_symbol_err
+	:
+	inx
+	lda $00, X
+	cmp #SINGLE_QUOTE
+	beq :+
+	
+	dex
+	dex
+	jmp undefined_symbol_err
+	:	
+	dex
+	lda #0
+	xba
+	lda $00, X
+	tax
+	ply
+	rts
+	
+@not_single_quoted_char:	
 	; try looking for label
 	phx
 	jsr find_label_value
@@ -1507,6 +1611,139 @@ determine_symbol_value:
 	; Error!
 	plx ; pull symbol that is undefined
 	jmp undefined_symbol_err
+
+perform_operation:
+	sty @tmp_word
+	
+	; compare for addition ;
+	cmp #'+'
+	bne @not_add
+	rep #$21 ; clear carry
+	.a16
+	txa
+	adc @tmp_word
+	tax
+	sep #$20
+	.a8
+	rts
+@not_add:
+	
+	; compare for subtraction ;
+	cmp #'-'
+	bne @not_subtract
+	rep #$20
+	.a16
+	txa
+	sec
+	sbc @tmp_word
+	tax
+	sep #$20
+	.a8
+	rts
+@not_subtract:
+	
+	; compare for OR ;
+	cmp #'|'
+	bne @not_or
+	rep #$20
+	.a16
+	txa
+	ora @tmp_word
+	tax
+	sep #$20
+	.a8
+	rts
+@not_or:
+
+	; compare for AND ;
+	cmp #'&'
+	bne @not_and
+	rep #$20
+	.a16
+	txa
+	and @tmp_word
+	tax
+	sep #$20
+	.a8
+	rts
+@not_and:
+	
+	; compare for XOR ;
+	cmp #'^'
+	bne @not_xor
+	rep #$20
+	.a16
+	txa
+	and @tmp_word
+	tax
+	sep #$20
+	.a8
+	rts
+@not_xor:
+	
+	; compare for ASL ;
+	cmp #'L'
+	beq :+
+	cmp #'l'
+	bne @not_left_shift
+	:
+	rep #$20
+	.a16
+	txa
+	cpy #0
+	beq :++
+	:
+	asl A	
+	dey
+	bne :-
+	:
+	tax
+	sep #$20
+	.a8
+	rts
+@not_left_shift:
+	
+	; compare for LSR ;
+	cmp #'R'
+	beq :+
+	cmp #'r'
+	bne @not_right_shift
+	:
+	rep #$20
+	.a16
+	txa
+	cpy #0
+	beq :++
+	:
+	lsr A	
+	dey
+	bne :-
+	:
+	tax
+	sep #$20
+	.a8
+	rts
+@not_right_shift:
+
+@invalid_operation:
+	; Error, value in .A is not one of the supported operations
+	pha
+	
+	jsr print_gen_err_str
+	
+	lda #<@invalid_op_str
+	ldx #>@invalid_op_str
+	jsr print_str
+	
+	pla
+	jsr CHROUT
+	
+	jmp print_quote_terminate
+
+@invalid_op_str:
+	.asciiz "Invalid operation '"
+@tmp_word:
+	.word 0
 
 ;
 ; str in .X, value as int in .Y
