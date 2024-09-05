@@ -1327,7 +1327,7 @@ load_dir_listing_extmem_ext:
 	lda KZE1
 	sta RAM_BANK
 	
-	lda #1
+	lda #.strlen("$=L")
 	ldx #<@s
 	ldy #>@s
 	jsr SETNAM
@@ -1375,7 +1375,7 @@ load_dir_listing_extmem_ext:
 	rts
 	
 @s:
-	.byte "$", 0
+	.asciiz "$=L"
 
 ;
 ; get_pwd_ext

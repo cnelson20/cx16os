@@ -1,6 +1,10 @@
 .include "routines.inc"
 .segment "CODE"
 
+COLOR_WHITE = $05
+COLOR_BLUE = $9A ; light blue
+COLOR_GREEN = $99 ; actually light green
+
 r0L = $02
 r0H = $03
 r1L = $04
@@ -15,6 +19,7 @@ ptr0 = $30
 
 ptr1 = $32
 ptr2 = $34
+ptr3 = $36
 
 init:
 	; get pwd ;
@@ -58,10 +63,25 @@ args_loop:
 	lda ptr1
 	ldx ptr1 + 1
 	jsr chdir
-	
 	; check if that was a success
-	; not yet implemented
-	
+	cmp #0
+	beq :+
+
+	lda #<no_such_dir_str_p1
+	ldx #>no_such_dir_str_p1
+	jsr print_str
+
+	lda ptr1
+	ldx ptr1 + 1
+	jsr print_str
+
+	lda #<no_such_dir_str_p1
+	ldx #>no_such_dir_str_p2
+	jsr print_str
+
+	bra args_loop
+
+	:	
 	lda ptr2 + 1
 	cmp #3
 	bcc print_dir
@@ -83,9 +103,6 @@ args_loop:
 	jsr CHROUT	
 	
 print_dir:
-	lda #2
-	sta first_run
-
 	lda #<$A000
 	sta r0
 	lda #>$A000
@@ -105,78 +122,183 @@ print_dir:
 	lda extmem_bank
 	jsr load_dir_listing_extmem
 	cpx #$FF
-	beq file_error
+	bne :+
+	jmp file_error
+	:
 	
 	sta end_listing_addr
 	stx end_listing_addr + 1
 	
-	lda #<$A000
-	ldx #>$A000
-	sta r3
-	stx r3 + 1
-	
-	; causes all future redirects to crash ;	
-file_print_loop:
-	lda #128
-	sta r1L
-	lda #0
-	sta r1H
-	
-	jsr read_listing_into_buf
-	sta bytes_read
-	
-	cpy #0
-	beq :+
-	jmp file_out_bytes
-	:
-	stz read_again
-	
-	cmp #128
-	bcc @print_read_bytes
-	
-	ldx #1
-	stx read_again
-@print_read_bytes:
-	lda bytes_read
-	beq file_out_bytes
-	ldx #0
-@print_read_bytes_loop:
-	lda buff, X
-	phx
-	jsr next_dir_char
-	plx
-	inx
-	cpx bytes_read
-	bcc @print_read_bytes_loop
-	
-	lda read_again
-	bne file_print_loop
-	
-file_out_bytes:
-	jmp args_loop
-	
-file_error_read:
-	tya
-	tax
-file_error:
-	stx err_num
-
-@dont_need_close:
-	lda #<error_msg
-	ldx #>error_msg
-	jsr PRINT_STR
-	
-	lda err_num
-	jsr GET_HEX_NUM
-	jsr CHROUT
-	txa
-	jsr CHROUT
-	
-	lda #$d
-	jsr CHROUT
+	rep #$10
+	.i16
+	ldx #$A004
+	stx ptr3
+	sep #$10
+	.i8
 	
 	lda #1
+	sta first_line
+
+print_dir_loop:
+	rep #$10
+	.i16
+	ldx #buff
+	stx r0
+	stz r2
+	ldx ptr3
+	stx r1
+	lda extmem_bank
+	sta r3
+	sep #$10
+	.i8
+	lda #<128
+	ldx #>128
+	jsr memmove_extmem
+
+	jsr get_strlen_buff
+	rep #$20
+	.a16
+	and #$00FF
+	clc
+	adc #4 + 1
+	adc ptr3
+	sta ptr3
+
+	cmp end_listing_addr ; don't print last line ; just says X KB FREE
+	sep #$20
+	.a8
+	bcc :+
+	jmp args_loop
+	:
+
+	lda first_line
+	beq :+
+	jmp end_print_dir_loop
+	:
+
+	;
+	; print file names between quotes
+	;
+	rep #$10
+	.i16
+	ldx #buff
+	lda #'"'
+	jsr strchr
+	inx
+	stx file_name_ptr
+
+	lda $00, X
+	cmp #'.'
+	bne :+
+	lda print_dotfiles_flag
+	bne :+
+	jmp end_print_dir_loop
+	:
+
+	lda #'"'
+	jsr strchr
+	stz $00, X
+	inx
+	jsr find_non_space_char
+	stz file_is_dir
+	lda $00, X
+	cmp #'D'
+	bne :+
+	lda #1
+	sta file_is_dir
+	:
+	
+	lda file_is_dir
+	beq :+
+	lda #COLOR_BLUE
+	bra :++
+	:
+	lda #COLOR_GREEN
+	:
+	jsr CHROUT
+
+	lda file_name_ptr
+	ldx file_name_ptr + 1
+	jsr print_str
+
+	lda #COLOR_WHITE
+	jsr CHROUT
+
+	lda file_is_dir
+	beq :+
+	lda #'/'
+	bra :++
+	:
+	lda #'*'
+	:
+	jsr CHROUT
+	
+	sep #$10
+	.i8
+
+	lda #$d
+	jsr CHROUT
+
+	; end of loop
+end_print_dir_loop:
+	stz first_line
+
+	jmp print_dir_loop
+
+file_is_dir:
+	.word 0
+file_name_ptr:
+	.word 0
+
+
+get_strlen_buff:
+	rep #$10
+	.i16
+	ldx #buff
+	ldy #0
+	:
+	lda $00, X
+	beq :+
+	inx
+	iny
+	bra :-
+	:
+	tya
+	sep #$10
+	.i8
 	rts
+
+;
+; assumes 16-bit index mode
+;
+strchr:
+	.i16
+	cmp $00, X
+	pha
+	beq :+
+	lda $00, X
+	beq :+
+	pla
+	inx
+	bne strchr
+	:
+	pla
+	rts
+	.i8
+
+;
+; assumes 16-bit index mode
+;
+find_non_space_char:
+	.i16
+	lda $00, X
+	cmp #' '
+	bne :+
+	inx
+	bne find_non_space_char
+	:
+	rts
+	.i8
 
 get_next_arg:
 	ldy #0
@@ -204,164 +326,43 @@ get_next_arg:
 	
 	rts
 
-first_run:
-	.byte 2
-dir_char:
-	.byte 0
-new_dir_line:
-	.byte 0
-first_char_of_line:
-	.byte 0
+file_error:
+	phx
 
-next_dir_char:
-	sta dir_char
+	lda #<error_msg
+	ldx #>error_msg
+	jsr PRINT_STR
 	
-	lda first_run
-	beq @not_first_run
-	dec first_run
-	lda #4
-	sta new_dir_line
-	rts
-@not_first_run:	
-	lda new_dir_line
-	beq @not_new_line
-	
-	dec new_dir_line
-	lda new_dir_line
-	cmp #2
-	bcs @ignore_first_2_bytes_line
-	eor #1
-	tax
-	lda dir_char
-	sta bin_line_num, X
-	lda new_dir_line
-	bne @ignore_first_2_bytes_line
-	; print length of file ;
-	jsr calc_num_size
-	tax
-	lda #$20
-@print_spaces:	
+	pla
+	jsr GET_HEX_NUM
 	jsr CHROUT
-	dex
-	bne @print_spaces
-	
-@ignore_first_2_bytes_line:
-	rts
-	
-@not_new_line:
-	lda dir_char
-	beq @end_of_line
+	txa
 	jsr CHROUT
-	rts
-
-@end_of_line:
-	lda #4
-	sta new_dir_line
+	
 	lda #$d
 	jsr CHROUT
-	rts
-
-calc_num_size:
-	lda #10
-	sta ptr0
-	stz ptr0 + 1
 	
-	lda #1
-	sta @calc_size
-@calc_loop:
-	lda bin_line_num_hi
-	cmp ptr0 + 1
-	bcc @fail
-	bne @pass
-	lda bin_line_num
-	cmp ptr0
-	bcc @fail
-@pass:
-	asl ptr0
-	rol ptr0 + 1 ; ptr0 = ptr0 * 2
-	ldx ptr0
-	ldy ptr0 + 1 ; .XY = ptr0 * 2
-	asl ptr0
-	rol ptr0 + 1
-	asl ptr0 ; ptr0 = ptr0 * 8
-	rol ptr0 + 1
-	clc
-	txa
-	adc ptr0
-	sta ptr0
-	tya
-	adc ptr0 + 1
-	sta ptr0 + 1
-	
-	; inc calc size ;
-	lda @calc_size
-	inc A
-	sta @calc_size
-	cmp #5
-	bcc @calc_loop
-	rts
-@fail:
-	lda @calc_size
-	rts
-	
-@calc_size:
-	.byte 0
-
-read_listing_into_buf:
-	lda extmem_bank
-	jsr set_extmem_rbank
-	lda #<r3
-	jsr set_extmem_rptr
-	
-	ldx #0
-@loop:
-	lda r3 + 1
-	cmp end_listing_addr + 1
-	bcc  :+
-	bne @out_bytes
-	lda r3
-	cmp end_listing_addr
-	bcs @out_bytes
-	:
-	
-	ldy #0
-	jsr readf_byte_extmem_y
-	sta buff, X
-	
-	inc r3
-	bne :+
-	inc r3 + 1
-	:
-	inx
-	cpx r1
-	bcc @loop
-@out_bytes:
-	txa
-	ldx #0
-	rts
-
+	jmp args_loop
 
 end_listing_addr:
 	.word 0
-
-bin_line_num:
-	.byte 0
-bin_line_num_hi:
+print_dotfiles_flag:
 	.byte 0
 
 err_num:
 	.byte 0
-bytes_read:
-	.byte 0
-read_again:
-	.byte 0
-out_bytes:
+first_line:
 	.byte 0
 
 extmem_bank:
 	.byte 0	
 error_msg:
 	.asciiz "Error opening directory listing, code #:"
+
+no_such_dir_str_p1:
+	.byte "ls: cannot access '"
+no_such_dir_str_p2:
+	.byte "': No such directory exists", $d, 0
 
 .SEGMENT "BSS"
 pwd_buff:
