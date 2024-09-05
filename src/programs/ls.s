@@ -42,19 +42,40 @@ init:
 	sty ptr2
 	sty ptr2 + 1
 	
-	cpy #1
-	bne :+
-	jmp print_dir ; just print this directory
-	:
-	
 args_loop:
 	dec ptr2 ; argc
-	bne :+
+	bne @not_out_args
+
+	inc ptr2
+	dec ptr2 + 1
+	beq dont_change_dirs ; if ptr2 + 1 was 1, branch
+
 	lda #0 ; out of args, done printing dirs
 	rts
-	:
+@not_out_args:
 	jsr get_next_arg	
 	
+	lda (ptr1)
+	cmp #'-'
+	bne print_dir
+
+	dec ptr2 + 1
+parse_flag:
+	inc ptr1
+	bne :+
+	inc ptr1 + 1
+	:
+	lda (ptr1)
+	cmp #'a'
+	bne :+
+
+	lda #1
+	sta print_dotfiles_flag
+	jmp args_loop
+
+	:
+	jmp flag_error
+print_dir:
 	lda #<pwd_buff
 	ldx #>pwd_buff
 	jsr chdir
@@ -84,7 +105,7 @@ args_loop:
 	:	
 	lda ptr2 + 1
 	cmp #3
-	bcc print_dir
+	bcc dont_change_dirs
 	
 	dec A
 	cmp ptr2
@@ -92,7 +113,7 @@ args_loop:
 	lda #$d
 	jsr CHROUT
 	:
-	
+
 	lda ptr1
 	ldx ptr1 + 1
 	jsr print_str
@@ -101,8 +122,8 @@ args_loop:
 	jsr CHROUT
 	lda #$d
 	jsr CHROUT	
-	
-print_dir:
+
+dont_change_dirs:	
 	lda #<$A000
 	sta r0
 	lda #>$A000
@@ -341,8 +362,29 @@ file_error:
 	
 	lda #$d
 	jsr CHROUT
+
+	lda #1
+	sta exit_code
 	
 	jmp args_loop
+
+flag_error:
+	lda #<@flag_error_str
+	ldx #>@flag_error_str
+	jsr print_str
+
+	lda ptr1
+	ldx ptr1 + 1
+	jsr print_str
+
+	lda #$d
+	jsr CHROUT
+
+	lda #2
+	rts
+	
+@flag_error_str:
+	.asciiz "ls: unknown option -- "
 
 end_listing_addr:
 	.word 0
@@ -352,6 +394,8 @@ print_dotfiles_flag:
 err_num:
 	.byte 0
 first_line:
+	.byte 0
+exit_code:
 	.byte 0
 
 extmem_bank:
