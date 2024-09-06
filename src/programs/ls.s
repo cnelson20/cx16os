@@ -109,6 +109,7 @@ print_dirs_list:
 	sta ptr1 + 1
 	jsr print_dir
 
+	ldx @dir_names_index
 	inx
 	stx @dir_names_index
 	cpx dir_names_size
@@ -245,6 +246,7 @@ print_dir_loop:
 	sep #$20
 	.a8
 	bcc :+
+	stp
 	rts
 	:
 
@@ -325,7 +327,6 @@ print_dir_loop:
 	; end of loop
 end_print_dir_loop:
 	stz first_line
-	
 	jmp print_dir_loop
 
 file_is_dir:
