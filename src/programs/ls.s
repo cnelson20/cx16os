@@ -40,26 +40,22 @@ init:
 	sta ptr1
 	stx ptr1 + 1
 	sty ptr2
-	sty ptr2 + 1
+
+	stz exit_code
+	stz dir_names_size
 	
 args_loop:
 	dec ptr2 ; argc
 	bne @not_out_args
 
-	inc ptr2
-	dec ptr2 + 1
-	beq dont_change_dirs ; if ptr2 + 1 was 1, branch
-
-	lda #0 ; out of args, done printing dirs
-	rts
+	jmp print_dirs_list
 @not_out_args:
 	jsr get_next_arg	
 	
 	lda (ptr1)
 	cmp #'-'
-	bne print_dir
+	bne add_dir_list
 
-	dec ptr2 + 1
 parse_flag:
 	inc ptr1
 	bne :+
@@ -71,11 +67,67 @@ parse_flag:
 
 	lda #1
 	sta print_dotfiles_flag
-	jmp args_loop
+	bra args_loop
+
+	:
+	cmp #'b'
+	bne :+
+
+	lda #1
+	sta disable_color_flag
+	bra args_loop
 
 	:
 	jmp flag_error
+
+add_dir_list:
+	ldx dir_names_size
+	lda ptr1
+	sta dir_names_lo, X
+	lda ptr1 + 1
+	sta dir_names_hi, X
+
+	inc dir_names_size
+	jmp args_loop
+
+print_dirs_list:
+	stz @dir_names_index
+
+	lda dir_names_size
+	bne :+
+
+	stz dir_names_lo + 0
+	stz dir_names_hi + 0
+
+	inc dir_names_size
+	:
+@print_dirs_list_loop:
+	ldx @dir_names_index
+	lda dir_names_lo, X
+	sta ptr1
+	lda dir_names_hi, X
+	sta ptr1 + 1
+	jsr print_dir
+
+	inx
+	stx @dir_names_index
+	cpx dir_names_size
+	bcc @print_dirs_list_loop
+
+	lda exit_code
+	rts
+	
+
+@dir_names_index:
+	.byte 0
+@this_dir:
+	.asciiz "."
+
 print_dir:
+	lda ptr1
+	ora ptr1 + 1
+	beq dont_change_dirs
+
 	lda #<pwd_buff
 	ldx #>pwd_buff
 	jsr chdir
@@ -96,15 +148,18 @@ print_dir:
 	ldx ptr1 + 1
 	jsr print_str
 
-	lda #<no_such_dir_str_p1
+	lda #<no_such_dir_str_p2
 	ldx #>no_such_dir_str_p2
 	jsr print_str
 
-	bra args_loop
+	lda #1
+	sta exit_code
+
+	rts
 
 	:	
-	lda ptr2 + 1
-	cmp #3
+	lda dir_names_size
+	cmp #2
 	bcc dont_change_dirs
 	
 	dec A
@@ -145,6 +200,7 @@ dont_change_dirs:
 	cpx #$FF
 	bne :+
 	jmp file_error
+	rts
 	:
 	
 	sta end_listing_addr
@@ -189,7 +245,7 @@ print_dir_loop:
 	sep #$20
 	.a8
 	bcc :+
-	jmp args_loop
+	rts
 	:
 
 	lda first_line
@@ -229,6 +285,8 @@ print_dir_loop:
 	sta file_is_dir
 	:
 	
+	lda disable_color_flag
+	bne :+++
 	lda file_is_dir
 	beq :+
 	lda #COLOR_BLUE
@@ -237,13 +295,17 @@ print_dir_loop:
 	lda #COLOR_GREEN
 	:
 	jsr CHROUT
+	:
 
 	lda file_name_ptr
 	ldx file_name_ptr + 1
 	jsr print_str
 
+	lda disable_color_flag
+	bne :+
 	lda #COLOR_WHITE
 	jsr CHROUT
+	:
 
 	lda file_is_dir
 	beq :+
@@ -263,7 +325,7 @@ print_dir_loop:
 	; end of loop
 end_print_dir_loop:
 	stz first_line
-
+	
 	jmp print_dir_loop
 
 file_is_dir:
@@ -366,7 +428,7 @@ file_error:
 	lda #1
 	sta exit_code
 	
-	jmp args_loop
+	rts
 
 flag_error:
 	lda #<@flag_error_str
@@ -390,6 +452,8 @@ end_listing_addr:
 	.word 0
 print_dotfiles_flag:
 	.byte 0
+disable_color_flag:
+	.byte 0
 
 err_num:
 	.byte 0
@@ -404,11 +468,17 @@ error_msg:
 	.asciiz "Error opening directory listing, code #:"
 
 no_such_dir_str_p1:
-	.byte "ls: cannot access '"
+	.asciiz "ls: cannot access '"
 no_such_dir_str_p2:
 	.byte "': No such directory exists", $d, 0
 
 .SEGMENT "BSS"
 pwd_buff:
 	.res $80
+dir_names_lo:
+	.res 128
+dir_names_hi:
+	.res 128
+dir_names_size:
+	.word 0	
 buff:
