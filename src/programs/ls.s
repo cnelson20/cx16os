@@ -246,7 +246,6 @@ print_dir_loop:
 	sep #$20
 	.a8
 	bcc :+
-	stp
 	rts
 	:
 
