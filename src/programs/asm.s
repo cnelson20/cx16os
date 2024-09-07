@@ -1596,7 +1596,6 @@ determine_symbol_value:
 	xba
 	lda $00, X
 	tax
-	ply
 	rts
 	
 @not_single_quoted_char:	
