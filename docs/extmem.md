@@ -27,21 +27,31 @@ Return values:
 - On success, returns a new extmem bank in .A
 - If no banks are available, returns 0
 
+---
+
 ### set_extmem_rbank
 Set bank to use for read_\*_extmem routines  
 Returns 0 if bank is valid, non-zero value otherwise  
+
+---
 
 ### set_extmem_wbank
 Set bank to use for write_\*_extmem routines  
 Returns 0 if bank is valid, non-zero value otherwise  
 
+---
+
 ### set_extmem_rptr
 Set ptr to use for readf_* calls  
 Returns 0 if ptr is valid, non-zero other  
 
+---
+
 ### set_extmem_wptr
 Set ptr to use for writef_* calls  
 Returns 0 if ptr is valid, non-zero other  
+
+---
 
 ### readf_byte_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_rptr](#set_extmem_rptr)
@@ -52,6 +62,8 @@ Preserves .X, .Y
 Return values:
 - Returns result of "simulated" LDA indirect instruction in .A
 
+---
+
 ### vread_byte_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank)  
 
@@ -61,12 +73,16 @@ Preserves .X, .Y
 Return values:
 - Returns value of memory address in .A
 
+---
+
 ### writef_byte_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_wptr](#set_extmem_wptr)  
 Does the equivalent of `STA (wptr), Y` to memory of the previously set bank (works with 16-bit index registers and accumulator) 
 
 Return values:
 - None, all registers are preserved
+
+---
 
 ### vwrite_byte_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank)  
@@ -76,6 +92,8 @@ Writes .A to mem addr `(X) + Y` on the previous set bank
 Return values:
 - None, all registers are preserved
 
+---
+
 ### memmove_extmem
 Moves .AX bytes from r3.r1 to r2.r0 (bank r3.L, addr r1 to bank r2.L, addr r0)  
 To indicate copies to/from prog space, r2/r3 should be 0  
@@ -83,15 +101,21 @@ To indicate copies to/from prog space, r2/r3 should be 0
 Return values:
 - Returns 0 if copy happened, non-zero otherwise (prog does not access to supplied banks)
 
+---
+
 ### fill_extmem
 Fills r1 bytes starting at r0 with value in .A (on bank preset by [set_extmem_bank](#set_extmem_bank))  
 
 Return values:
 - None
 
+---
+
 ### free_extmem_bank
 Frees the extmem bank in .A (and the bank + 1)
 After this routine is called, the calling process can no longer access memory in the banks freed
+
+---
 
 ### share_extmem_bank
 Shares the bank in .A (and the bank + 1) with the process with id in .X
