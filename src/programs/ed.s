@@ -1932,7 +1932,7 @@ shell_cmd_read:
 	ldx #>@temp_read_filename
 	rts
 @temp_read_filename:
-	.asciiz "tmpR"
+	.asciiz "/OS/tmp/tmpR"
 
 exec_shell_cmd:
 	; ptr0.L holds stdin for prog

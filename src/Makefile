@@ -31,12 +31,13 @@ build: os.prg programs
 	cp AUTOBOOT.X16 mnt/
 	
 	cp osfiles/* mnt/
+	-mkdir mnt/tmp/
 
 sd: copy build
 ifeq ($(OS),Windows_NT)
 	-rm /cygdrive/c/x16image.vhdx
 	diskpart < scripts/diskpart_mount.in
-	mkdir /cygdrive/v/OS/
+	-mkdir /cygdrive/v/OS/
 	cp mnt/* -r /cygdrive/v/OS/
 	diskpart < scripts/diskpart_detach.in
 	qemu-img convert -f vhdx "C:\x16image.vhdx" -O raw cx16os.img
