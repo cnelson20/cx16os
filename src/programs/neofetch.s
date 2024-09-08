@@ -420,6 +420,7 @@ get_memory_info:
 	cpx #0
 	beq :+
 	pha
+	txa
 	jsr GET_HEX_NUM
 	txa
 	jsr CHROUT
