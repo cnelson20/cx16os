@@ -22,7 +22,10 @@ Routines to expand a program's data access beyond its allocated $2000 bytes
 ### res_extmem_bank
 Get a bank to use other extmem routines with  
 Can use bank, bank + 1 for calls to [set_extmem_bank](#set_extmem_bank)  
-Returns 0 in .A if no banks available  
+
+Return values:
+- On success, returns a new extmem bank in .A
+- If no banks are available, returns 0
 
 ### set_extmem_rbank
 Set bank to use for read_\*_extmem routines  
@@ -44,33 +47,47 @@ Returns 0 if ptr is valid, non-zero other
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_rptr](#set_extmem_rptr)
  
 Does the equivalent of `LDA (rptr), Y` from memory of the previously set bank (works with 16-bit index registers and accumulator)  
-Preserves all registers  
+Preserves .X, .Y
+
+Return values:
+- Returns result of "simulated" LDA indirect instruction in .A
 
 ### vread_byte_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank)  
 
 Reads into .A from mem addr `(X) + Y` on the previous set bank  
-Preserves .XY 
+Preserves .X, .Y 
+
+Return values:
+- Returns value of memory address in .A
 
 ### writef_byte_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank), [set_extmem_wptr](#set_extmem_wptr)  
 Does the equivalent of `STA (wptr), Y` to memory of the previously set bank (works with 16-bit index registers and accumulator) 
-Preserves .AXY  
+
+Return values:
+- None, all registers are preserved
 
 ### vwrite_byte_extmem_y
 - Prepatory Routines: [set_extmem_bank](#set_extmem_bank)  
 
 Writes .A to mem addr `(X) + Y` on the previous set bank  
-Preserves .AXY
+
+Return values:
+- None, all registers are preserved
 
 ### memmove_extmem
 Moves .AX bytes from r3.r1 to r2.r0 (bank r3.L, addr r1 to bank r2.L, addr r0)  
 To indicate copies to/from prog space, r2/r3 should be 0  
-Returns 0 if both banks are accessable by the current program and copy happened, non-zero otherwise  
+
+Return values:
+- Returns 0 if copy happened, non-zero otherwise (prog does not access to supplied banks)
 
 ### fill_extmem
 Fills r1 bytes starting at r0 with value in .A (on bank preset by [set_extmem_bank](#set_extmem_bank))  
-No return values  
+
+Return values:
+- None
 
 ### free_extmem_bank
 Frees the extmem bank in .A (and the bank + 1)
