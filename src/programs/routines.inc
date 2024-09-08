@@ -72,6 +72,7 @@ mkdir := $9D6F
 rmdir := $9D72
 
 get_time := $9D9F
+get_sys_info := $9DAB
 
 setup_chrout_hook := $9D75
 release_chrout_hook := $9D78
