@@ -1,7 +1,7 @@
 CC = cl65
 FLAGS =-t none -C cl65_progs.cfg
 
-all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir cat_slow guiterm gui sendmsg splitterm crshmon color strings cron swapterm asm
+all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir cat_slow guiterm gui sendmsg splitterm crshmon color strings cron swapterm asm neofetch
 
 clean:
 	rm *.o
@@ -52,6 +52,10 @@ ed: ed.s routines.inc
 # Other commands
 # (Mostly) named for similar linux commands
 #
+
+neofetch: neofetch.s routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
+	cp $@ ../mnt/bin
 
 asm: asm.s routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
