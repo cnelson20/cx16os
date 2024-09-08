@@ -1910,7 +1910,11 @@ shell_cmd_determine_mode:
 	rts
 	
 shell_cmd_read:
-	;stp
+	lda $00 ; pid
+	jsr GET_HEX_NUM
+	sta @end_temp_read_filename - 3
+	stx @end_temp_read_filename - 2
+	
 	ldy #'W' ; this will be stdout of exec'd program
 	lda #<@temp_read_filename
 	ldx #>@temp_read_filename
@@ -1932,7 +1936,8 @@ shell_cmd_read:
 	ldx #>@temp_read_filename
 	rts
 @temp_read_filename:
-	.asciiz "/OS/tmp/tmpR"
+	.asciiz "/OS/tmp/edR00"
+@end_temp_read_filename:
 
 exec_shell_cmd:
 	; ptr0.L holds stdin for prog
