@@ -1367,15 +1367,15 @@ setup_system_info:
 	dec A
 	sta max_ram_bank
 	
-	lda #63 < 1
-	sta vera_ctrl
+	lda #63 << 1
+	sta VERA::CTRL
 	ldx #2
 	:
 	lda $9F29, X
 	sta vera_version_number, X	
 	dex
 	bpl :-
-	stz vera_ctrl
+	stz VERA::CTRL
 	
 	lda $FF80 ; holds ROM version
 	sta rom_vers
