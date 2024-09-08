@@ -25,6 +25,7 @@
 .import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook, mark_last_hook_message_received
 .import lock_vera_regs, unlock_vera_regs
 .import in_active_processes_table, add_active_processes_table, active_processes_table_index, active_processes_table
+.import vera_version_number, rom_vers, max_ram_bank
 
 .import surrender_process_time, schedule_timer
 .import irq_already_triggered
@@ -94,6 +95,7 @@ call_table:
 	jmp detach_self ; $9DA2
 	jmp active_table_lookup ; $9DA5
 	jmp copy_fd ; $9DA8
+	jmp get_sys_info ; $9DAB
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -648,4 +650,24 @@ detach_self:
 @end_function:
 	restore_p_816
 	rts
+
+;
+; get_sys_info
+;
+get_sys_info:
+	save_p_816_8bitmode
+	
+	ldx vera_version_number
+	stx r0
+	ldx vera_version_number + 1
+	stx r0 + 1
+	ldx vera_version_number + 2
+	stx r1
+	
+	ldx max_ram_bank
+	ldy rom_vers
+	
+	restore_p_816
+	rts
+
 

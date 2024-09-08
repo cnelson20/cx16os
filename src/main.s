@@ -836,8 +836,10 @@ find_new_process_bank:
 	rts
 	
 @id_taken:
+	cpx max_ram_bank
+	beq @not_found
 	inx
-	bne @loop
+	bra @loop
 @not_found:
 	lda #0
 	rts
@@ -1350,10 +1352,44 @@ vera_status:
 ; calls multiple subprocesses
 ;
 setup_kernal:
+	jsr setup_system_info
 	jsr setup_kernal_processes
 	jsr setup_kernal_file_table
 	jsr setup_system_hooks
 	jmp setup_call_table
+
+;
+; setup_system_info
+;
+setup_system_info:
+	sec
+	jsr MEMTOP
+	dec A
+	sta max_ram_bank
+	
+	lda #63 < 1
+	sta vera_ctrl
+	ldx #2
+	:
+	lda $9F29, X
+	sta vera_version_number, X	
+	dex
+	bpl :-
+	stz vera_ctrl
+	
+	lda $FF80 ; holds ROM version
+	sta rom_vers
+	rts
+
+.export max_ram_bank
+max_ram_bank:
+	.byte 0
+.export vera_version_number
+vera_version_number:
+	.res 3
+.export rom_vers
+rom_vers:
+	.byte 0
 
 ;
 ; setup_kernal_processes
