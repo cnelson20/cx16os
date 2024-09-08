@@ -366,7 +366,7 @@ get_gpu_info:
 	jsr CHROUT	
 	ply
 	iny
-	cpy #(r1 + 1) - r0 ; 3
+	cpy #r1 - r0 ; 2
 	bcc @loop	
 	
 	jmp print_cr
