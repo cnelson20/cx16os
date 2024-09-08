@@ -48,7 +48,7 @@
 | $9DA2 | [`detach_self`](#9da2-detach_self) | .A | | .XY |
 | $9DA5 | [`active_table_lookup`](#9da5-active_table_lookup) | .A | .A, .X, .Y | |
 | $9DA8 | [`copy_fd`](#9da8-copy_fd) | .A | .X | .Y |
-
+| $9DAB | [`get_sys_info`](#9dab-get_sys_info) | | .X, .Y, r0, r1 | |
 
 ## Function Reference
 
@@ -338,12 +338,16 @@ Return values:
 - r3L:  jiffies (0-59)
 - r3H: 	weekday (0-6)
 
+---
+
 ### $9DA2: detach_self
 - Removes a process' PPID if it is not an active process
 - If .A != 0, it adds the process to the active process table
 
 Return values:
 - None
+
+---
 
 ### $9DA5: active_table_lookup
 - Returns information about the system active_processes_table
@@ -356,11 +360,23 @@ Return values:
 - .X -> index of active process within active_processes_table
 - .Y -> currently active process
 
+---
+
 ### $9DA8: copy_fd
 - Changes the fd associated with the file currently associated with the fd in .A
 
 Return values:
 - New fd for the file in .A
+
+---
+
+### $9DAB: get_sys_info
+- Returns several values about the OS / kernal currently running
+
+Return values:
+- X -> maximum RAM bank available (one of 63, 128, or 255)
+- Y -> X16 Kernal version number (see X16 User's Guide)
+- r0-r1 -> VERA version number
 
 
 
