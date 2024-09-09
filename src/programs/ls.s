@@ -163,13 +163,6 @@ print_dir:
 	cmp #2
 	bcc dont_change_dirs
 	
-	dec A
-	cmp ptr2
-	beq :+
-	lda #$d
-	jsr CHROUT
-	:
-
 	lda ptr1
 	ldx ptr1 + 1
 	jsr print_str
@@ -245,9 +238,15 @@ print_dir_loop:
 	cmp end_listing_addr ; don't print last line ; just says X KB FREE
 	sep #$20
 	.a8
+	bcc @not_end_listing
+	lda dir_names_size
+	cmp #2
 	bcc :+
-	rts
+	lda #$d
+	jsr CHROUT
 	:
+	rts
+@not_end_listing:
 
 	lda first_line
 	beq :+
