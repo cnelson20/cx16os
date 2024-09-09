@@ -248,8 +248,7 @@ skip_print_prompt:
 @not_auto_command:
 	lda #0
 	jsr send_byte_chrout_hook
-
-	stz flicker_tick
+	
 	stz input
 	ldx #0
 wait_for_input:
@@ -271,19 +270,6 @@ wait_for_input:
 	cmp #0
 	bne @key_buff_not_empty
 	
-	lda last_background_alive
-	bne wait_for_input
-	; if there is no alive background proc, flicker underscore every so often
-	inc flicker_tick
-	bne wait_for_input
-	lda #'_'
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-	lda #0
-	phx
-	jsr send_byte_chrout_hook
-	plx
 	bra wait_for_input
 	
 @key_buff_not_empty:
