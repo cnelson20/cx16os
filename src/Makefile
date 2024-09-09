@@ -31,7 +31,7 @@ build: os.prg programs
 	cp AUTOBOOT.X16 mnt/
 	
 	cp osfiles/* mnt/
-	-mkdir mnt/tmp/
+	-mkdir mnt/tmp/ mnt/etc/
 
 sd: copy build
 ifeq ($(OS),Windows_NT)
