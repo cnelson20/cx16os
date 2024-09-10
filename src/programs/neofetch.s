@@ -21,6 +21,8 @@ COLOR_PURPLE = $9C
 COLOR_YELLOW = $9E
 COLOR_CYAN = $9F
 
+SINGLE_QUOTE = 39
+
 r0 := $02
 r1 := $04
 r2 := $06
@@ -34,8 +36,22 @@ ptr2 := $34
 	rep #$10
 	.i16
 	
-	ldx #alt_x16_art
-	stx ascii_ptr
+	ldx #0
+	stx info_functions_size
+	stx info_functions_index
+	
+	lda #<config_file_location
+	ldx #>config_file_location
+	ldy #0
+	jsr open_file
+	cmp #$FF
+	beq :+
+	sta config_file_fd
+	jsr use_file_config
+	bra :++
+	:
+	jsr use_default_config
+	:
 	
 	lda #1
 	sta still_print_ascii
@@ -43,6 +59,7 @@ ptr2 := $34
 	sta still_print_info
 	
 	jsr get_length_first_ascii_line
+	jmp print_loop
 	
 print_loop:
 	lda still_print_ascii
@@ -56,6 +73,361 @@ print_loop:
 	jsr print_next_info_line
 	
 	jmp print_loop
+
+use_file_config:
+	; go through each line of file ;
+@get_next_line:
+	ldy #0
+@get_next_line_loop:
+	phy
+	ldx config_file_fd
+	jsr fgetc
+	ply
+	sta file_contents_buff, Y
+	cpx #0
+	beq :+
+	ldx #1
+	sta @eof
+	bra @end_loop
+	:
+	cmp #$d
+	beq @end_loop
+	iny
+	bra @get_next_line_loop
+@end_loop:
+	lda #0
+	sta file_contents_buff, Y
+	
+	; now we can parse this line ;
+	jsr parse_config_line
+	
+	lda @eof
+	bne :+
+	jmp @get_next_line
+	:
+	
+	lda config_file_fd
+	jsr close_file
+	rts
+@eof:
+	.word 0
+
+parse_config_line:
+	ldx #file_contents_buff
+	jsr split_string_by_first_space
+	; ptr0 points to first word of line
+	; ptr1 will point to rest of line (args, if there are any)
+	
+	ldx ptr0
+	lda $00, X
+	bne :+
+	rts ; if string is empty, just ignore and move onto next line
+	:
+	
+	ldx ptr0
+	ldy #ascii_str_compare
+	jsr compare_strings
+	bne @not_ascii_comm
+	
+	ldx ptr1
+	jsr split_string_by_first_space
+	ldx ptr0
+	ldy #default_str_compare
+	jsr compare_strings
+	bne :+
+	ldx #alt_x16_art
+	stx ascii_ptr
+	rts
+	:
+	ldx ptr0
+	ldy #alt_str_compare
+	jsr compare_strings
+	bne :+
+	ldx #x16_ascii_art
+	stx ascii_ptr
+	rts
+	:
+	
+	ldx ptr0
+	ldy #0
+	:
+	lda $00, X
+	beq :+
+	sta filename_buffer, Y
+	inx
+	iny
+	cpy #128 - 1 ; size of buffer - 1
+	bcc :-
+	:
+	sta filename_buffer, Y
+	rts	
+@not_ascii_comm:
+	ldx ptr0
+	ldy #blank_str_compare
+	jsr compare_strings
+	bne @not_blank_comm
+	
+	rep #$20
+	.a16
+	lda info_functions_size
+	asl A
+	tax
+	lda #print_cr
+	sta info_functions, X
+	
+	inc info_functions_size
+	sep #$20
+	.a8
+	rts
+@not_blank_comm:
+	ldx ptr0
+	ldy #info_str_compare
+	jsr compare_strings
+	bne @not_info_comm
+	
+	jmp parse_info_command
+	
+@not_info_comm:
+	; invalid command, we should error
+	lda #<invalid_command_err_str
+	ldx #>invalid_command_err_str
+	jsr print_str
+
+	lda ptr0
+	ldx ptr0 + 1
+	jsr print_str
+
+	lda #SINGLE_QUOTE
+	jsr CHROUT
+	jsr print_cr
+	
+	ldx #$01FD
+	txs
+	rts
+	
+ascii_str_compare:
+	.asciiz "ascii"
+blank_str_compare:
+	.asciiz "blank"
+info_str_compare:
+	.asciiz "info"
+	
+default_str_compare:
+	.asciiz "default"
+alt_str_compare:
+	.asciiz "alt"
+
+invalid_command_err_str:
+	.asciiz "neofetch: Invalid command: '"
+
+parse_info_command:
+	ldx ptr1
+	jsr split_string_by_first_space
+	
+	; os ;
+	ldx ptr0
+	ldy #info_os_str
+	jsr compare_strings
+	bne :+	
+	ldx #get_os_info
+	jmp add_function_list
+	:
+
+	; kernal ;
+	ldx ptr0
+	ldy #info_kernal_str
+	jsr compare_strings
+	bne :+
+	ldx #get_kernal_info
+	jmp add_function_list
+	:
+	
+	; programs ;
+	ldx ptr0
+	ldy #info_programs_str
+	jsr compare_strings
+	bne :+	
+	ldx #get_programs_info
+	jmp add_function_list
+	:
+	
+	; shell ;
+	ldx ptr0
+	ldy #info_shell_str
+	jsr compare_strings
+	bne :+	
+	ldx #get_shell_info
+	jmp add_function_list
+	:
+	
+	; term ;
+	ldx ptr0
+	ldy #info_terminal_str
+	jsr compare_strings
+	bne :+
+	ldx #get_term_info
+	jmp add_function_list
+	:
+	
+	; cpu ;
+	ldx ptr0
+	ldy #info_cpu_str
+	jsr compare_strings
+	bne :+
+	ldx #get_cpu_info
+	jmp add_function_list
+	:
+	
+	; gpu ;
+	ldx ptr0
+	ldy #info_gpu_str
+	jsr compare_strings
+	bne :+
+	ldx #get_gpu_info
+	jmp add_function_list
+	:
+	
+	; memory ;
+	ldx ptr0
+	ldy #info_memory_str
+	jsr compare_strings
+	bne :+
+	ldx #get_memory_info
+	jmp add_function_list
+	:
+	
+	; colors ;
+	ldx ptr0
+	ldy #info_colors_str
+	jsr compare_strings
+	bne :+
+	ldx #print_colors
+	jsr add_function_list
+	ldx #print_colors
+	jmp add_function_list
+	:
+	
+	; invalid option for info ;
+	lda #<invalid_info_opt_err_str
+	ldx #>invalid_info_opt_err_str
+	jsr print_str
+
+	lda ptr0
+	ldx ptr0 + 1
+	jsr print_str
+
+	lda #SINGLE_QUOTE
+	jsr CHROUT
+	jsr print_cr
+	
+	ldx #$01FD
+	txs
+	rts
+	rts
+
+invalid_info_opt_err_str:
+	.asciiz "neofetch: Invalid info option '"
+
+add_function_list:
+	phx
+	rep #$20
+	.a16
+	lda info_functions_size
+	asl A
+	tax
+	pla
+	sta info_functions, X
+	
+	inc info_functions_size
+	sep #$20
+	.a8
+	rts	
+
+info_os_str:
+	.asciiz "os"
+info_kernal_str:
+	.asciiz "kernal"
+info_programs_str:
+	.asciiz "programs"
+info_shell_str:
+	.asciiz "shell"
+info_terminal_str:
+	.asciiz "terminal"
+info_cpu_str:
+	.asciiz "cpu"
+info_gpu_str:
+	.asciiz "gpu"
+info_memory_str:
+	.asciiz "memory"
+info_colors_str:
+	.asciiz "colors"
+
+compare_strings:
+	lda $00, X
+	cmp $00, Y
+	bne @not_equal
+	lda $00, X
+	beq @equal
+	inx
+	iny
+	bra compare_strings
+@equal:
+	lda #0
+	rts
+@not_equal:
+	lda #1
+	rts
+
+split_string_by_first_space:
+	:	
+	lda $00, X
+	beq @end_find_non_whitespace_loop
+	cmp #$20
+	bcc :+
+	cmp #$80
+	bcc @end_find_non_whitespace_loop
+	:
+	inx
+	bra :--
+@end_find_non_whitespace_loop:
+	stx ptr0
+	
+	:
+	lda $00, X
+	beq @end_find_space_loop
+	cmp #$20
+	beq :+
+	inx
+	bra :-
+	:
+	stz $00, X
+	inx
+@end_find_space_loop:
+	stx ptr1
+	rts
+
+use_default_config:
+	ldx #alt_x16_art
+	stx ascii_ptr
+	
+	rep #$20
+	.a16
+	ldy #0
+	ldx #0
+	:
+	lda default_info_functions, X
+	beq :+
+	sta info_functions, X
+	iny
+	inx
+	inx
+	bra :-
+	:
+	sty info_functions_size
+	
+	sep #$20
+	.a8
+	rts
 
 get_length_first_ascii_line:
 	ldx ascii_ptr
@@ -115,17 +487,23 @@ still_print_ascii:
 	.byte 0
 
 get_os_info:
+	lda #<@os_str
+	ldx #>@os_str
+	jsr print_str
+	
 	lda #<@cx16os_str
 	ldx #>@cx16os_str
 	jsr print_str
 
 	jmp print_cr
+@os_str:
+	.asciiz "OS: "
 @cx16os_str:
 	.asciiz "Commander X16 OS"
 
 get_kernal_info:
-	lda #<@x16_kern_str
-	ldx #>@x16_kern_str
+	lda #<@kernal_str
+	ldx #>@kernal_str
 	jsr print_str
 	
 	jsr get_sys_info
@@ -181,12 +559,16 @@ get_kernal_info:
 	jsr CHROUT
 	:
 	jmp print_cr
-@x16_kern_str:
-	.asciiz "X16 ROM "
+@kernal_str:
+	.asciiz "Kernal: X16 ROM "
 @release_str:
 	.asciiz "elease Version "
 	
 get_programs_info:
+	lda #<@programs_str
+	ldx #>@programs_str
+	jsr print_str
+	
 	lda #<@path_str
 	ldx #>@path_str
 	jsr chdir
@@ -263,12 +645,18 @@ get_programs_info:
 	jsr CHROUT
 
 	jmp print_cr
+@programs_str:
+	.asciiz "Programs: "
 @path_str:
 	.asciiz "/OS/bin"
 @dir_listing_bank:
 	.byte 0
 
 get_shell_info:	
+	lda #<@shell_str
+	ldx #>@shell_str
+	jsr print_str
+	
 	lda $00
 	jsr get_process_info
 	lda r0 + 1
@@ -287,8 +675,14 @@ get_shell_info:
 	
 	:
 	jmp print_cr
+@shell_str:
+	.asciiz "Shell: "
 
 get_term_info:
+	lda #<@term_str
+	ldx #>@term_str
+	jsr print_str
+
 	jsr release_chrout_hook
 	cmp #$FF
 	beq @term_is_kernal
@@ -312,12 +706,14 @@ get_term_info:
 
 @end_fxn:
 	jmp print_cr
+@term_str:
+	.asciiz "Terminal: "
 @kernal_str:
-	.asciiz "x16 kernal"
+	.asciiz "X16 Kernal"
 	
 get_cpu_info:
-	lda #<@cpu_name_str
-	ldx #>@cpu_name_str
+	lda #<@cpu_str
+	ldx #>@cpu_str
 	jsr print_str
 
 	; TODO: add a speed checker somehow
@@ -327,8 +723,8 @@ get_cpu_info:
 	;jsr print_str
 	
 	jmp print_cr
-@cpu_name_str:
-	.asciiz "WDC 65c816"
+@cpu_str:
+	.asciiz "CPU: WDC 65c816"
 @sep_str:
 	.asciiz " @ "
 	
@@ -371,9 +767,13 @@ get_gpu_info:
 	
 	jmp print_cr
 @vera_str:
-	.asciiz "VERA v"
+	.asciiz "GPU: VERA v"
 	
 get_memory_info:
+	lda #<@memory_str
+	ldx #>@memory_str
+	jsr print_str
+	
 	jsr get_sys_info
 	rep #$20
 	.a16
@@ -436,6 +836,8 @@ get_memory_info:
 	jsr print_str
 	
 	jmp print_cr
+@memory_str:
+	.asciiz "Memory: "
 @ram_str:
 	.asciiz "KB Banked RAM ("
 @banks_str:
@@ -480,6 +882,12 @@ print_next_info_line:
 	lda #COLOR_WHITE
 	jsr CHROUT
 	
+	ldx info_functions_index
+	cpx info_functions_size
+	bcc :+
+	stz still_print_info
+	:
+	
 	lda still_print_info
 	bne :+
 	jmp print_cr
@@ -497,55 +905,23 @@ print_next_info_line:
 	lda info_functions, X
 	sep #$20
 	.a8	
-	bne :+
-	stz still_print_info
-	jmp print_cr
-	:
-	phx
-	txy
 	
-	iny
-	lda info_function_strs, Y
-	tax
-	dey
-	lda info_function_strs, Y
-	jsr print_str
-	
-	lda #' '
-	jsr CHROUT
-	
-	plx
 	jmp (info_functions, X)
 	
 
-info_functions:
+default_info_functions:
 	.word get_os_info, get_kernal_info, get_programs_info, get_shell_info
 	.word get_term_info, get_cpu_info, get_gpu_info, get_memory_info, print_cr
 	.word print_colors, print_colors, 0
-info_function_strs:
-	.word @os_str, @kernal_str, @programs_str, @shell_str
-	.word @term_str, @cpu_str, @gpu_str, @memory_str, @empty_str
-	.word @empty_str, @empty_str
-@os_str:
-	.asciiz "OS:"
-@kernal_str:
-	.asciiz "Kernal:"
-@programs_str:
-	.asciiz "Programs:"
-@shell_str:
-	.asciiz "Shell:"
-@term_str:
-	.asciiz "Terminal:"
-@cpu_str:
-	.asciiz "CPU:"
-@gpu_str:
-	.asciiz "GPU:"
-@memory_str:
-	.asciiz "Memory:"
-@empty_str:
-	.asciiz ""
 
 info_functions_index:
+	.word 0
+info_functions_size:
+	.word 0
+	
+config_file_location:
+	.asciiz "/OS/etc/neofetch.conf"
+config_file_fd:
 	.word 0
 	
 print_cr:
@@ -590,9 +966,12 @@ alt_x16_art:
 	.byte COLOR_RED,    "  M@/           \@M  ", $d
 	.byte 0
 
+filename_buffer:
+	.res 128, 0
+
 .segment "BSS"
 
-filename_buffer:
-	.res 128
+info_functions:
+	.res 64 * 2
 
 file_contents_buff:
