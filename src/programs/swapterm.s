@@ -871,7 +871,7 @@ scroll_term_window:
     :
     lda temp_term_color
     :
-    sta vera_data0
+    sta vera_data1
 
 	dex
 	beq :+
