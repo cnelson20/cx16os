@@ -157,6 +157,7 @@ print_loop:
     cpy chrout_last_char_offset
     bne @process_messages_in_buffer
 
+    stz prog_printing
     jsr check_dead_processes
 	
 	jsr surrender_process_time
@@ -387,6 +388,8 @@ check_dead_processes:
     
     ldx #128 - 1
 @check_process_loop:
+    cpx prog_printing
+    beq @loop_iter
     lda prog_buff_lengths, X
     beq @loop_iter
 	
