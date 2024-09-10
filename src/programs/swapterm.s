@@ -44,6 +44,8 @@ vera_addrl := $9F20
 vera_addrh := $9F21
 vera_addri := $9F22
 vera_data0 := $9F23
+vera_data1 := $9F24
+vera_ctrl := $9F25
 vera_layer1_mapbase := $9F35
 
 REAL_CHROUT := $FFD2
@@ -827,16 +829,27 @@ scroll_term_window:
     pha
     lda ptr0 + 1
     pha
-
-    lda #$01
-    sta vera_addri
+	
+    lda #(9 << 4) | 1
+    pha
+	sta vera_addri
     lda temp_term_vram_offset
-    inc A
-    sta vera_addrh
     sta ptr0 + 1
+	inc A
+    sta vera_addrh
     stz vera_addrl
     stz ptr0
     
+	lda #1
+	sta vera_ctrl
+	pla
+	sta vera_addri
+	lda ptr0 + 1
+	sta vera_addrh
+	stz vera_addrl
+	
+	stz vera_ctrl	
+	
     lda #TERM_WIDTH
     asl A ; char & color bytes
     tax
@@ -844,16 +857,12 @@ scroll_term_window:
     ldy #TERM_HEIGHT - 1
     :
     lda vera_data0
-    dec vera_addrh
-    sta vera_data0
-    inc vera_addrh
-    inc vera_addrh
+    sta vera_data1
 
     dey
     bne :-
 
     ; clear the top line being scrolled ;
-    dec vera_addrh
     lda vera_addrl
     and #1
     bne :+
@@ -864,13 +873,24 @@ scroll_term_window:
     :
     sta vera_data0
 
+	dex
+	beq :+
+
     inc vera_addrl
     lda ptr0 + 1
+	inc A
     sta vera_addrh
-
-    dex
-    bne @outer_loop
-
+	
+	lda #1
+	sta vera_ctrl
+	inc vera_addrl
+	lda ptr0 + 1
+	sta vera_addrh
+	stz vera_ctrl
+	
+    bra @outer_loop
+	:
+	
     lda #$11
     sta vera_addri
 
