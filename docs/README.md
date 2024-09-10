@@ -11,7 +11,7 @@
 ### Features
 
 - Shell
-- Cooperative multitasking
+- Preemptive multitasking
 - Redirection
 
 *Note:* cx16os only runs on X16's with 65c816 processors installed. Older versions ran on the 65c02, but the 16-bit features of the 65c816 make both programs and the kernal run at faster speeds. 
