@@ -140,7 +140,8 @@ init:
 
     lda #10
     jsr set_own_priority
-
+	
+	jsr set_ptr0_rptr_ringbuff_rbank
 print_loop:
     ldy hook1_first_char_offset
     cpy hook1_last_char_offset
@@ -155,46 +156,47 @@ print_loop:
     bne @process_messages_in_buffer
 
     jsr check_dead_processes
-
-    jsr surrender_process_time
+	
+	jsr surrender_process_time
     jmp print_loop
 @process_messages_in_buffer:
     ldx #chrout_ringbuff
     stx ptr0
-    lda ringbuff_bank
-    phy
-    jsr set_extmem_rbank
-    lda #ptr0
-    jsr set_extmem_rptr
-    ply
-
-    jsr readf_byte_extmem_y
-    sta char_printed
+    
+	rep #$20
+	.a16
+	jsr readf_byte_extmem_y
+	sep #$20
+	.a8
+	sta char_printed
     iny
     cpy chrout_buff_size
     bcc :+
     ldy #0
-    :
     jsr readf_byte_extmem_y
-    sta prog_printing
-    iny
+	bra :++
+	:
+    xba
+    :
+	sta prog_printing
+	
+	iny
     cpy chrout_buff_size
     bcc :+
     ldy #0
     :
     sty chrout_first_char_offset
 
-    lda prog_printing
-    jsr get_process_info
-    cmp #0
-    beq :+ ; if process is alive, print dead process output first
-    pha_byte char_printed
-    pha_byte prog_printing
-    jsr check_dead_processes
-    pla_byte prog_printing
-    pla_byte char_printed
-    :
-
+    ;lda prog_printing
+    ;jsr get_process_info ; this can probably be before a call to write_line_screen
+    ;cmp #0
+    ;beq :+ ; if process is alive, print dead process output first
+	;stp
+    ;jsr check_dead_processes
+    ;pla_byte prog_printing
+    ;pla_byte char_printed
+    ;:
+	
     jsr process_char
 
     jmp print_loop
@@ -227,10 +229,10 @@ check_active_switch:
     rts
 
 check_hook1_messages:
-    lda ringbuff_bank
-    jsr set_extmem_rbank
-    lda #ptr0
-    jsr set_extmem_rptr
+    ;lda ringbuff_bank
+    ;jsr set_extmem_rbank
+    ;lda #ptr0
+    ;jsr set_extmem_rptr
     ldy #hook1_ringbuff
     sty ptr0
 
@@ -301,7 +303,7 @@ check_hook1_messages:
 @dont_parse_msg:
     lda #1
     jsr mark_last_hook_message_received
-
+	
     rts
 @pid_switch:
     .word 0
@@ -377,13 +379,16 @@ figure_process_term:
 ; check_dead_processes
 ;
 check_dead_processes:
-    php
+	php
     sep #$30
     .i8
     
     ldx #128 - 1
 @check_process_loop:
-    phx
+    lda prog_buff_lengths, X
+    beq @loop_iter
+	
+	phx
     txa
     asl A
     jsr get_process_info
@@ -391,13 +396,14 @@ check_dead_processes:
     cmp #0
     bne @loop_iter ; process still alive ;
 
-    lda prog_buff_lengths, X
-    beq @loop_iter
-
     phx ; print the rest of this buffer ;
-    stx prog_printing
+    lda prog_printing
+	pha
+	stx prog_printing
     jsr calc_offset
     jsr write_line_screen
+	pla
+	sta prog_printing
     plx
 
 @loop_iter:
@@ -414,12 +420,9 @@ calc_offset:
     .a16
     lda prog_printing
     and #$00FF
-    asl A
-    asl A
-    asl A
-    asl A
-    asl A
-    asl A
+    xba
+	lsr A
+	lsr A ; equivalent to six asl's
     adc #PROG_BUFFS_START
     sta ptr1 ; address of prog's buff
 
@@ -448,7 +451,8 @@ process_char:
     lda prog_buff_lengths, X
     cmp #PROG_BUFF_MAXSIZE
     bcc @buff_not_full
-   
+	
+	jsr check_dead_processes
     jsr write_line_screen
 
 @buff_not_full:
@@ -472,12 +476,23 @@ process_char:
     bne @not_newline
 
 @flush_buff_end_of_line:
-    jsr write_line_screen
+    jsr check_dead_processes
+	jsr write_line_screen
 
 @not_newline:
 
     rep #$10
     rts
+
+;
+; call set_extmem_rbank and set_extmem_rptr after write_line_screen so that print_loop doesn't have to do it repeatedly
+;
+set_ptr0_rptr_ringbuff_rbank:
+	lda ringbuff_bank
+	jsr set_extmem_rbank
+	
+	lda #ptr0
+	jmp set_extmem_rptr
 
 char_printed:
     .word 0
@@ -491,18 +506,18 @@ write_line_screen:
 
     ldx prog_printing
     cmp #0
-    bne :+
-
+    bne @process_alive
+@process_is_dead:
     lda prog_inst_ids, X
-    beq :++
+    beq @not_same_process
 
     stz prog_inst_ids, X
     bra @dont_find_term_use
 
-    :
+@process_alive:
     cmp prog_inst_ids, X
     beq @dont_find_term_use
-    :
+@not_same_process:
     sta prog_inst_ids, X
     
     lda prog_printing
@@ -725,7 +740,9 @@ write_line_screen:
       
     ldx prog_printing
     stz prog_buff_lengths, X
-    rts
+    
+	jsr set_ptr0_rptr_ringbuff_rbank
+	rts
 
 @set_term_color:
     pha
