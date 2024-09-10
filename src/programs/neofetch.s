@@ -106,11 +106,76 @@ use_file_config:
 	jmp @get_next_line
 	:
 	
+	; close file ;
 	lda config_file_fd
 	jsr close_file
+	
+	ldx ascii_ptr
+	bne @end
+	lda filename_buffer
+	bne :+
+	; No ascii art set ;
+	ldx #alt_x16_art
+	stx ascii_ptr
+	beq @end
+	:
+	
+	lda #<filename_buffer
+	ldx #>filename_buffer
+	ldy #0
+	jsr open_file
+	cmp #$FF
+	bne :+
+	
+	; file doesn't exist
+	lda #<ascii_file_doesnt_exist_err_str
+	ldx #>ascii_file_doesnt_exist_err_str
+	jsr print_str
+	
+	lda #<filename_buffer	
+	ldx #>filename_buffer
+	jsr print_str
+	
+	lda #SINGLE_QUOTE
+	jsr CHROUT
+	jsr print_cr
+	ldx #$01FD
+	txs
+	lda #1
+	rts
+	:	
+	sta config_file_fd
+	
+	ldx #file_contents_buff
+	stx r0
+	ldx #$C000 - file_contents_buff
+	stx r1
+	stz r2
+	lda config_file_fd
+	jsr read_file
+	
+	clc
+	adc #<file_contents_buff
+	sta ptr0
+	txa
+	adc #>file_contents_buff
+	sta ptr0 + 1	
+	lda #0
+	sta (ptr0)
+	
+	ldx #file_contents_buff
+	stx ascii_ptr
+	
+	lda config_file_fd
+	jsr close_file
+
+@end:	
 	rts
 @eof:
 	.word 0
+
+ascii_file_doesnt_exist_err_str:
+	.asciiz "neofetch: Error: No such ascii file '"
 
 parse_config_line:
 	ldx #file_contents_buff
@@ -203,6 +268,7 @@ parse_config_line:
 	
 	ldx #$01FD
 	txs
+	lda #1
 	rts
 	
 ascii_str_compare:
@@ -322,7 +388,7 @@ parse_info_command:
 	
 	ldx #$01FD
 	txs
-	rts
+	lda #1
 	rts
 
 invalid_info_opt_err_str:
@@ -975,3 +1041,4 @@ info_functions:
 	.res 64 * 2
 
 file_contents_buff:
+
