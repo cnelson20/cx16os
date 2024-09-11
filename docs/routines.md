@@ -63,7 +63,9 @@ Return values:
 
 ### $9D03: putc
 - Prints the character passed in .A
-- Mimics the function of CHROUT
+- Mimics the function of CHROUT, with the following exceptions:
+    - When $0B or $0C are passed to putc, the next value passed to putc will change the X and Y position of the cursor, respectively. These characters normally have no special function when passed to the X16's CHROUT routine
+    - There is no verbatim mode character (normally $80)
 
 Return values:
 - None, but preserves .AXY
