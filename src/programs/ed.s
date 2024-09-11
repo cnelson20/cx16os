@@ -128,6 +128,34 @@ main:
 	stz last_error
 	jsr reorder_lines
 
+	jsr get_args
+	cpy #2
+	bcc loop
+	; read first arg as file ;
+	
+	sta ptr0
+	stx ptr0 + 1
+	ldy #0
+	:
+	lda (ptr0), Y
+	beq :+
+	iny
+	bne :-
+	:
+	iny
+	ldx #0
+	:
+	lda (ptr0), Y
+	sta input, X
+	beq :+
+	inx
+	iny
+	bne :-
+	:
+	
+	lda #'E'
+	jsr read_buf_file
+	
 loop:
 	lda exit_flag
 	beq :+
