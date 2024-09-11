@@ -11,6 +11,8 @@
 .import hex_num_to_string_kernal
 .import setup_system_hooks, release_all_process_hooks
 
+.import programs_last_printed_special_char
+
 .import check_channel_status, load_process_entry_pt
 .import file_table_count
 .import prog_using_vera_regs
@@ -527,6 +529,11 @@ program_exit:
 	pla_byte RAM_BANK
 	lda KZP0
 	jsr release_all_process_hooks
+
+	lda KZP0
+	lsr A
+	tax
+	stz programs_last_printed_special_char, X
 	
 @check_process_switch:	
 	ldx KZP0
