@@ -11,6 +11,8 @@
 .import hex_num_to_string_kernal
 .import setup_system_hooks, release_all_process_hooks
 
+.import programs_last_printed_special_char
+
 .import check_channel_status, load_process_entry_pt
 .import file_table_count
 .import prog_using_vera_regs
@@ -27,15 +29,29 @@ SWAP_FGBG_COLORS = 1
 init:
 	clc
 	xce ; enter 816 native mode
+	bcs @correct_cpu
+	; not on 65816
+	ldx #0
+	:
+	lda incorrect_cpu_msg, X
+	beq :+
+	jsr CHROUT
+	inx
+	bne :-
+	:
+	rts
+@correct_cpu:
 	
 	stz ROM_BANK
 	stz current_program_id
 	
 	lda #SWAP_FGBG_COLORS
 	jsr CHROUT
-	lda #$90
+	lda #$90 ; COLOR_BLACK
 	jsr CHROUT
 	lda #SWAP_FGBG_COLORS
+	jsr CHROUT
+	lda #$05 ; COLOR_WHITE
 	jsr CHROUT
 	
 	lda #$0f
@@ -69,8 +85,10 @@ return_to_basic:
 	clc
 	jmp enter_basic
 
+incorrect_cpu_msg:
+	.literal $d, "ERROR: CX16OS ONLY SUPPORTS 65816 CPUS", 0
 load_error_msg:
-	.literal $d, "COULD NOT FIND BIN/SHELL TO START OS", 0
+	.literal $d, "ERROR: COULD NOT FIND BIN/SHELL TO START OS", 0
 shell_name:
 	.literal "shell", 0
 
@@ -527,6 +545,11 @@ program_exit:
 	pla_byte RAM_BANK
 	lda KZP0
 	jsr release_all_process_hooks
+
+	lda KZP0
+	lsr A
+	tax
+	stz programs_last_printed_special_char, X
 	
 @check_process_switch:	
 	ldx KZP0

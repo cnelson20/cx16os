@@ -11,6 +11,8 @@
 .import check_process_owns_bank
 
 CHROUT_BUFF_SIZE = $1000
+PLOT_X = $0B
+PLOT_Y = $0C
 
 chrout_prog_bank:
     .byte 0
@@ -249,14 +251,44 @@ write_char_chrout_hook_buff:
 ;
 .export putc_v
 putc_v:
-	; need to handle quote mode ;
+    tax
+    lda current_program_id
+    lsr A
+    tay
+    lda programs_last_printed_special_char, Y
+    cmp #PLOT_X
+    bne :+
+    lda #0
+    sta programs_last_printed_special_char, Y
+    stp
+    phx
+    sec
+    jsr PLOT
+    ply ; change Y position of cursor
+    clc
+    jmp PLOT
+    :
+    cmp #PLOT_Y
+    bne :+
+    lda #0
+    sta programs_last_printed_special_char, Y
+    stp
+    phx
+    sec
+    jsr PLOT
+    plx ; change X position of cursor
+    clc
+    jmp PLOT
+    :
+    txa
+    
+    ; need to handle quote mode ;
 	cmp #$22 ; "
 	bne :+
 	pha
 	lda #$80
 	jsr CHROUT
-	pla
-	jmp CHROUT
+	bra @valid_char
 	:
 
 	pha
@@ -272,17 +304,33 @@ putc_v:
 	pla
 	pha
 	
+    pha
+    lda current_program_id
+    lsr A
+    tay
+    pla
+    sta programs_last_printed_special_char, Y 
+
 	cmp #$d ; '\r'
 	bne :+
-	jsr CHROUT
+    jsr CHROUT
 	pla
 	lda #$a ; '\n'
 	jmp CHROUT
 	:
 	
-	cmp #$80
+    cmp #PLOT_X
+    beq :+
+    cmp #PLOT_Y
+    bne :++
+    :
+    pla
+    rts ; just return, don't print these escaped
+    :
+
+    cmp #$80
 	bcs :+
-	lda valid_c_table_0, X
+	lda valid_c_table_0, X ; X = A & $7F
 	bra :++
 	:
 	lda valid_c_table_1, X
@@ -293,7 +341,12 @@ putc_v:
 	lda #$80
 	jsr CHROUT
 	jmp @valid_char
-	
+
+@plot_x_bank:
+    .byte 0
+@plot_y_bank:
+    .byte 0
+
 valid_c_table_0:
 	.byte 0, 1, 0, 0, 1, 1, 0, 1
 	.byte 1, 1, 1, 1, 1, 1, 0, 0
@@ -304,6 +357,10 @@ valid_c_table_1:
 	.byte 0, 0, 0, 0, 0, 1, 0, 0
 	.byte 1, 1, 1, 1, 0, 1, 1, 1
 	.byte 1, 1, 1, 1, 1, 1, 1, 1
+
+.export programs_last_printed_special_char
+programs_last_printed_special_char:
+    .res 128, 0
 
 ;
 ; other hooks
