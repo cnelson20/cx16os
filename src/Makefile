@@ -1,4 +1,4 @@
-CC = cl65.exe
+CC = cl65
 
 PROGRAM = OS.PRG
 
