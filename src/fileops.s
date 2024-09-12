@@ -1110,38 +1110,33 @@ write_file_ext:
 	rts
 	
 write_stdout:
-	push_zp_word KZES4
-	push_zp_word KZES5
+	index_16_bit
+	.i16
+	ldx KZE0
+	ldy KZE1
 
-	ldax_word KZE0
-	inc_ax
-	stax_word KZES4
-	ldsta_word KZE1, KZES5
-	ldy #0
-@loop:
-	dec KZES4
-	bne :+
-	dec KZES4 + 1
-	bpl :+
-
-	;no more bytes to copy, return
-	pla_word KZES5
-	pla_word KZES4
-	lda r1
-	ldx r1 + 1
-	ldy #0
-	rts
-	
+	cpy #0
+	beq :++
 	:
-	lda (KZES4), Y
+	lda $00, X
+	phx
 	phy
+	index_8_bit
 	jsr CHROUT_screen
+	index_16_bit
 	ply
+	plx
+	inx
+	dey
+	bne :-
+	:
+
+	index_8_bit
+	.i8
 	
-	iny
-	bne @loop
-	inc KZES4 + 1
-	bra @loop
+	lda KZE1
+	ldx KZE1 + 1
+	rts
 
 ;
 ; move_fd
