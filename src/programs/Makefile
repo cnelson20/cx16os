@@ -1,8 +1,9 @@
 all: asm
 
 asm: FORCE
-	make -C asm/
 	make -C cc65/
+	make -C asm/
+	make -C c/
 	
 FORCE:
 	

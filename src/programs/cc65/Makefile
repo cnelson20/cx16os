@@ -10,7 +10,7 @@ cx16os.lib: $(C_CONFIG) crt0.o fcntl.o
 	ar65 a cx16os.lib crt0.o fcntl.o
 	
 crt0.o: crt0.s
-	ca65 $(A_FLAGS) -C $(C_CONFIG) crt0.s
+	ca65 $(A_FLAGS) crt0.s
 
 fcntl.o: fcntl.s
 	ca65 $(A_FLAGS) fcntl.s

@@ -19,7 +19,6 @@
 
 _init:
 	; set stack pointer
-    stp
 	lda     #<(__RAM_START__ + __RAM_SIZE__)
     sta     sp
     lda     #>(__RAM_START__ + __RAM_SIZE__)

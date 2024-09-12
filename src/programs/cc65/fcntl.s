@@ -11,7 +11,6 @@ r1 := $04
 .SEGMENT "CODE"
 
 .proc _write: near
-    stp
     sta r1
     stx r1 + 1
     
