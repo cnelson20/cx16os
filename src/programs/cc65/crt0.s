@@ -4,10 +4,13 @@
 .export   __STARTUP__ : absolute = 1        ; Mark as startup
 .import   __RAM_START__, __RAM_SIZE__       ; Linker generated
 
-.import    zerobss, initlib, donelib
+.import    zerobss, initlib, donelib, callmain
+.import    pushax
 
 .setcpu "65816"
 .include "zeropage.inc"
+
+.include "routines.inc" ; cx16os routines
 
 ; ---------------------------------------------------------------------------
 ; Place the startup code in a special segment
@@ -28,7 +31,9 @@ _init:
     jsr     zerobss              ; Clear BSS segment
     jsr     initlib              ; Run constructors
 
-	jsr     _main
+	; fill argv array
+	stp
+	jsr callmain
 
 ; ---------------------------------------------------------------------------
 ; Back from main (this is also the _exit entry):
@@ -46,3 +51,17 @@ _exit:
 	
 	rts
 
+.SEGMENT "ONCE"
+
+initmainargs:
+	rts
+
+.SEGMENT "DATA"
+
+MAXARGS = (128 / 2)
+
+argv:
+	.res (MAXARGS + 1) * 2
+
+__argc:         .word   0
+__argv:         .addr   0
