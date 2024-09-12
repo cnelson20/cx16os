@@ -35,7 +35,9 @@ _init:
 ; Back from main (this is also the _exit entry):
 
 _exit:
+	pha
 	jsr     donelib              ; Run destructors	
+	pla
 	rep #$10
 	.i16
 	ldx #$01FD
