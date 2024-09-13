@@ -7,3 +7,8 @@ asm: FORCE
 	
 FORCE:
 	
+
+clean:
+	-make clean -C c/
+	-make clean -C cc65/
+	-make clean -C asm/
