@@ -1,5 +1,4 @@
 .include "routines.inc"
-.include "errno.inc"
 .include "fcntl.inc"
 
 r0 := $02

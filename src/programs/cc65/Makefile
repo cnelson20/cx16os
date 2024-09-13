@@ -14,3 +14,7 @@ cx16os.lib: $(C_CONFIG) $(OBJS)
 	
 $(OBJS): %.o: %.s
 	$(AS) $(A_FLAGS) $<
+
+
+clean:
+	-rm *.o
