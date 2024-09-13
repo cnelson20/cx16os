@@ -5,8 +5,7 @@ MNT_DIR = ../../mnt
 
 L_FLAGS = -C $(INCL_DIR)/cx16os_c.cfg
 
-
-all: bindir test
+all: bindir ctest cat
 
 clean:
 	rm *.s
@@ -19,11 +18,18 @@ $(MNT_DIR)/bin:
 	-mkdir $(MNT_DIR)
 	-mkdir $(MNT_DIR)/bin
 
-test: test.c
+ctest: ctest.c
+	cc65 -t none --cpu 65sc02 $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
+
+	cp $@ $(MNT_DIR)/bin
+
+cat: cat.c
 #	$(CC) $(FLAGS) $@.c $(INCL_DIR)/cx16os.lib
-	cc65 -t none --cpu 65sc02 test.c
-	ca65 --cpu 65sc02 test.s
-	ld65 -o test $(L_FLAGS) test.o $(INCL_DIR)/cx16os.lib
+	cc65 -t none --cpu 65sc02 $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
 
 	cp $@ $(MNT_DIR)/bin
 
