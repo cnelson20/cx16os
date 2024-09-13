@@ -202,7 +202,7 @@ Return values:
 ---
 
 ### $9D2D: get_pwd
-- Copies the first r1 of the pwd into memory pointed to by r0
+- Copies the first r1 bytes of the pwd into memory pointed to by r0
 
 Return values:
 - None
