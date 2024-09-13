@@ -12,7 +12,7 @@ r2 := $06
 .SEGMENT "CODE"
 
 .proc _read: near
-    sta r1
+	sta r1
     stx r1 + 1
     
 	stz r2
@@ -22,6 +22,12 @@ r2 := $06
     stx r0 + 1
 	
     jsr popax
-    jmp read_file
+    jsr read_file
+	cpy #0
+	beq :+
+	lda #$FF
+	tax	
+	:
+	rts
 .endproc
 

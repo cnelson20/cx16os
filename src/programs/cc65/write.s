@@ -6,12 +6,12 @@ r1 := $04
 .import popax
 .import popa
 
-.export _write
+.export _write: near
 
 .SEGMENT "CODE"
 
-.proc _write: near
-    sta r1
+.proc _write
+	sta r1
     stx r1 + 1
     
     jsr popax
