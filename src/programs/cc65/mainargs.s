@@ -11,7 +11,6 @@ MAXARGS = (128 / 2)                   ; Maximum number of arguments allowed
 .segment "ONCE"
 
 initmainargs:
-    stp
 	jsr get_args
     sty __argc
     stz __argc + 1
@@ -44,10 +43,9 @@ initmainargs:
 	inx
 	bra @loop	
 @end_loop:
-	stp
-	lda #0
-	sta argv, Y
-	sta argv + 1, Y
+	;lda #0 ; rest of argv already zero'd out
+	;sta argv, Y
+	;sta argv + 1, Y
 	
     ldx #argv
     stx __argv

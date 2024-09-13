@@ -18,7 +18,7 @@ r1 := $04
     sta r0
     stx r0 + 1
 
-    jsr popa
+    jsr popax
     jmp write_file
 .endproc
 

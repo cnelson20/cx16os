@@ -19,8 +19,8 @@
     lda     __argv
     ldx     __argv+1
     jsr     pushax          ; Push argv
-
-    ldy     #4              ; Argument size
+	
+	ldy     #4              ; Argument size
     jmp     _main
 
 .endproc
