@@ -32,7 +32,6 @@ _init:
     jsr     initlib              ; Run constructors
 
 	; fill argv array
-	stp
 	jsr callmain
 
 ; ---------------------------------------------------------------------------

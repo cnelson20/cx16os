@@ -3,28 +3,25 @@
 ;
 ; Push arguments and call main()
 ;
+    .export         callmain
+    .export         __argc, __argv
 
-
-        .export         callmain
-        .export         __argc, __argv
-
-        .import         _main, pushax
+    .import         _main, pushax
 
 ;---------------------------------------------------------------------------
 ; Setup the stack for main(), then jump to it
 
 .proc   callmain
+	lda     __argc
+    ldx     __argc+1
+    jsr     pushax          ; Push argc
 
-        lda     __argc
-        ldx     __argc+1
-        jsr     pushax          ; Push argc
+    lda     __argv
+    ldx     __argv+1
+    jsr     pushax          ; Push argv
 
-        lda     __argv
-        ldx     __argv+1
-        jsr     pushax          ; Push argv
-
-        ldy     #4              ; Argument size
-        jmp     _main
+    ldy     #4              ; Argument size
+    jmp     _main
 
 .endproc
 
@@ -33,7 +30,7 @@
 
 .data
 __argc:         .word   0
-__argv:         .addr   0
+__argv:         .word   0
 
 
 

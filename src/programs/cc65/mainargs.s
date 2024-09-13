@@ -11,9 +11,12 @@ MAXARGS = (128 / 2)                   ; Maximum number of arguments allowed
 .segment "ONCE"
 
 initmainargs:
-    jsr get_args
+    stp
+	jsr get_args
     sty __argc
     stz __argc + 1
+	
+	sty @argc
     
     xba
     txa
@@ -22,9 +25,30 @@ initmainargs:
     .i16
     tax
     ldy #0
-
-    
-    
+ @loop:  
+	rep #$20
+	txa
+	sta argv, Y
+	sep #$20
+	iny
+	iny
+	dec @argc
+	beq @end_loop
+	
+	:
+	lda $00, X
+	beq :+
+	inx
+	bra :-
+	:
+	inx
+	bra @loop	
+@end_loop:
+	stp
+	lda #0
+	sta argv, Y
+	sta argv + 1, Y
+	
     ldx #argv
     stx __argv
 
@@ -32,6 +56,8 @@ initmainargs:
     .i8
 
     rts
+@argc:
+	.byte 0
 
 .segment "DATA"
 

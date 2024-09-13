@@ -22,9 +22,11 @@ cx16os.img:
 	cp blank_sd.img cx16os.img
 
 clean:
-	make -C programs/ clean
-	rm *.lbl
-	rm *.map
+	-make -C programs/ clean
+	-rm *.lbl
+	-rm *.map
+	-rm -r mnt/
+	-rm -r mnt_dir/
 
 build: os.prg programs
 	cp os.prg mnt/OS.PRG
@@ -48,4 +50,3 @@ else
 	./scripts/close_sd.sh mnt_dir/
 endif
 
-	
