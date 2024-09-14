@@ -160,12 +160,15 @@ strlen:
 	phx
 	lda #0
 	:
+	pha
 	lda $00, X
 	beq :+
+	pla
 	inx
 	inc A
 	bne :-
 	:
+	pla
 	txy
 	plx
 	rts
@@ -186,6 +189,7 @@ strcmp:
 @end:	
 	ply
 	plx
+	cmp #0
 	rts
 
 missing_operand_str:
