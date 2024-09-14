@@ -46,7 +46,7 @@ start:
 	lda #0
 	rts
 
-parse_name: ; step1
+parse_name: 
 	ldy #0
 	:
 	lda $00, X
@@ -57,6 +57,7 @@ parse_name: ; step1
 	bra :-
 	:
 	
+	; step1
 	; step1: If string is //, skip steps 2 to 5.
 	ldx #copy_buff
 	ldy #double_slash_str
