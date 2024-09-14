@@ -29,8 +29,8 @@ cat: cat.c
 #	$(CC) $(FLAGS) $@.c $(INCL_DIR)/cx16os.lib
 	cc65 -t none --cpu 65sc02 $@.c
 	ca65 --cpu 65sc02 $@.s
-	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
+	ld65 -o $@_c $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
 
-	cp $@ $(MNT_DIR)/bin
+	cp $@_c $(MNT_DIR)/bin
 
 	
