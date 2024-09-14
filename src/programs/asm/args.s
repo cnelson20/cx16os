@@ -1,17 +1,14 @@
 .include "routines.inc"
 .segment "CODE"
 
-LBKT = $5B
-RBKT = $5D
-
 ptr = $30
 ptrL = $30
 ptrH = $31
 
 main:
 	jsr get_args
-	sta ptrL
-	stx ptrH
+	sta ptr
+	stx ptr + 1
 	
 	stz argc_inc
 	sty argc_left
@@ -23,7 +20,7 @@ main_loop:
 continue_loop:
 	lda #$20
 	jsr CHROUT
-	lda #LBKT
+	lda #'['
 	jsr CHROUT
 	lda argc_inc
 	jsr hex_num_to_string
@@ -35,8 +32,8 @@ continue_loop:
 	ldx #>string
 	jsr print_str
 	
-	lda ptrL
-	ldx ptrH
+	lda ptr
+	ldx ptr + 1
 	jsr print_str
 	
 	ldy #0
@@ -49,11 +46,11 @@ end_find_nul:
 	iny
 	tya
 	clc
-	adc ptrL
-	sta ptrL
-	lda ptrH
+	adc ptr
+	sta ptr
+	lda ptr + 1
 	adc #0
-	sta ptrH
+	sta ptr + 1
 	
 	lda #$27 ; '
 	jsr CHROUT
