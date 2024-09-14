@@ -146,6 +146,7 @@ main:
 	ldx #0
 	:
 	lda (ptr0), Y
+	sta default_filename, X
 	sta input, X
 	beq :+
 	inx
@@ -325,7 +326,11 @@ parse_user_cmd:
 @pl_not_cmd:
 	
 	cmp #','
+	beq :+
+	cmp #';'
 	bne @pl_not_comma
+	sta input_line_sep_char
+	:
 	; comma separates line no inputs
 	lda parse_cmd_first_num
 	bne :+
@@ -335,13 +340,24 @@ parse_user_cmd:
 	:
 	
 	lda input_begin_set
-	bne :+
+	bne @input_begin_alr_defined
 	
 	lda #1
 	sta input_begin_set
+	lda input_line_sep_char
+	cmp ';'
+	bne :+
+	lda curr_lineno
+	sta input_begin_lineno
+	lda curr_lineno + 1
+	sta input_begin_lineno + 1
+	bra :++
+	:
+	lda #1
 	sta input_begin_lineno
 	stz input_begin_lineno + 1
 	:
+@input_begin_alr_defined:
 	lda input_end_explicit_set
 	bne :+
 	
@@ -357,13 +373,27 @@ parse_user_cmd:
 	inx ; comma is 1 char
 	jmp @parse_loop
 @pl_not_comma:
-	
+	cmp #'+'
+	beq :+
+	cmp #'-'
+	bne :++
+	:
+	inx
+	lda input, X
+	beq @end_parse_loop
+	dex
+	cmp #'0'
+	bcc @pl_not_num
+	cmp #'9' + 1
+	bcs @pl_not_num
+	bra :++
+	:	
 	cmp #'0'
 	bcc @pl_not_num
 	cmp #'9' + 1
 	bcs @pl_not_num
 	; have a line number to use for input ;
-	
+	:
 	jsr set_cmd_line_num
 	tax ; a holds end of num on return	
 	jmp @parse_loop ; contine parsing
@@ -457,7 +487,16 @@ parse_cmd_args:
 	:
 @not_special_line:
 	; check if a number ;
+	stz input_cmd_args_int + 2
 	ldx #0
+	lda input, X
+	cmp #'+'
+	beq :+
+	cmp #'-'
+	bne @check_num_loop
+	:
+	sta input_cmd_args_int + 2
+	inx
 @check_num_loop:
 	lda input, X
 	beq @maybe_num
@@ -472,10 +511,45 @@ parse_cmd_args:
 @maybe_num:
 	cpx #0
 	beq @not_num
+	lda input_cmd_args_int + 2
+	beq :+
+	cpx #1
+	beq @not_num ; + by itself doesn't count
+	:
 	; is number! ;
 	lda #<input
 	ldx #>input
 	jsr parse_num
+	
+	ldy input_cmd_args_int + 2
+	beq @no_add_subtract
+	cpy #1
+	bne :+
+	clc
+	adc curr_lineno
+	pha
+	txa
+	adc curr_lineno + 1
+	tax
+	pla	
+	bra :++
+	:
+	ldy ptr0
+	phy
+	sec
+	sta ptr0
+	lda curr_lineno
+	sbc ptr0
+	pha
+	stx ptr0
+	lda curr_lineno + 1
+	sbc ptr0
+	tax
+	pla	
+	ply
+	sty ptr0
+	:
+@no_add_subtract:	
 	sta input_cmd_args_int
 	stx input_cmd_args_int + 1
 	
@@ -529,6 +603,14 @@ set_cmd_line_num:
 	phx
 	txa
 	tay ; move .X -> .Y
+	stz @number_offset_sign
+	lda input, Y
+	cmp #'+'
+	beq :+
+	cmp #'-'
+	bne :++
+	:
+	sta @number_offset_sign
 	:
 	iny
 	lda input, Y
@@ -543,8 +625,10 @@ set_cmd_line_num:
 	lda #0
 	sta input, Y
 	
+	; if number_offset_sign != 0, carry should be set
+	lda @number_offset_sign
+	cmp #1 ; carry is set if >= 1 (!= 0)
 	txa
-	clc
 	adc #<input
 	pha
 	lda #>input
@@ -553,6 +637,46 @@ set_cmd_line_num:
 	pla
 	; pointer to input, X in .AX
 	jsr parse_num
+	ldy @number_offset_sign
+	beq @dont_add_subtract
+	
+	sta @tmp_value
+	stx @tmp_value + 1
+	
+	ldy parse_cmd_first_num
+	bne :+
+	ldy input_line_sep_char
+	cpy #';'
+	bne :+
+	; use first value as offset
+	lda input_begin_lineno
+	ldx input_begin_lineno + 1
+	bra :++
+	:
+	; use curr_lineno as offset
+	lda curr_lineno
+	ldx curr_lineno + 1
+	:
+	ldy @number_offset_sign
+	cpy #'-'
+	beq :+
+	clc
+	adc @tmp_value
+	pha
+	txa
+	adc @tmp_value + 1
+	tax
+	pla
+	bra @dont_add_subtract
+	:
+	sec
+	sbc @tmp_value
+	pha
+	txa
+	sbc @tmp_value + 1
+	tax
+	pla
+@dont_add_subtract:
 	jsr storeax_linenos
 	
 	ply
@@ -562,6 +686,11 @@ set_cmd_line_num:
 	plx
 	tya ; return end of num
 	rts
+@number_offset_sign:
+	.byte 0
+@tmp_value:
+	.byte 0
+
 
 indicate_input_error:
 	stz input_cmd
@@ -709,21 +838,36 @@ get_input_strlen:
 	rts
 
 stitch_input_lines:
-	lda input_mode_line_count
-	ora input_mode_line_count + 1
-	bne :+
-	rts ; if no lines were entered, just don't do anything
-	:
-	
 	lda input_mode
 	cmp #'c'
 	bne @not_change
 	
 	jsr delete_lines
-	
 	dec_word input_begin_lineno
 	lda input_mode
 @not_change:
+	
+	lda input_mode_line_count
+	ora input_mode_line_count + 1
+	bne @lines_not_empty
+	
+	; if no lines were entered, just update curr_lineno
+	lda input_begin_lineno
+	sta curr_lineno
+	lda input_begin_lineno + 1
+	sta curr_lineno + 1
+	
+	ldx input_mode
+	cpx #'c'
+	beq @app_mode_dont_dec ; already decremented
+	cpx #'a'
+	beq @app_mode_dont_dec
+	dec_word curr_lineno
+@app_mode_dont_dec:	
+	rts
+	
+@lines_not_empty:	
+	
 	cmp #'i'
 	bne @not_insert
 	
@@ -1301,6 +1445,10 @@ print_lines:
 	
 	jmp @print_lines_loop
 @end:
+	lda input_end_lineno
+	sta curr_lineno
+	lda input_end_lineno + 1
+	sta curr_lineno + 1
 	rts
 
 move_lines:
@@ -2057,6 +2205,9 @@ read_buf_file:
 @open_success:
 	sta ptr0
 	
+	stz count_file_size
+	stz count_file_size + 1
+	
 	; read data ;
 	stz input_mode_start_chain
 	stz input_mode_start_chain + 1
@@ -2090,6 +2241,11 @@ read_buf_file:
 	; no more data if no bytes read, exit ;
 	stz @read_buf_file_have_more_bytes
 	jmp @end_of_line
+	:
+	
+	inc count_file_size
+	bne :+
+	inc count_file_size + 1
 	:
 	
 	lda #1
@@ -2271,6 +2427,13 @@ read_buf_file:
 	stz input_mode
 	jsr reorder_lines
 	
+	lda count_file_size
+	ldx count_file_size + 1
+	jsr bin_to_bcd16
+	jsr print_bcd_num
+	lda #$d
+	jsr CHROUT
+	
 	lda #1
 	sta edits_made	
 	rts
@@ -2284,6 +2447,9 @@ read_buf_file:
 
 @read_buf_file_have_more_bytes:
 	.byte 0
+
+count_file_size:
+	.res 4
 	
 write_buf_file:
 	jsr get_io_filename
@@ -2306,6 +2472,9 @@ write_buf_file:
 @open_success:
 	sta ptr0 ; store fileno in ptr0
 	
+	stz count_file_size
+	stz count_file_size + 1
+	
 	lda input_begin_lineno
 	ldx input_begin_lineno + 1
 	dec_ax
@@ -2320,11 +2489,13 @@ write_buf_file:
 	; ptr1 holds lineno - 1, which should be < than input_end_lineno
 	lda ptr1 + 1
 	cmp input_end_lineno + 1
-	bcc :+
-	bne @end
+	bcc :++
+	bne :+ ; bne @end
 	lda ptr1
 	cmp input_end_lineno
-	bcs @end
+	bcc :++ ; bcs @end
+	:
+	jmp @end
 	:
 	
 	; let's write this line to the file ;
@@ -2384,6 +2555,14 @@ write_buf_file:
 	stx r1
 	stz r1 + 1
 	
+	txa
+	clc
+	adc count_file_size
+	sta count_file_size
+	lda count_file_size + 1
+	adc #0
+	sta count_file_size + 1
+	
 	; line_copy is in r0 ;
 	lda ptr0
 	jsr write_file
@@ -2403,6 +2582,13 @@ write_buf_file:
 @end:
 	lda ptr0
 	jsr close_file
+	
+	lda count_file_size
+	ldx count_file_size + 1
+	jsr bin_to_bcd16
+	jsr print_bcd_num
+	lda #$d
+	jsr CHROUT
 	
 	stz edits_made
 	rts
@@ -2501,6 +2687,41 @@ use_def_endno:
 @not_all:
 	; presumably NUL, just exit
 	rts	
+
+print_bcd_num:
+	sty @values + 2
+	stx @values + 1
+	sta @values + 0
+	
+	ldy #2
+	:
+	lda @values, Y
+	bne :+ ; don't print until we get to non-zero digit
+	dey
+	bpl :- ; if whole number is zero, print '0' and exit
+	lda #'0'
+	jmp CHROUT
+	:
+	jsr GET_HEX_NUM
+	cmp #'0'
+	beq :+
+	jsr CHROUT
+	:
+	txa
+	jsr CHROUT
+	bra :++
+	:
+	lda @values, Y
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	:
+	dey
+	bpl :--
+	rts
+@values:
+	.res 3
 
 print_error:
 	lda last_error
@@ -2788,11 +3009,13 @@ input_end_set:
 	.byte 0
 input_end_explicit_set:
 	.byte 0
+input_line_sep_char:
+	.byte 0
 	
 input_cmd:
 	.byte 0
 input_cmd_args_int:
-	.word 0
+	.res 4
 
 print_cmd_info_flag:
 	.byte 0
