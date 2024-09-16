@@ -4,8 +4,8 @@ os.img
 # mnt folder
 mnt/
 
-# shell
-shell
+# vscode
+.vscode/
 
 # Object files
 *.o
