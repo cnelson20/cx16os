@@ -4,7 +4,8 @@
 .include "routines.inc"
 
 .export _kill_process
-_kill_process:
+
+.proc _kill_process: near
     jsr kill_process
     lda #0
     cpx #0
@@ -12,3 +13,5 @@ _kill_process:
     lda #0
     :
     rts
+
+.endproc

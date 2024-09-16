@@ -8,10 +8,12 @@
 ;
 
 .export _wait_process
-_wait_process:
+
+.proc _wait_process: near
     jsr wait_process
     cpx #0
     beq :+
     txa ; return 0xFFFF (-1)
     :
     rts
+.endproc

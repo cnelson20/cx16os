@@ -18,8 +18,11 @@ _hex_num_to_string := hex_num_to_string
 .export _res_extmem_bank
 _res_extmem_bank := res_extmem_bank
 
+.export _free_extmem_bank
+_free_extmem_bank := free_extmem_bank
+
 .export _set_extmem_rbank
-_res_extmem_rbank := res_extmem_rbank
+_set_extmem_rbank := set_extmem_rbank
 
 .export _set_extmem_wbank
-_res_extmem_wbank := res_extmem_wbank
+_set_extmem_wbank := set_extmem_wbank

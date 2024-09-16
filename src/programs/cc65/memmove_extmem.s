@@ -3,6 +3,12 @@
 .include "zeropage.inc"
 .include "routines.inc"
 
+r0 := $02
+r1 := $04
+r2 := $06
+r3 := $08
+
+.import popax, popa
 ;
 ; unsigned char __fastcall__ memmove_extmem(void *dest, unsigned char dest_bank, void *src, unsigned char src_bank, size_t count);
 ;
