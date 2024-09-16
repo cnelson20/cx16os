@@ -54,6 +54,7 @@ void parse_date(char *date_str) {
 	
 	if (*date_str != '+') {
 		printf("date: invalid date '%s'\r", date_str);
+		exit(1);
 	}
 	++date_str;
 	
