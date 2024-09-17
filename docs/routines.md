@@ -49,6 +49,8 @@
 | $9DA5 | [`active_table_lookup`](#9da5-active_table_lookup) | .A | .A, .X, .Y | |
 | $9DA8 | [`copy_fd`](#9da8-copy_fd) | .A | .X | .Y |
 | $9DAB | [`get_sys_info`](#9dab-get_sys_info) | | .X, .Y, r0, r1 | |
+| $9DAB | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | |
+| $9DB1 | [`pwrite_extmem_xy`](extmem.md#pwrite_extmem_xy) | .A, .X, .Y | | |
 
 ## Function Reference
 
