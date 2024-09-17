@@ -12,7 +12,7 @@ cx16os.lib: $(C_CONFIG) $(OBJS)
 #	-rm cx16os.lib
 	ar65 a cx16os.lib *.o
 	
-$(OBJS): %.o: %.s
+$(OBJS): %.o: %.s routines.inc
 	$(AS) $(A_FLAGS) $<
 
 

@@ -15,7 +15,7 @@
     .i16
     plx ; pull ptr off hardware stack
     ply ; pull offset off hardware stack
-    jsr vwrite_byte_extmem_y
+    jsr pwrite_extmem_xy
     sep #$10
     .i8
     rts

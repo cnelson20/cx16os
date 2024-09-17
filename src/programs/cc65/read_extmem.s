@@ -5,13 +5,13 @@
 .export _read_byte_extmem, _read_word_extmem
 
 .proc _read_byte_extmem: near
-    jsr _read_byte_extmem
+    jsr _read_word_extmem ; just call word routine and clear high byte
     ldx #0
     rts
 .endproc
 
 .proc _read_word_extmem: near
-    phx
+	phx
     pha
     jsr popax
     xba
@@ -22,7 +22,7 @@
     .a16
     tax
     ply
-    jsr vread_byte_extmem_y
+    jsr pread_extmem_xy
     sep #$30
     .i8
     .a8
