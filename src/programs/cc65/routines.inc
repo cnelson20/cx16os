@@ -42,21 +42,26 @@ copy_fd := $9DA8
 ;
 
 res_extmem_bank := $9D33
+free_extmem_bank := $9D42
+share_extmem_bank := $9D4B
+
+set_extmem_wbank := $9D57
 set_extmem_rbank := $9D36
 set_extmem_rptr := $9D39
 set_extmem_wptr := $9D3C
 
 readf_byte_extmem_y := $9D3F
-free_extmem_bank := $9D42
-vread_byte_extmem_y := $9D45
-
 writef_byte_extmem_y := $9D48
-share_extmem_bank := $9D4B
+
+vread_byte_extmem_y := $9D45
 vwrite_byte_extmem_y := $9D4E
+
+pread_extmem_xy := $9DAE
+pwrite_extmem_xy := $9DB1
 
 memmove_extmem := $9D51
 fill_extmem := $9D54
-set_extmem_wbank := $9D57
+
 
 ;
 ; More system routines ;

@@ -20,6 +20,7 @@
 .import res_extmem_bank, set_extmem_rbank, set_extmem_wbank, set_extmem_rptr, set_extmem_wptr
 .import readf_byte_extmem_y, vread_byte_extmem_y, writef_byte_extmem_y, vwrite_byte_extmem_y
 .import free_extmem_bank_extwrapper, share_extmem_bank, memmove_extmem, fill_extmem
+.import pread_extmem_xy, pwrite_extmem_xy
 
 .import setup_chrout_hook, release_chrout_hook, CHROUT_screen, send_byte_chrout_hook
 .import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook, mark_last_hook_message_received
@@ -96,6 +97,8 @@ call_table:
 	jmp active_table_lookup ; $9DA5
 	jmp copy_fd ; $9DA8
 	jmp get_sys_info ; $9DAB
+	jmp pread_extmem_xy ; $9DAE
+	jmp pwrite_extmem_xy ; $9DB1
 	.res 3, $FF
 .export call_table_end
 call_table_end:

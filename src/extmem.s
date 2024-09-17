@@ -446,9 +446,72 @@ vwrite_byte_extmem_y:
 	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
 
+	lda KZE1 ; only need to load back low byte of .C
 	restore_p_816
 	
-	lda KZE1
+	sta (KZE0), Y
+
+	save_p_816
+	accum_8_bit
+	
+	lda current_program_id
+	sta RAM_BANK
+	
+	lda KZE1 ; same thing here
+	restore_p_816
+	rts
+
+;
+; pread_extmem_xy
+;
+; Reads either a byte or word into .A, depending on the M flag, from mem addr X + Y
+; preserves .XY
+;
+.export pread_extmem_xy
+pread_extmem_xy:
+	save_p_816
+	accum_8_bit
+	
+	stz KZE0 + 1
+	stx KZE0
+	
+	lda STORE_PROG_EXTMEM_RBANK
+	sta RAM_BANK
+	
+	restore_p_816
+
+	lda (KZE0), Y
+
+	save_p_816
+	accum_8_bit
+	pha
+	lda current_program_id
+	sta RAM_BANK
+	pla
+	
+	restore_p_816
+	rts
+
+;
+; pwrite_extmem_xy
+;
+; Writes either a byte or word to mem addr X + Y, depending on the size of .A
+; .preserves .AXY
+;
+.export pwrite_extmem_xy
+pwrite_extmem_xy:
+	sta KZE1
+	save_p_816
+	accum_8_bit
+	
+	stz KZE0 + 1
+	stx KZE0
+	
+	lda STORE_PROG_EXTMEM_WBANK
+	sta RAM_BANK
+	
+	lda KZE1 ; only need to load back low byte of .C
+	restore_p_816
 	sta (KZE0), Y
 
 	save_p_816
