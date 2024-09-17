@@ -52,6 +52,13 @@
 | $9DAB | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | | &mdash; |
 | $9DB1 | [`pwrite_extmem_xy`](extmem.md#pwrite_extmem_xy) | .A, .X, .Y | | | &mdash; |
 
+### Note:
+Functions with an '&mdash;' under the `C Wrapper Implemented?` column mean that existing C builtins or functions provide the same functionality and are not necessary. 
+
+For example, the `open`, `close`, `read`, `write` C functions offer the same functionally as `open_file`, `close_file`, `read_file`, and `write_file` respectively.
+
+There is no `get_args` wrapper because the cx16os cc65 library already populates `argc` and `argv` and passes them to main.
+
 ## Function Reference
 
 ### $9D00: getc 
