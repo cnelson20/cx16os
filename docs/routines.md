@@ -10,7 +10,7 @@
 | $9D09 | [`print_str`](#9d06-print_str) | .AX | | .Y | &check; |
 | $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .Y, r0 | .X | &cross; |
 | $9D0F | [`get_args`](#9d0f-get_args) | | .AX, .Y | | &mdash; |
-| $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | | &cross; |
+| $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | | | &cross; |
 | $9D15 | [`parse_num`](#9d15-parse_num) | .AX | .AX | .Y | &check; |
 | $9D18 | [`hex_num_to_string`](#9d18-hex_num_to_string) | .A | .A, .X | | &check; |
 | $9D1B | [`kill_process`](#9d1b-kill_process) | .A | .A, .X | | &check; |
@@ -30,27 +30,27 @@
 | $9D6C | [`copy_file`](#9d6c-copy_file) | r0, r1 | .A | .XY | &cross; |
 | $9D6F | [`mkdir`](#9d6f-mkdir) | .AX | .A | .Y | &check; |
 | $9D72 | [`rmdir`](#9d72-rmdir) | .AX | .A | .Y | &check; |
-| $9D75 | [`setup_chrout_hook`](system_hooks.md#setup_chrout_hook) | .A, r0, r1 | .AX | .Y |
-| $9D78 | [`release_chrout_hook`](system_hooks.md#release_chrout_hook) | | .A | .XH, .YH |
-| $9D7B | [`setup_general_hook`](system_hooks.md#setup_general_hook) | .A, .X, r0, r1 | .AX | .Y |
-| $9D7E | [`release_general_hook`](system_hooks.md#release_general_hook) | .A | .A | .XY |
-| $9D81 | [`get_general_hook_info`](system_hooks.md#get_general_hook_info) | .A | .A, TBD | .XY |
-| $9D84 | [`send_message_general_hook`](system_hooks.md#send_message_general_hook) | .A, .X, r0, r1 | .A | .XY |
-| $9D87 | [`send_byte_chrout_hook`](system_hooks.md#send_byte_chrout_hook) | .A | .A | .XY |
-| $9D8A | [`set_own_priority`](#9d8a-set_own_priority) | .A | | .X, .YH |
-| $9D8D | [`surrender_process_time`](#9d8d-surrender_process_time) | | | |
-| $9D90 | [`mark_last_hook_message_received`](system_hooks.md#mark_last_hook_message_received) | .A | | .XY |
-| $9D93 | [`lock_vera_regs`](system_hooks.md#lock_vera_regs) | .A | .XY |
-| $9D96 | [`unlock_vera_regs`](system_hooks.md#unlock_vera_regs) | .A | .XY |
-| $9D99 | [`bin_to_bcd16`](#9d99-bin_to_bcd16) | .AX | .AXY |
-| $9D9C | [`move_fd`](#9d9c-move_fd) | .A, .X | .A | .Y |
-| $9D9F | [`get_time`](#9d9f-get_time) | | r0, r1, r2, r3 | .AXY |
-| $9DA2 | [`detach_self`](#9da2-detach_self) | .A | | .XY |
-| $9DA5 | [`active_table_lookup`](#9da5-active_table_lookup) | .A | .A, .X, .Y | |
-| $9DA8 | [`copy_fd`](#9da8-copy_fd) | .A | .X | .Y |
-| $9DAB | [`get_sys_info`](#9dab-get_sys_info) | | .X, .Y, r0, r1 | |
-| $9DAB | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | |
-| $9DB1 | [`pwrite_extmem_xy`](extmem.md#pwrite_extmem_xy) | .A, .X, .Y | | |
+| $9D75 | [`setup_chrout_hook`](system_hooks.md#setup_chrout_hook) | .A, r0, r1 | .AX | .Y | &cross; |
+| $9D78 | [`release_chrout_hook`](system_hooks.md#release_chrout_hook) | | .A | .XH, .YH | &cross; |
+| $9D7B | [`setup_general_hook`](system_hooks.md#setup_general_hook) | .A, .X, r0, r1 | .AX | .Y | &cross; |
+| $9D7E | [`release_general_hook`](system_hooks.md#release_general_hook) | .A | .A | .XY | &cross; |
+| $9D81 | [`get_general_hook_info`](system_hooks.md#get_general_hook_info) | .A | .A, TBD | .XY | &cross; |
+| $9D84 | [`send_message_general_hook`](system_hooks.md#send_message_general_hook) | .A, .X, r0, r1 | .A | .XY | &cross; |
+| $9D87 | [`send_byte_chrout_hook`](system_hooks.md#send_byte_chrout_hook) | .A | .A | .XY | &cross; |
+| $9D8A | [`set_own_priority`](#9d8a-set_own_priority) | .A | | .X, .YH | &cross; |
+| $9D8D | [`surrender_process_time`](#9d8d-surrender_process_time) | | | | &cross; |
+| $9D90 | [`mark_last_hook_message_received`](system_hooks.md#mark_last_hook_message_received) | .A | | .XY | &cross; |
+| $9D93 | [`lock_vera_regs`](system_hooks.md#lock_vera_regs) | .A | .XY | | &cross; |
+| $9D96 | [`unlock_vera_regs`](system_hooks.md#unlock_vera_regs) | .A | .XY | | &cross; |
+| $9D99 | [`bin_to_bcd16`](#9d99-bin_to_bcd16) | .AX | .AXY | | &cross; |
+| $9D9C | [`move_fd`](#9d9c-move_fd) | .A, .X | .A | .Y | &cross; |
+| $9D9F | [`get_time`](#9d9f-get_time) | | r0, r1, r2, r3 | .AXY | &cross; |
+| $9DA2 | [`detach_self`](#9da2-detach_self) | .A | | .XY | &cross; |
+| $9DA5 | [`active_table_lookup`](#9da5-active_table_lookup) | .A | .A, .X, .Y | | &cross; |
+| $9DA8 | [`copy_fd`](#9da8-copy_fd) | .A | .X | .Y | &cross; |
+| $9DAB | [`get_sys_info`](#9dab-get_sys_info) | | .X, .Y, r0, r1 | | &cross; |
+| $9DAB | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | | &mdash; |
+| $9DB1 | [`pwrite_extmem_xy`](extmem.md#pwrite_extmem_xy) | .A, .X, .Y | | | &mdash; |
 
 ## Function Reference
 
