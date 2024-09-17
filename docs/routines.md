@@ -10,26 +10,26 @@
 | $9D09 | [`print_str`](#9d06-print_str) | .AX | | .Y | &check; |
 | $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .Y, r0 | .X | &cross; |
 | $9D0F | [`get_args`](#9d0f-get_args) | | .AX, .Y | | &mdash; |
-| $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | |
-| $9D15 | [`parse_num`](#9d15-parse_num) | .AX | .AX | .Y
-| $9D18 | [`hex_num_to_string`](#9d18-hex_num_to_string) | .A | .A, .X | |
-| $9D1B | [`kill_process`](#9d1b-kill_process) | .A | .A, .X | |
-| $9D1E | [`open_file`](#9d1e-open_file) | .AX, .Y | .A, .X | |
-| $9D21 | [`close_file`](#9d21-close_file) | .A | | .X, .Y |
-| $9D24 | [`read_file`](#9d24-read_file) | .A, r0, r1, r2 | .AX, .Y | |
-| $9D27 | [`write_file`](#9d27-write_file) | .A, r0, r1 | .AX, .Y | |
-| $9D2A | [`load_dir_listing_extmem`](#9d2a-load_dir_listing_extmem) | .A | .AX | .Y |
-| $9D2D | [`get_pwd`](#9d2d-get_pwd) | r0, r1 | | .A, .X, .Y |
-| $9D30 | [`chdir`](#9d30-chdir) | .AX | .A | .Y |
-| $9D33-$9D5A | [`Extmem routines`](extmem.md) | | | |
-| $9D5D | [`wait_process`](#9d5d-wait_process) | .A | .A | .XY |
-| $9D60 | [`fgetc`](#9d60-fgetc) | .X | .A, .X | .Y | 
-| $9D63 | [`fputc`](#9d63-fputc) | .A, .X | .Y | .X | 
-| $9D66 | [`unlink`](#9d66-unlink) | .AX | .A | .Y | 
-| $9D69 | [`rename`](#9d69-rename) | r0, r1 | .A | .XY | 
-| $9D6C | [`copy_file`](#9d6c-copy_file) | r0, r1 | .A | .XY | 
-| $9D6F | [`mkdir`](#9d6f-mkdir) | .AX | .A | .Y |
-| $9D72 | [`rmdir`](#9d72-rmdir) | .AX | .A | .Y |
+| $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | | &cross; |
+| $9D15 | [`parse_num`](#9d15-parse_num) | .AX | .AX | .Y | &check; |
+| $9D18 | [`hex_num_to_string`](#9d18-hex_num_to_string) | .A | .A, .X | | &check; |
+| $9D1B | [`kill_process`](#9d1b-kill_process) | .A | .A, .X | | &check; |
+| $9D1E | [`open_file`](#9d1e-open_file) | .AX, .Y | .A, .X | | &mdash; |
+| $9D21 | [`close_file`](#9d21-close_file) | .A | | .X, .Y | &mdash; |
+| $9D24 | [`read_file`](#9d24-read_file) | .A, r0, r1, r2 | .AX, .Y | | &mdash; |
+| $9D27 | [`write_file`](#9d27-write_file) | .A, r0, r1 | .AX, .Y | | &mdash; |
+| $9D2A | [`load_dir_listing_extmem`](#9d2a-load_dir_listing_extmem) | .A | .AX | .Y | &cross; |
+| $9D2D | [`get_pwd`](#9d2d-get_pwd) | r0, r1 | | .A, .X, .Y | &mdash; |
+| $9D30 | [`chdir`](#9d30-chdir) | .AX | .A | .Y | &check; |
+| $9D33-$9D5A | [`Extmem routines`](extmem.md) | | | | &mdash; |
+| $9D5D | [`wait_process`](#9d5d-wait_process) | .A | .A | .XY | &check; |
+| $9D60 | [`fgetc`](#9d60-fgetc) | .X | .A, .X | .Y | &cross; |
+| $9D63 | [`fputc`](#9d63-fputc) | .A, .X | .Y | .X | &cross; |
+| $9D66 | [`unlink`](#9d66-unlink) | .AX | .A | .Y | &mdash; |
+| $9D69 | [`rename`](#9d69-rename) | r0, r1 | .A | .XY | &check; |
+| $9D6C | [`copy_file`](#9d6c-copy_file) | r0, r1 | .A | .XY | &cross; |
+| $9D6F | [`mkdir`](#9d6f-mkdir) | .AX | .A | .Y | &check; |
+| $9D72 | [`rmdir`](#9d72-rmdir) | .AX | .A | .Y | &check; |
 | $9D75 | [`setup_chrout_hook`](system_hooks.md#setup_chrout_hook) | .A, r0, r1 | .AX | .Y |
 | $9D78 | [`release_chrout_hook`](system_hooks.md#release_chrout_hook) | | .A | .XH, .YH |
 | $9D7B | [`setup_general_hook`](system_hooks.md#setup_general_hook) | .A, .X, r0, r1 | .AX | .Y |
