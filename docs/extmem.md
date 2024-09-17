@@ -86,6 +86,9 @@ Prepatory Routines: [set_extmem_rbank](#set_extmem_rbank)
 Return values:
 - Returns value of (.X + .Y) in .A
 
+***Note*:**
+- Using 16-bit index registers is highly recommended using this function. Otherwise, you will not be able to even read from extmem!
+
 ---
 
 ### writef_byte_extmem_y
@@ -116,6 +119,9 @@ Prepatory Routines: [set_extmem_wbank](#set_extmem_wbank)
 
 Return values:
 - None, all registers are preserved
+
+***Note*:**
+- Using 16-bit index registers is highly recommended using this function. Otherwise, you will not be able to even write to extmem, and you will probably crash the OS writing to an internal variable!
 
 ---
 
