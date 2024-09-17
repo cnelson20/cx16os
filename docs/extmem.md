@@ -115,7 +115,7 @@ Prepatory Routines: [set_extmem_wbank](#set_extmem_wbank)
 - Preserves .X, .Y 
 
 Return values:
-- Returns value of (.X + .Y) in .A
+- None, all registers are preserved
 
 ---
 
