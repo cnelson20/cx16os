@@ -2,14 +2,14 @@
 
 ###
 
-| Address | Function name | Argument Registers | Return Registers | Registers trampled |
-|---------|---------------|--------------------|------------------|--------------------|
-| $9D00 | [`getc / GETIN`](#9d00-getc) | | .A | .Y |
-| $9D03 | [`putc / CHROUT`](#9d03-putc) | .A | | |
-| $9D06 | [`exec`](#9d09-exec) | .AX, .Y, r0, r2 | .A | r1 |
-| $9D09 | [`print_str`](#9d06-print_str) | .AX | | .Y |
-| $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .Y, r0 | .X |
-| $9D0F | [`get_args`](#9d0f-get_args) | | .AX, .Y | |
+| Address | Function name | Argument Registers | Return Registers | Registers trampled | C Wrapper Implemented? |
+|---------|---------------|--------------------|------------------|--------------------|:----------------------:|
+| $9D00 | [`getc / GETIN`](#9d00-getc) | | .A | .Y | &check; |
+| $9D03 | [`putc / CHROUT`](#9d03-putc) | .A | | | &check; |
+| $9D06 | [`exec`](#9d09-exec) | .AX, .Y, r0, r2 | .A | r1 | &cross; |
+| $9D09 | [`print_str`](#9d06-print_str) | .AX | | .Y | &check; |
+| $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .Y, r0 | .X | &cross; |
+| $9D0F | [`get_args`](#9d0f-get_args) | | .AX, .Y | | &mdash; |
 | $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | |
 | $9D15 | [`parse_num`](#9d15-parse_num) | .AX | .AX | .Y
 | $9D18 | [`hex_num_to_string`](#9d18-hex_num_to_string) | .A | .A, .X | |
