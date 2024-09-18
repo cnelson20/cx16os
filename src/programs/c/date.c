@@ -102,10 +102,6 @@ char week_of_year(char specifier) {
 	first_day_of_this_week = day_thru_year - weekday;
 	days_in_first_week = ( (first_day_of_this_week + 5) % 7) + 1;
 	
-	printf("day_thru_year: %d\r", day_thru_year);
-	printf("first_day_of_this_week: %d\r", first_day_of_this_week);
-	printf("days_in_first_week: %d\r", days_in_first_week);
-	
 	if (specifier == 'V') {
 		// Start of week is Monday, not Sun
 		days_in_first_week = (days_in_first_week % 7) + 1;
@@ -113,10 +109,7 @@ char week_of_year(char specifier) {
 	
 	if (specifier == 'V' && days_in_first_week >= 4) {
 		// Start of week is Monday, not Sun
-		days_in_first_week = (days_in_first_week % 7) + 1;
-		if (days_in_first_week >= 4) { 
-			start_of_first_week = days_in_first_week + 1 - 14;
-		}
+		start_of_first_week = days_in_first_week + 1 - 14;
 	} else {
 		if (days_in_first_week == 7) {
 			start_of_first_week = 1 - 7;
@@ -124,7 +117,6 @@ char week_of_year(char specifier) {
 			start_of_first_week = days_in_first_week + 1 - 7;
 		}
 	}
-	
 	return ( (day_thru_year - start_of_first_week) / 7 );
 }
 
