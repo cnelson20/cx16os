@@ -622,7 +622,11 @@ surrender_process_time_extwrapper:
 get_time:
 	save_p_816_8bitmode
 	jsr clock_get_date_time
-	dec r3 + 1
+	lda r3 + 1
+	cmp #7
+	bne :+
+	stz r3 + 1
+	:
 	
 	jsr RDTIM
 	sta r3 ; write jiffies to r3.L
