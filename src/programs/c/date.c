@@ -83,14 +83,57 @@ char is_leap_year(short year) {
 	return 1; // if mult of 400, return true
 }
 
+short month_sum_days[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+
+// For %j, %U, %V specifiers
+short days_since_jan_1() {
+	return month_sum_days[month - 1] + day + (month < 3 ? 0 : is_leap_year(year));
+}
+
+// For %U and %V specifiers
+char week_of_year(char specifier) {
+	static signed short day_thru_year;
+	static signed short first_day_of_this_week;
+	
+	static signed char days_in_first_week;
+	static signed short start_of_first_week;
+	
+	day_thru_year = days_since_jan_1();
+	first_day_of_this_week = day_thru_year - weekday;
+	days_in_first_week = ( (first_day_of_this_week + 5) % 7) + 1;
+	
+	printf("day_thru_year: %d\r", day_thru_year);
+	printf("first_day_of_this_week: %d\r", first_day_of_this_week);
+	printf("days_in_first_week: %d\r", days_in_first_week);
+	
+	if (specifier == 'V') {
+		// Start of week is Monday, not Sun
+		days_in_first_week = (days_in_first_week % 7) + 1;
+	}
+	
+	if (specifier == 'V' && days_in_first_week >= 4) {
+		// Start of week is Monday, not Sun
+		days_in_first_week = (days_in_first_week % 7) + 1;
+		if (days_in_first_week >= 4) { 
+			start_of_first_week = days_in_first_week + 1 - 14;
+		}
+	} else {
+		if (days_in_first_week == 7) {
+			start_of_first_week = 1 - 7;
+		} else {
+			start_of_first_week = days_in_first_week + 1 - 7;
+		}
+	}
+	
+	return ( (day_thru_year - start_of_first_week) / 7 );
+}
+
 char abbr_weekdays[][4] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 char abbr_months [][4] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
 char weekdays[][10] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 char months[][10] = {"January", "February", "March", "April", "June", "July", "August", "September",
 "October", "November", "December"};
-
-char month_sum_days[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
 
 void parse_spec_char(char c) {
 	switch (c) {
@@ -125,7 +168,7 @@ void parse_spec_char(char c) {
 			printf("%02d", (hour % 12) + 1);
 			break;
 		case 'j':
-			printf("%03d", month_sum_days[month - 1] + day + is_leap_year(year));
+			printf("%03d", days_since_jan_1());
 		case 'm':
 			printf("%02d", month);
 			break;
@@ -148,7 +191,12 @@ void parse_spec_char(char c) {
 		case 'u':
 			printf("%d", weekday == 0 ? 7 : weekday);
 			break;
-		// missing %U and %V
+		case 'U':
+			printf("%03d", week_of_year('U'));
+			break;
+		case 'V':
+			printf("%03d", week_of_year('V'));
+			break;
 		case 'w':
 			printf("%d", weekday);
 			break;

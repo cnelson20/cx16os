@@ -1,6 +1,8 @@
 *.s
 *.o
 
+a.out
+
 cat
 ctest
 cat_c
