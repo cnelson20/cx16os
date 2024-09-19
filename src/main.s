@@ -686,37 +686,38 @@ save_current_process:
 	lda store_vera_ctrl
 	sta VERA::CTRL
 @not_using_vera_regs:
+
+	accum_index_16_bit
+	.a16
+	.i16
 	
-	ldx #$02
-	:
-	lda ZP_SET1_START, X
-	sta STORE_RAM_ZP_SET1, X
-	inx
-	cpx #ZP_SET1_SIZE
-	bcc :-
+	; copies $02 - $1F in zp to STORE_RAM_ZP_SET1
+	lda #(ZP_SET1_SIZE - 2) - 1
+	ldx #ZP_SET1_START + 2
+	ldy #STORE_RAM_ZP_SET1 + 2
+	mvn #$00, #$00
+
+	; copies $30 - $4f to STORE_RAM_ZP_SET2
+	lda #ZP_SET2_SIZE - 1
+	ldx #ZP_SET2_START
+	ldy #STORE_RAM_ZP_SET2
+	mvn #$00, #$00
 	
-	ldx #0
-	:
-	lda ZP_SET2_START, X
-	sta STORE_RAM_ZP_SET2, X
-	inx 
-	cpx #ZP_SET2_SIZE
-	bcc :-
+	; copies $50 - $5f to STORE_RAM_ZP_KZE
+	lda #ZP_KZE_SIZE - 1
+	ldx #ZP_KZE_START
+	ldy #STORE_RAM_ZP_KZE
+	mvn #$00, #$00
 	
-	ldx #0
-	:
-	lda ZP_KZE_START, X
-	sta STORE_RAM_ZP_KZE, X
-	inx
-	cpx #ZP_KZE_SIZE
-	bcc :-
-	
-	ldx #$80
-	:
-	lda $0100, X
-	sta STORE_PROG_STACK, X
-	inx
-	bne :-
+	; copy top half of stack to STORE_PROG_STACK
+	lda #$80 - 1
+	ldx #$0100 + $80
+	ldy #STORE_PROG_STACK + $80
+	mvn #$00, #$00
+
+	accum_index_8_bit
+	.a8
+	.i8
 
 	rts
 
@@ -756,36 +757,37 @@ restore_new_process:
 	sta VERA::CTRL
 @not_using_vera_regs:
 
-	ldx #$02
-	:
-	lda STORE_RAM_ZP_SET1, X
-	sta ZP_SET1_START, X
-	inx
-	cpx #ZP_SET1_SIZE
-	bcc :-
+	accum_index_16_bit
+	.a16
+	.i16
 	
-	ldx #0
-	:
-	lda STORE_RAM_ZP_SET2, X
-	sta ZP_SET2_START, X
-	inx 
-	cpx #ZP_SET2_SIZE
-	bcc :-
+	; copies STORE_RAM_ZP_SET1 to $02 - $1F in zp
+	lda #(ZP_SET1_SIZE - 2) - 1
+	ldy #ZP_SET1_START + 2
+	ldx #STORE_RAM_ZP_SET1 + 2
+	mvn #$00, #$00
+
+	; copies STORE_RAM_ZP_SET2 to $30 - $4f
+	lda #ZP_SET2_SIZE - 1
+	ldy #ZP_SET2_START
+	ldx #STORE_RAM_ZP_SET2
+	mvn #$00, #$00
 	
-	ldx #0
-	:
-	lda STORE_RAM_ZP_KZE, X
-	sta ZP_KZE_START, X
-	inx
-	cpx #ZP_KZE_SIZE
-	bcc :-
+	; copies STORE_RAM_ZP_KZE to $50 - $5f
+	lda #ZP_KZE_SIZE - 1
+	ldy #ZP_KZE_START
+	ldx #STORE_RAM_ZP_KZE
+	mvn #$00, #$00
 	
-	ldx #$80
-	:
-	lda STORE_PROG_STACK, X
-	sta $0100, X
-	inx
-	bne :-
+	; copy STORE_PROG_STACK to top half of stack
+	lda #$80 - 1
+	ldy #$0100 + $80
+	ldx #STORE_PROG_STACK + $80
+	mvn #$00, #$00
+
+	accum_index_8_bit
+	.a8
+	.i8
 
 	jmp return_control_program
 
