@@ -28,7 +28,7 @@ ctest: ctest.c $(LIB_FILE)
 	cp $@ $(MNT_DIR)/bin
 
 date: date.c $(LIB_FILE)
-	cc65 -t none --cpu 65sc02 $@.c
+	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
 
