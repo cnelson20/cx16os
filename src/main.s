@@ -1396,7 +1396,7 @@ setup_system_info:
 	sta VERA::CTRL
 	ldx #2
 	:
-	lda $9F29, X
+	lda $9F2A, X
 	sta vera_version_number, X	
 	dex
 	bpl :-
