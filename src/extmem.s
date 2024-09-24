@@ -69,7 +69,7 @@ res_extmem_bank:
 clear_process_extmem_banks:
 	phx
 	
-	ldx #$10
+	ldx #FIRST_PROGRAM_BANK
 @clear_loop:
 	txa
 	jsr free_extmem_bank

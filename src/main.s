@@ -371,7 +371,7 @@ custom_nmi_handler:
 	lda current_program_id
 	cmp active_process
 	bne :+
-	cmp #$10 ; first process is nmi-able
+	cmp #FIRST_PROGRAM_BANK ; first process is nmi-able
 	bne @stop_active_process
 
 	:	
@@ -477,7 +477,7 @@ program_return_handler:
 	sta irq_already_triggered ; no sheningans during this
 	
 	lda current_program_id
-	cmp #$10 ; shell prog
+	cmp #FIRST_PROGRAM_BANK ; starting prog
 	bne :+
 	jmp return_to_basic
 
@@ -611,7 +611,7 @@ update_parent_processes:
 	tay ; store this processes' parent in .Y
 	txa
 
-	ldx #$10
+	ldx #FIRST_PROGRAM_BANK
 @check_loop:
 	cmp process_parents_table, X
 	bne :+
@@ -850,7 +850,7 @@ find_next_process:
 ;
 .export find_new_process_bank
 find_new_process_bank:
-	lda #$10
+	lda #FIRST_PROGRAM_BANK
 	tax
 @loop:
 	lda process_table, X
@@ -1109,7 +1109,7 @@ setup_process_info:
 	pha
 	
 	lda current_program_id
-	cmp #$10
+	cmp #FIRST_PROGRAM_BANK
 	bcs :+
 	lda #0
 	ldx #1
@@ -1440,7 +1440,7 @@ setup_kernal_processes:
 	
 	; mark evens banks as open
 	; odd banks are for extra process data
-	ldx #$10 ; first 16 ram banks not for programs
+	ldx #FIRST_PROGRAM_BANK ; first 16 ram banks not for programs
 	:
 	stz process_table, X
 	inx 
