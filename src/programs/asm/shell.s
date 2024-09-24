@@ -618,7 +618,7 @@ parse_env_var:
 	jsr strcmp
 	bne @not_self_pid
 
-	; pid of last process put into background
+	; pid of this process
 	lda $00 ; RAM_BANK
 	bra @repl_arg_hex_num
 @not_self_pid:
