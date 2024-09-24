@@ -1324,7 +1324,7 @@ switch_control_bank:
 ; transfer control to first program in process table (when starting up)
 ;
 run_first_prog:
-	lda #$10
+	lda #FIRST_PROGRAM_BANK
 	sta RAM_BANK
 	sta current_program_id
 	
