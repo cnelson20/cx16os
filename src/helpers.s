@@ -37,7 +37,7 @@ strlen_16bit:
 	.i16
 	ldy #0
 	:
-	lda $0000, X
+	lda $00, X
 	beq :+
 	inx
 	iny
