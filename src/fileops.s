@@ -24,6 +24,9 @@ file_table_count_end := file_table_count + FILE_TABLE_COUNT_OFFSET
 path_offset:
 	.literal "bin/"
 	.byte 0
+
+base_dir:
+	.res MAX_FILELEN, 0
 path_dir:
 	.res MAX_FILELEN, 0
 pwd:
@@ -67,11 +70,19 @@ setup_kernal_file_table:
 	stz file_table_count + 15
 	
 	jsr update_internal_pwd
+
+	; copy current pwd to base_dir
+	cnsta_word pwd, KZP1
+	cnsta_word base_dir, KZP0
+	lda #MAX_FILELEN
+	jsr strncpy_int
+	
+	; copy pwd to path_dir and concat path_offset
 	cnsta_word pwd, KZP1
 	cnsta_word path_dir, KZP0
 	lda #MAX_FILELEN
 	jsr strncpy_int
-	
+
 	cnsta_word path_offset, KZP1
 	cnsta_word path_dir, KZP0
 	lda #MAX_FILELEN
@@ -315,16 +326,30 @@ get_dir_filename_ext:
 	lda current_program_id
 	ora #%00000001
 	sta RAM_BANK
-	
-	cpy #0
+
+	lda (KZE0)
+	cmp #'~'
+	bne @not_home_pathing
+	phy
+	ldy #1
+	lda (KZE0), Y
+	ply
+	cmp #'/'
+	beq :+
+	cmp #0
+	bne :+
+	:
+	; Replace ~ with base_dir
+	ldax_addr base_dir
+	bra @copy_paths
+
+@not_home_pathing:
+	cpy #0 ; only programs should use path
 	beq @relative_pathing
 	
 	ldax_word KZE0
-	push_ax
 	jsr strlen
-	tay
-	pla_word KZE0
-	
+	tay	
 @path_check_loop:
 	lda (KZE0), Y
 	cmp #'/'
@@ -338,32 +363,28 @@ get_dir_filename_ext:
 @relative_pathing:
 	lda current_program_id
 	bne :+
-	lda #<pwd
-	ldx #>pwd
+	ldax_addr pwd
 	bra @copy_paths
 	:
-	lda #<PV_PWD
-	ldx #>PV_PWD
+	ldax_addr PV_PWD
 	bra @copy_paths
 @get_path_filename:
-	lda #<path_dir
-	ldx #>path_dir
+	ldax_addr path_dir
 
 @copy_paths:
 	push_zp_word KZES4
 	push_zp_word KZES5
 	push_zp_word KZES6
 	
-	ldsty_word KZE0, KZES4 ; argument path
+	ldsty_word KZE0, KZES4 ; file name
 	
-	sta KZES5 ; pwd / path_dir 
+	sta KZES5 ; pwd / path_dir / base_dir
 	stx KZES5 + 1
-	
+
 	jsr strlen
-	sta KZES6 ; strlen of pwd / path_dir
-	
-	lda KZES4
-	ldx KZES4 + 1
+	sta KZES6 ; strlen of pwd / path_dir / base_dir
+
+	ldax_word KZES4
 	jsr strlen
 	sta KZES6 + 1 ; strlen of file name
 	
@@ -378,6 +399,24 @@ get_dir_filename_ext:
 	adc #0
 	sta KZE0 + 1
 	
+	; if base_dir = ~/, need to decrease length by 2
+	; do that by subtract two from KZE0
+	lda (KZES4)
+	cmp #'~'
+	bne :+
+	ldy #1
+	lda (KZES4), Y
+	cmp #'/'
+	bne :+
+	index_16_bit
+	ldy KZE0
+	dey
+	dey
+	sty KZE0
+	index_8_bit
+	:
+
+
 	lda #MAX_FILELEN - 1
 	clc ; - 1
 	sbc KZES6 ; pwd.strlen
@@ -398,8 +437,8 @@ get_dir_filename_ext:
 	lda #0
 	sta (KZES4), Y
 	
-	ldsta_word KZES5, KZE1
 	ldsta_word KZES4, KZE0
+	ldsta_word KZES5, KZE1
 	lda KZES6
 	ldx #0
 	jsr memcpy_ext
@@ -515,6 +554,7 @@ free_dos_channel:
 	sta RAM_BANK
 	pla
 	rts
+
 
 ;
 ; open_file_kernal_ext
