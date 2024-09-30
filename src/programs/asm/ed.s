@@ -2112,7 +2112,7 @@ shell_cmd_read:
 	ldx #>@temp_read_filename
 	rts
 @temp_read_filename:
-	.asciiz "/OS/tmp/edR00"
+	.asciiz "~/tmp/edR00"
 @end_temp_read_filename:
 
 exec_shell_cmd:

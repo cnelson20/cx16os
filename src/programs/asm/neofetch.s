@@ -986,7 +986,7 @@ info_functions_size:
 	.word 0
 	
 config_file_location:
-	.asciiz "/OS/etc/neofetch.conf"
+	.asciiz "~/etc/neofetch.conf"
 config_file_fd:
 	.word 0
 	
