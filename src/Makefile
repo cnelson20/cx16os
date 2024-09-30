@@ -1,6 +1,6 @@
 CC = cl65.exe
 
-PROGRAM = OS.PRG
+PROGRAM = os.prg
 
 SOURCES = main.s kernalcalls.s helpers.s helpers_int.s fileops.s extmem.s system_hooks.s
 INCS = prog.inc cx16.inc macs.inc
