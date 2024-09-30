@@ -44,9 +44,9 @@ ifeq ($(OS),Windows_NT)
 	diskpart < scripts/diskpart_detach.in
 	qemu-img convert -f vhdx "C:\x16image.vhdx" -O raw cx16os.img
 else
-	sh ./scripts/mount_sd.sh cx16os.img mnt_dir/
+	$(shell ./scripts/mount_sd.sh cx16os.img mnt_dir/)
 	-sudo mkdir mnt_dir/OS/
 	sudo cp mnt/* -r mnt_dir/OS/
-	sh ./scripts/close_sd.sh mnt_dir/
+	$(shell ./scripts/close_sd.sh mnt_dir/)
 endif
 
