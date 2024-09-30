@@ -1392,6 +1392,8 @@ setup_system_info:
 	dec A
 	sta max_ram_bank
 	
+	; get VERA version
+	
 	lda #63 << 1
 	sta VERA::CTRL
 	ldx #2
@@ -1402,6 +1404,16 @@ setup_system_info:
 	bpl :-
 	stz VERA::CTRL
 	
+	; get SMC firmware version
+	ldx #$42 ; SMC
+	ldy #$30 ; Major firmware version
+	:
+	jsr i2c_read_byte
+	sta smc_version_number - $30, Y
+	iny
+	cpy #$30 + 3
+	bcc :-
+	
 	lda $FF80 ; holds ROM version
 	sta rom_vers
 	rts
@@ -1411,6 +1423,9 @@ max_ram_bank:
 	.byte 0
 .export vera_version_number
 vera_version_number:
+	.res 3
+.export smc_version_number
+smc_version_number:
 	.res 3
 .export rom_vers
 rom_vers:

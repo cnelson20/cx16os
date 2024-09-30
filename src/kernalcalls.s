@@ -26,7 +26,7 @@
 .import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook, mark_last_hook_message_received
 .import lock_vera_regs, unlock_vera_regs
 .import in_active_processes_table, add_active_processes_table, active_processes_table_index, active_processes_table
-.import vera_version_number, rom_vers, max_ram_bank
+.import vera_version_number, rom_vers, max_ram_bank, smc_version_number
 
 .import surrender_process_time, schedule_timer
 .import irq_already_triggered
@@ -670,6 +670,13 @@ get_sys_info:
 	stx r0 + 1
 	ldx vera_version_number + 2
 	stx r1
+	
+	ldx smc_version_number
+	stx r1 + 1
+	ldx smc_version_number + 1
+	stx r2
+	ldx smc_version_number + 2
+	stx r2 + 1
 	
 	ldx max_ram_bank
 	ldy rom_vers
