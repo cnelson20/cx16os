@@ -811,6 +811,17 @@ get_gpu_info:
 	
 	lda r0, Y
 	phy
+	jsr print_bcd_byte	
+	ply
+	iny
+	cpy #(r1 + 1) - r0 ; 2
+	bcc @loop	
+	
+	jmp print_cr
+@vera_str:
+	.asciiz "GPU: VERA v"
+
+print_bcd_byte:
 	ldx #0
 	jsr bin_to_bcd16
 	cpx #0
@@ -821,19 +832,16 @@ get_gpu_info:
 	txa
 	jsr CHROUT
 	pla
+	bra :++
 	:
 	jsr GET_HEX_NUM
+	cmp #'0'
+	beq :++
+	:
 	jsr CHROUT
+	:
 	txa
-	jsr CHROUT	
-	ply
-	iny
-	cpy #r1 - r0 ; 2
-	bcc @loop	
-	
-	jmp print_cr
-@vera_str:
-	.asciiz "GPU: VERA v"
+	jmp CHROUT
 	
 get_memory_info:
 	lda #<@memory_str

@@ -55,12 +55,12 @@ strncat_int:
 	
 	sta KZP2 ; save strlen
 	
-	clc
+	rep #$21 ; clear carry
+	accum_16_bit
 	adc KZP0
-	sta KZP0
-	lda KZP0 + 1
-	adc #0
-	sta KZP0 + 1
+	sta KZP0	
+	sep #$20
+	accum_8_bit
 	
 	pla ; pull n back off stack
 	sec

@@ -1,6 +1,6 @@
 CC = cl65.exe
 
-PROGRAM = OS.PRG
+PROGRAM = os.prg
 
 SOURCES = main.s kernalcalls.s helpers.s helpers_int.s fileops.s extmem.s system_hooks.s
 INCS = prog.inc cx16.inc macs.inc
@@ -44,9 +44,9 @@ ifeq ($(OS),Windows_NT)
 	diskpart < scripts/diskpart_detach.in
 	qemu-img convert -f vhdx "C:\x16image.vhdx" -O raw cx16os.img
 else
-	./scripts/mount_sd.sh cx16os.img mnt_dir/
+	sh ./scripts/mount_sd.sh cx16os.img mnt_dir/
 	-sudo mkdir mnt_dir/OS/
 	sudo cp mnt/* -r mnt_dir/OS/
-	./scripts/close_sd.sh mnt_dir/
+	sh ./scripts/close_sd.sh mnt_dir/
 endif
 
