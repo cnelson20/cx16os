@@ -1,7 +1,7 @@
 
 ## cx16os
 
-### Abstract
+### Synopsis
 
 - Multitasking OS for the Commander X16
 
