@@ -3,6 +3,7 @@ os.img
 
 # mnt folder
 mnt/
+mnt_dir/
 
 # vscode
 .vscode/
@@ -18,10 +19,6 @@ mnt/
 *.map
 *.lbl
 *.exp
-
-# Precompiled Headers
-*.gch
-*.pch
 
 # Libraries
 *.lib
