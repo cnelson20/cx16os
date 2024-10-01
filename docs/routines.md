@@ -48,7 +48,7 @@
 | $9DA2 | [`detach_self`](#9da2-detach_self) | .A | | .XY | &cross; |
 | $9DA5 | [`active_table_lookup`](#9da5-active_table_lookup) | .A | .A, .X, .Y | | &cross; |
 | $9DA8 | [`copy_fd`](#9da8-copy_fd) | .A | .X | .Y | &cross; |
-| $9DAB | [`get_sys_info`](#9dab-get_sys_info) | | .X, .Y, r0, r1 | | &cross; |
+| $9DAB | [`get_sys_info`](#9dab-get_sys_info) | | .X, .Y, r0, r1, r2 | | &cross; |
 | $9DAB | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | | &mdash; |
 | $9DB1 | [`pwrite_extmem_xy`](extmem.md#pwrite_extmem_xy) | .A, .X, .Y | | | &mdash; |
 
@@ -385,7 +385,8 @@ Return values:
 Return values:
 - X -> maximum RAM bank available (one of 63, 128, or 255)
 - Y -> X16 Kernal version number (see X16 User's Guide)
-- r0-r1 -> VERA version number
+- r0.L - r1.L -> VERA version number
+- r1.H - r2.H -> SMC version number
 
 
 
