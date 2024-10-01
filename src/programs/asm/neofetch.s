@@ -76,6 +76,9 @@ print_loop:
 
 use_file_config:
 	; go through each line of file ;
+	ldx #alt_x16_art ; use nice art by default
+	stx ascii_ptr
+	
 @get_next_line:
 	ldy #0
 @get_next_line_loop:
@@ -353,6 +356,15 @@ parse_info_command:
 	jmp add_function_list
 	:
 	
+	; smc ;
+	ldx ptr0
+	ldy #info_smc_str
+	jsr compare_strings
+	bne :+
+	ldx #get_smc_info
+	jmp add_function_list
+	:
+	
 	; memory ;
 	ldx ptr0
 	ldy #info_memory_str
@@ -423,6 +435,8 @@ info_cpu_str:
 	.asciiz "cpu"
 info_gpu_str:
 	.asciiz "gpu"
+info_smc_str:
+	.asciiz "smc"
 info_memory_str:
 	.asciiz "memory"
 info_colors_str:
@@ -814,12 +828,39 @@ get_gpu_info:
 	jsr print_bcd_byte	
 	ply
 	iny
-	cpy #(r1 + 1) - r0 ; 2
+	cpy #(r1 + 1) - r0 ; 3
 	bcc @loop	
 	
 	jmp print_cr
 @vera_str:
 	.asciiz "GPU: VERA v"
+
+get_smc_info:
+	lda #<@smc_str
+	ldx #>@smc_str
+	jsr print_str
+	
+	jsr get_sys_info
+	
+	ldy #0
+@loop:
+	cpy #0
+	beq :+
+	lda #'.'
+	jsr CHROUT
+	:
+	
+	lda r1 + 1, Y
+	phy
+	jsr print_bcd_byte	
+	ply
+	iny
+	cpy #(r2 + 2) - (r1 + 1) ; 3
+	bcc @loop	
+	
+	jmp print_cr
+@smc_str:
+	.asciiz "SMC: ATTiny v"
 
 print_bcd_byte:
 	ldx #0
