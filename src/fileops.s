@@ -1576,6 +1576,12 @@ cd_process_pwd:
 	rts
 
 ;
+; tmp filenames for do_dos_cmd
+;
+dos_cmds_tmp_filename:
+	.res MAX_FILELEN, 0
+
+;
 ; changes process' pwd
 ; dir to cd to in .AX
 ;
@@ -1682,20 +1688,37 @@ do_dos_cmd:
 	lda KZES4
 	ldx KZES4 + 1
 	jsr strlen
-	inc A
-	pha
+	accum_index_16_bit
+	.a16
+	.i16
+	and #$00FF
+	ldx KZES4
+	ldy #dos_cmds_tmp_filename
+	mvn #$00, #$00	
+	accum_index_8_bit
+	.a8
+	.i8
 	
-	ldsta_word KZES4, KZE1
+	lda #<dos_cmds_tmp_filename
+	ldx #>dos_cmds_tmp_filename
+	ldy #0
+	jsr get_dir_filename_ext
+	
 	lda current_program_id
-	sta KZE3
 	inc A
-	sta KZE2
+	sta RAM_BANK
 	; load strlen bytes 
-	pla
+	
+	lda #<dos_cmds_tmp_filename
+	sta KZE1
+	ldx #>dos_cmds_tmp_filename
+	stx KZE1 + 1
+	jsr strlen
+	inc A
 	ldx #0
 	
 	ply_word KZE0
-	jsr memcpy_banks_ext
+	jsr memcpy_ext
 	
 	; if KZES5 <> 0, need to have this too ;
 	lda KZES5
@@ -1732,20 +1755,36 @@ do_dos_cmd:
 	lda KZES5
 	ldx KZES5 + 1
 	jsr strlen
-	inc A
-	pha
+	accum_index_16_bit
+	.a16
+	.i16
+	and #$00FF
+	ldx KZES5
+	ldy #dos_cmds_tmp_filename
+	mvn #$00, #$00	
+	accum_index_8_bit
+	.a8
+	.i8
 	
-	ldsta_word KZES5, KZE1
+	lda #<dos_cmds_tmp_filename
+	ldx #>dos_cmds_tmp_filename
+	ldy #0
+	jsr get_dir_filename_ext
+	
 	lda current_program_id
-	sta KZE3
 	inc A
-	sta KZE2
-	; load strlen bytes, again 
-	pla
-	ldx #0
+	sta RAM_BANK
+	; load strlen bytes 
 	
+	lda #<dos_cmds_tmp_filename
+	sta KZE1
+	ldx #>dos_cmds_tmp_filename
+	stx KZE1 + 1
+	jsr strlen
+	inc A
+	ldx #0
 	ply_word KZE0
-	jsr memcpy_banks_ext
+	jsr memcpy_ext
 	
 @no_second_arg:
 	; need to wait for dos channel to open up ;	
