@@ -424,12 +424,37 @@ get_dir_filename_ext:
 	adc #0
 	sta KZE0 + 1
 	
+
+	;
+	; If KZES5, prefix_dir is not base_dir, then skip both of these checks
+	;
 	lda KZES5
 	cmp #<base_dir
 	bne @prefix_dir_not_root
 	lda KZES5 + 1
 	cmp #>base_dir
 	bne @prefix_dir_not_root
+
+	;
+	; if KZES4 (the filename) == ~, just copy KZES5 to KZES4
+	;
+	lda (KZES4)
+	cmp #'~'
+	bne @filename_not_base
+	ldy #1
+	lda (KZES4), Y
+	bne @filename_not_base
+
+	lda KZES5
+	ldx KZES5 + 1
+	jsr strlen
+	inc A ; copy the \0 too
+	sta KZES6
+	jmp @call_memcpy
+@filename_not_base:
+	;
+	; If strlen( prefix_dir ) == 1, must be /, so have special behavior
+	;
 	lda KZES6
 	cmp #1
 	bne @prefix_dir_not_root
