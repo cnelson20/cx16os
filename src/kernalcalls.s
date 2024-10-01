@@ -17,6 +17,8 @@
 .import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, load_dir_listing_extmem_ext, move_fd, copy_fd
 .import get_pwd_ext, chdir_ext, unlink_ext, rename_ext, copy_file_ext, mkdir_ext, rmdir_ext
 
+.import PV_OPEN_TABLE
+
 .import res_extmem_bank, set_extmem_rbank, set_extmem_wbank, set_extmem_rptr, set_extmem_wptr
 .import readf_byte_extmem_y, vread_byte_extmem_y, writef_byte_extmem_y, vwrite_byte_extmem_y
 .import free_extmem_bank_extwrapper, share_extmem_bank, memmove_extmem, fill_extmem
@@ -160,7 +162,7 @@ putc:
 .export fputc
 fputc:
 	save_p_816_8bitmode
-	cpx #PV_OPEN_TABLE_SIZE
+	cpx #<PV_OPEN_TABLE_SIZE
 	bcs @exit_nsuch_file
 	
 	pha

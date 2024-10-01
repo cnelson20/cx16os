@@ -14,12 +14,37 @@
 
 .import CHROUT_screen
 
+;
+; In RAM bank #1 ;
+;
+
 .export file_table_count
 file_table_count := $A000
 
 FILE_TABLE_COUNT_SIZE = 14
 FILE_TABLE_COUNT_OFFSET = 16
 file_table_count_end := file_table_count + FILE_TABLE_COUNT_OFFSET
+
+;
+; Memory locations in program bank + 1
+;
+
+.export PV_OPEN_TABLE
+.export PV_PWD_PREFIX, PV_PWD
+.export PV_TMP_FILENAME_PREFIX, PV_TMP_FILENAME
+
+PV_OPEN_TABLE := process_extmem_table + $100
+
+PV_PWD_PREFIX := PV_OPEN_TABLE + PV_OPEN_TABLE_SIZE
+PV_PWD := PV_PWD_PREFIX + 4 ; holds process PWD
+
+PV_TMP_FILENAME_PREFIX := PV_PWD + sys_max_filelen
+PV_TMP_FILENAME := PV_TMP_FILENAME_PREFIX + 2
+
+
+;
+; bin/ directory (a pseudo PATH), pwd, base_dir (~)
+;
 
 path_offset:
 	.literal "bin/"
@@ -399,6 +424,37 @@ get_dir_filename_ext:
 	adc #0
 	sta KZE0 + 1
 	
+	lda KZES5
+	cmp #<base_dir
+	bne @prefix_dir_not_root
+	lda KZES5 + 1
+	cmp #>base_dir
+	bne @prefix_dir_not_root
+	lda KZES6
+	cmp #1
+	bne @prefix_dir_not_root
+	
+	index_16_bit
+	.i16
+	ldy KZES4
+	:
+	lda $00, Y
+	beq :+
+	cmp #'/'
+	beq :+
+	iny 
+	bra :-
+	:
+	sty KZES5
+	index_8_bit
+	.i8
+	lda KZES5
+	ldx KZES5 + 1
+	jsr strlen
+	sta KZES6
+	jmp @call_memcpy
+@prefix_dir_not_root:
+	
 	; if base_dir = ~/, need to decrease length by 2
 	; do that by subtract two from KZE0
 	lda (KZES4)
@@ -437,6 +493,7 @@ get_dir_filename_ext:
 	lda #0
 	sta (KZES4), Y
 	
+@call_memcpy:
 	ldsta_word KZES4, KZE0
 	ldsta_word KZES5, KZE1
 	lda KZES6

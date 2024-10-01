@@ -17,6 +17,8 @@
 .import file_table_count
 .import prog_using_vera_regs
 
+.import PV_OPEN_TABLE
+
 .SEGMENT "STARTUP"
 .SEGMENT "INIT"
 .SEGMENT "ONCE"

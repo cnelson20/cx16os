@@ -39,19 +39,11 @@ STORE_PROG_ARGS_END := $A180 + $80
 PROG_LOAD_ADDRESS := $A300
 
 ;
-; Memory locations in program bank + 1
+; Mem locations in program bank + 1
 ;
 
 process_extmem_table := $A000
-
-PV_OPEN_TABLE := process_extmem_table + $100
-PV_OPEN_TABLE_SIZE = $10 ; 16
-
-PV_PWD_PREFIX := PV_OPEN_TABLE + PV_OPEN_TABLE_SIZE
-PV_PWD := PV_PWD_PREFIX + 4 ; holds process PWD
-
-PV_TMP_FILENAME_PREFIX := PV_PWD + sys_max_filelen
-PV_TMP_FILENAME := PV_TMP_FILENAME_PREFIX + 2
+PV_OPEN_TABLE_SIZE := $10 ; 16
 
 ;
 ; Kernal variables
