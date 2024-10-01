@@ -441,9 +441,13 @@ get_dir_filename_ext:
 	lda $00, Y
 	beq :+
 	cmp #'/'
-	beq :+
+	beq :++
 	iny 
 	bra :-
+	:
+	dey
+	lda #'/'
+	sta $00, Y
 	:
 	sty KZES5
 	index_8_bit
@@ -451,6 +455,7 @@ get_dir_filename_ext:
 	lda KZES5
 	ldx KZES5 + 1
 	jsr strlen
+	inc A ; copy the \0 too
 	sta KZES6
 	jmp @call_memcpy
 @prefix_dir_not_root:
