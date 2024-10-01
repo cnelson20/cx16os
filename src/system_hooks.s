@@ -260,7 +260,6 @@ putc_v:
     bne :+
     lda #0
     sta programs_last_printed_special_char, Y
-    stp
     phx
     sec
     jsr PLOT
@@ -272,7 +271,6 @@ putc_v:
     bne :+
     lda #0
     sta programs_last_printed_special_char, Y
-    stp
     phx
     sec
     jsr PLOT
