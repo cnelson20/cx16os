@@ -346,15 +346,15 @@ putc_v:
     .byte 0
 
 valid_c_table_0:
-	.byte 0, 1, 0, 0, 1, 1, 0, 1
-	.byte 1, 1, 1, 1, 1, 1, 0, 0
-	.byte 0, 0, 1, 1, 0, 0, 0, 0
-	.byte 1, 0, 1, 0, 1, 1, 1, 1
+	.byte 0, 1, 0, 0, 1, 1, 0, 1 ; $00 - $07
+	.byte 1, 0, 1, 1, 1, 1, 0, 0 ; $08 - $0F
+	.byte 0, 0, 1, 1, 0, 0, 0, 0 ; $10 - $17
+	.byte 1, 0, 1, 0, 1, 1, 1, 1 ; $18 - $1F
 valid_c_table_1:
-	.byte 0, 1, 0, 0, 0, 0, 0, 0
-	.byte 0, 0, 0, 0, 0, 1, 0, 0
-	.byte 1, 1, 1, 1, 0, 1, 1, 1
-	.byte 1, 1, 1, 1, 1, 1, 1, 1
+	.byte 0, 1, 0, 0, 0, 0, 0, 0 ; $80 - $87
+	.byte 0, 0, 0, 0, 0, 0, 0, 0 ; $88 - $8F
+	.byte 1, 0, 0, 1, 0, 1, 1, 1 ; $90 - $97
+	.byte 1, 1, 1, 1, 1, 1, 1, 1 ; $98 - $9F
 
 .export programs_last_printed_special_char
 programs_last_printed_special_char:
