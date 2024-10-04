@@ -14,10 +14,10 @@ Step 2: Navigate to the `cx16os/src` directory, then run the `make sd` command.
 
 Step 3: Rename the newly created `mnt/` folder `OS/`. 
 
-#### Note: 
-Make'ing `sd` requires either sudo access on Linux in order to use disk formatting & mounting tools, and requires admin permissions and qemu installed on Windows in order to use `diskpart`. 
+*Note:*
+*Make'ing `sd` requires either sudo access on Linux in order to use disk formatting & mounting tools, or on Windows `qemu` installed and admin permissions in order to use `diskpart`.*
 
-This requires you to run make in a shell started with admin access. I apologize for the inconvience, but I am not aware of any other way to make these disk images Windows, without another dependency.
+*This requires you to run make in a shell started with admin access. I apologize for the inconvience, but I am not aware of any other way to make these disk images Windows, without another dependency.*
 
 <br/>
 
@@ -57,7 +57,7 @@ Despite all the disclaimers, you have now installed cx16os!
 
 ### Running cx16os
 
-Note: the following assumes the `OS/` folder is at the root of your SD card. If you are using the emulator, do not worry about this.
+*Note: the following assumes the `OS/` folder is at the root of your SD card. If you are using the emulator, do not worry about this.*
 
 Step 1: cd to the `OS/` folder using `DOS` or a disk wedge command
 
