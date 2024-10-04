@@ -2,7 +2,7 @@
 
 ## cx16os build / install guide
 
-If you are just installing cx16os and not trying to build it from source, start [here](installing-cx16os)
+If you are just installing cx16os and not trying to build it from source, start [here](#installing-cx16os)
 
 ### Building cx16os
 
