@@ -65,9 +65,11 @@ Step 1: cd to the `OS/` folder using `DOS` or a disk wedge command
 
 Step 2: Run the `BOOT` command in BASIC.
 
-And now you should be placed into cx16os and `shell` will prompt you to enter a command!
+- If you see a `READY` prompt with a black background in the ISO character set, something went wrong.
 
-If you see a READY prompt with a black background in the ISO character set, something went wrong.
+Otherwise, you should be placed into cx16os and `shell` will prompt you to enter a command!
+
+
 
 
 
