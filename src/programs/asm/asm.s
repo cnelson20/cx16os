@@ -2839,12 +2839,12 @@ instruction_strs:
 	.asciiz "STZ" ; 55
 	.asciiz "TAX" ; 56
 	.asciiz "TAY" ; 57
-	.asciiz "TXY" ; 58
-	.asciiz "TYX" ; 59
-	.asciiz "TSX" ; 60
-	.asciiz "TXA" ; 61
-	.asciiz "TXS" ; 62
-	.asciiz "TYA" ; 63
+	.asciiz "TSX" ; 58
+	.asciiz "TXA" ; 59
+	.asciiz "TXS" ; 60
+	.asciiz "TXY" ; 61
+	.asciiz "TYA" ; 62
+	.asciiz "TYX" ; 63
 	.asciiz "WAI" ; 64
 
 INSTRUCTION_LIST_SIZE = 65
@@ -2937,7 +2937,7 @@ instruction_modes:
 /* 50 SEI */ .byte $78, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 /* 51 STA */ .byte $ff, $ff, $85, $95, $8d, $9d, $99, $92, $81, $91, $ff, $ff
 /* 52 STP */ .byte $DB, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-/* 52 STX */ .byte $ff, $ff, $86, $96, $8e, $ff, $ff, $ff, $ff, $ff, $ff, $ff ; Note: zp,Y addressing not supported. oops
+/* 53 STX */ .byte $ff, $ff, $86, $96, $8e, $ff, $ff, $ff, $ff, $ff, $ff, $ff ; Note: zp,Y addressing not supported. oops
 /* 54 STY */ .byte $ff, $ff, $84, $94, $8c, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 /* 55 STZ */ .byte $ff, $ff, $64, $74, $9c, $9e, $ff, $ff, $ff, $ff, $ff, $ff
 /* 56 TAX */ .byte $aa, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
@@ -2946,8 +2946,8 @@ instruction_modes:
 /* 59 TXA */ .byte $8a, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 /* 60 TXS */ .byte $9a, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 /* 61 TXY */ .byte $9b, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-/* 62 TYX */ .byte $bb, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-/* 63 TYA */ .byte $98, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+/* 62 TYA */ .byte $98, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+/* 63 TYX */ .byte $bb, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 /* 64 WAI */ .byte $cb, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 
 
