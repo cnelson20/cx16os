@@ -16,7 +16,7 @@ valid options:
 
 
 
-### syntax:
+### Syntax:
 
 `label_name:` used to create labels, local labels are unimplemented
 
