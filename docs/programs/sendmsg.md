@@ -14,7 +14,7 @@ Options:
 - `-c byte`: add 1 byte of data `byte` to the message. Can either be a decimal number or hex signified by a preceding $ or 0x.
 - `-s string`: add the characters in `string` to the message.
 
-Both `-c` and `-s` can be repeatedly used to craft a message.
+Both `-c` and `-s` can be used more than once to craft a message.
 
 <br/>
 
