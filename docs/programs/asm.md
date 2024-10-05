@@ -2,7 +2,7 @@
 
 ## asm
 
-#### a 6502 assembler for cx16os
+#### a 6502(+?) assembler for cx16os
 
 ### syntax:
 
