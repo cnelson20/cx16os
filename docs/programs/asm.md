@@ -4,6 +4,18 @@
 
 #### a 6502(+?) assembler for cx16os
 
+### Usage
+`
+asm [options] input_file
+`
+valid options:
+
+- `-o file` Write the output to `file`. By default the output is written to `a.out`.
+- `-pc number` Set the starting program counter to `number`, which can be decimal or hex (signified by a preceding $ or 0x). If not specifed, the default is `0xA300`, the starting address of all cx16os programs.
+
+
+
+
 ### syntax:
 
 `label_name:` used to create labels, local labels are unimplemented
