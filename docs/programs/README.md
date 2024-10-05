@@ -19,7 +19,8 @@ The following utilities are mostly similar in function to the POSIX utilities, w
 - echo
 - ed
   - no options (first argument is a file to open)
-  - no regex   
+  - no regex support
+  - no `j` command to join lines 
 - kill
   - no options
 - ls
