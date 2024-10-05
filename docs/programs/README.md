@@ -2,7 +2,7 @@
 
 ## cx16os programs documentation
 
-The following utilities are mostly similar in function to the POSIX utilities, with details under each item
+The following programs are mostly similar in function to the POSIX utilities, with more detail listed under each program:
 - basename
   - no options
 - cat
