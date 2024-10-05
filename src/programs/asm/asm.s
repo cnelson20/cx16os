@@ -29,34 +29,34 @@ C_DIRECTIVE_PROCESSED = 3
 ; C_DIRECTIVE_PROCESSED | 2 bytes SIZE | SIZE bytes DATA |
 
 init:
-    jsr get_args
-    sta ptr0
-    stx ptr0 + 1
+	jsr get_args
+	sta ptr0
+	stx ptr0 + 1
 
-    sty argc
+	sty argc
 
-    ; arg pointer in .X ;
-    rep #$10
-    .i16
+	; arg pointer in .X ;
+	rep #$10
+	.i16
 
-    ; default settings
-    ldx #$A300
-    stx starting_pc
+	; default settings
+	ldx #$A300
+	stx starting_pc
 	
 	ldx #a_out_str
 	stx output_filename_pointer
 
-    ldx ptr0
+	ldx ptr0
 parse_args:
-    dec argc
-    bne :+
-    jmp end_parse_args
-    :
+	dec argc
+	bne :+
+	jmp end_parse_args
+	:
 
-    ; next arg ;
-    ldx ptr0
-    jsr next_arg
-    stx ptr0
+	; next arg ;
+	ldx ptr0
+	jsr next_arg
+	stx ptr0
 	
 	; -o flag ;
 	lda $00, X
@@ -64,23 +64,23 @@ parse_args:
 	beq :+
 	jmp @file_input
 	:  
-    inx
+	inx
 	lda $00, X
 	cmp #'o'
-    bne @not_output_flag
+	bne @not_output_flag
 @output_flag:	
 	dec argc
 	bne :+
 	jmp flag_invalid_argument
 	:
 	
-    ldx ptr0
-    jsr next_arg
-    stx ptr0
+	ldx ptr0
+	jsr next_arg
+	stx ptr0
 
-    stx output_filename_pointer
+	stx output_filename_pointer
 
-    jmp parse_args
+	jmp parse_args
 
 @not_output_flag:
 	ldx ptr0
@@ -98,13 +98,13 @@ parse_args:
 	jmp flag_invalid_argument
 	:
 	
-    ldx ptr0
-    jsr next_arg
-    stx ptr0
+	ldx ptr0
+	jsr next_arg
+	stx ptr0
 	
 	lda ptr0
 	ldx ptr0 + 1
-    jsr parse_num
+	jsr parse_num
 	sta starting_pc
 	txa
 	sta starting_pc + 1
@@ -114,317 +114,317 @@ parse_args:
 	brk
 
 @file_input:
-    lda input_fd
-    beq :+
-    lda #TWO_INPUT_FILES_ERR
-    jmp gen_error
-    :
+	lda input_fd
+	beq :+
+	lda #TWO_INPUT_FILES_ERR
+	jmp gen_error
+	:
 
-    ldx ptr0 + 1
-    lda ptr0
-    ldy #0
-    jsr open_file
-    sta input_fd
-    cmp #$FF
-    bne :+
+	ldx ptr0 + 1
+	lda ptr0
+	ldy #0
+	jsr open_file
+	sta input_fd
+	cmp #$FF
+	bne :+
 
-    lda #FILE_DOESNT_EXIST_ERR
-    jmp gen_error
+	lda #FILE_DOESNT_EXIST_ERR
+	jmp gen_error
 
-    :
-    jmp parse_args
+	:
+	jmp parse_args
 
 next_arg:
-    :
-    lda $00, X
-    beq :+
-    inx
-    bne :-
-    :
-    lda $00, X
-    bne :+
-    inx
-    bne :-
-    :
-    rts
+	:
+	lda $00, X
+	beq :+
+	inx
+	bne :-
+	:
+	lda $00, X
+	bne :+
+	inx
+	bne :-
+	:
+	rts
 
 end_parse_args:
-    ; do first pass ;
-    stz eof_flag
+	; do first pass ;
+	stz eof_flag
 
-    ldx #$A000
-    stx lines_extmem_ptr
-    stx extmem_data_ptr
+	ldx #$A000
+	stx lines_extmem_ptr
+	stx extmem_data_ptr
 
-    jsr res_extmem_bank
-    sta lines_extmem_bank
-    inc A
-    sta last_extmem_data_bank
+	jsr res_extmem_bank
+	sta lines_extmem_bank
+	inc A
+	sta last_extmem_data_bank
 
 	lda #1
 	jsr print_parse_msg
 first_parse:
-    jsr get_next_line_input
-    
-    ldx #line_buf
-    jsr find_non_whitespace
-    stx ptr0
+	jsr get_next_line_input
+	
+	ldx #line_buf
+	jsr find_non_whitespace
+	stx ptr0
 
-    jsr find_comment
-    stz $00, X
+	jsr find_comment
+	stz $00, X
 
-    ldx ptr0
-    jsr find_last_whitespace
-    stz $00, X
+	ldx ptr0
+	jsr find_last_whitespace
+	stz $00, X
 
-    ldx ptr0
-    lda $00, X
-    bne :+
-    jmp @end_parse_line ; empty line
-    :
+	ldx ptr0
+	lda $00, X
+	bne :+
+	jmp @end_parse_line ; empty line
+	:
 
-    cmp #'.'
-    beq @parse_directive
+	cmp #'.'
+	beq @parse_directive
 
-    jsr strlen
-    ; start of line still in .X
-    dey
-    lda $00, Y
-    cmp #':'
-    bne :+
-    jmp @parse_label
-    :
-    jmp @parse_instruction
+	jsr strlen
+	; start of line still in .X
+	dey
+	lda $00, Y
+	cmp #':'
+	bne :+
+	jmp @parse_label
+	:
+	jmp @parse_instruction
 
 @parse_directive:
-    inx
-    jsr find_whitespace_char
-    lda $00, X
-    bne :+
+	inx
+	jsr find_whitespace_char
+	lda $00, X
+	bne :+
 
-    jmp first_parse_error
-    
-    :
-    phx
-    inx
-    jsr find_non_whitespace
-    lda $00, X
-    bne :+
+	jmp first_parse_error
+	
+	:
+	phx
+	inx
+	jsr find_non_whitespace
+	lda $00, X
+	bne :+
 
-    plx
-    jmp first_parse_error
+	plx
+	jmp first_parse_error
 
-    :
-    stx ptr1
-    plx
-    stz $00, X
+	:
+	stx ptr1
+	plx
+	stz $00, X
 
-    ldx ptr0
-    inx
-    stx ptr0
-    jsr strlen
-    sta ptr2
+	ldx ptr0
+	inx
+	stx ptr0
+	jsr strlen
+	sta ptr2
 
-    ldx ptr1
-    jsr strlen
-    clc
-    adc ptr2 ; add length of other string
-    adc #3 ; \0, \0, C_DIRECTIVE
-    jsr alloc_extmem_space_for_line
+	ldx ptr1
+	jsr strlen
+	clc
+	adc ptr2 ; add length of other string
+	adc #3 ; \0, \0, C_DIRECTIVE
+	jsr alloc_extmem_space_for_line
 
-    stx ptr2
-    jsr set_extmem_wbank
+	stx ptr2
+	jsr set_extmem_wbank
 
-    lda #ptr2
-    jsr set_extmem_wptr
+	lda #ptr2
+	jsr set_extmem_wptr
 
-    ldy #0
-    lda #C_DIRECTIVE
-    jsr writef_byte_extmem_y
+	ldy #0
+	lda #C_DIRECTIVE
+	jsr writef_byte_extmem_y
 
-    iny
-    ldx ptr0
-    :
-    stx ptr0
-    lda (ptr0)
-    jsr writef_byte_extmem_y
-    cmp #0
-    beq :+
-    iny
-    inx
-    bne :-
-    :
+	iny
+	ldx ptr0
+	:
+	stx ptr0
+	lda (ptr0)
+	jsr writef_byte_extmem_y
+	cmp #0
+	beq :+
+	iny
+	inx
+	bne :-
+	:
 
-    iny
-    ldx ptr1
-    :
-    stx ptr1
-    lda (ptr1)
-    jsr writef_byte_extmem_y
-    cmp #0
-    beq :+
-    iny
-    inx
-    bne :-
-    :
+	iny
+	ldx ptr1
+	:
+	stx ptr1
+	lda (ptr1)
+	jsr writef_byte_extmem_y
+	cmp #0
+	beq :+
+	iny
+	inx
+	bne :-
+	:
 
-    jmp @end_parse_line
+	jmp @end_parse_line
 
 @parse_label:
-    lda #0
-    sta $00, Y
+	lda #0
+	sta $00, Y
 
-    ldx ptr0
-    jsr strlen
-    clc
-    adc #2 ; \0 + C_LABEL
-    jsr alloc_extmem_space_for_line
+	ldx ptr0
+	jsr strlen
+	clc
+	adc #2 ; \0 + C_LABEL
+	jsr alloc_extmem_space_for_line
 
-    stx ptr1
-    jsr set_extmem_wbank
+	stx ptr1
+	jsr set_extmem_wbank
 
-    lda #ptr1
-    jsr set_extmem_wptr
+	lda #ptr1
+	jsr set_extmem_wptr
 
-    ldy #0
-    lda #C_LABEL
-    jsr writef_byte_extmem_y
+	ldy #0
+	lda #C_LABEL
+	jsr writef_byte_extmem_y
 
-    iny
-    ldx ptr0
-    :
-    stx ptr0
-    lda (ptr0)
-    jsr writef_byte_extmem_y
-    cmp #0
-    beq :+
-    iny
-    inx
-    bne :-
-    :
+	iny
+	ldx ptr0
+	:
+	stx ptr0
+	lda (ptr0)
+	jsr writef_byte_extmem_y
+	cmp #0
+	beq :+
+	iny
+	inx
+	bne :-
+	:
 
-    jmp @end_parse_line    
+	jmp @end_parse_line	
 
 @parse_instruction:
-    txy
-    iny
-    iny
-    iny
-    lda $00, Y
-    jsr is_whitespace_char
-    bcs :+
-    ; not whitespace, error
-    jmp first_parse_error
-    :
-    lda $00, Y
-    pha
-    lda #0
-    sta $00, Y
+	txy
+	iny
+	iny
+	iny
+	lda $00, Y
+	jsr is_whitespace_char
+	bcs :+
+	; not whitespace, error
+	jmp first_parse_error
+	:
+	lda $00, Y
+	pha
+	lda #0
+	sta $00, Y
 
-    sty ptr1
+	sty ptr1
 
-    jsr makeupper ; instructions are all in table as uppercase
+	jsr makeupper ; instructions are all in table as uppercase
 
-    jsr get_instr_num
-    sta @curr_instr_num
-    cmp #$FF
-    
-    pla
-    ldx ptr1 ; byte that was there was in .A
-    sta $00, X
-    
-    bcc :+ ; if num was $FF, carry will be set
-    jmp first_parse_error
-    :
+	jsr get_instr_num
+	sta @curr_instr_num
+	cmp #$FF
+	
+	pla
+	ldx ptr1 ; byte that was there was in .A
+	sta $00, X
+	
+	bcc :+ ; if num was $FF, carry will be set
+	jmp first_parse_error
+	:
 
-    ; ptr1 in .X
-    jsr find_non_whitespace
-    stx ptr1
-@find_addr_mode:
-    lda $00, X
-    bne :+
-    ; implied addressing mode
-    ;stx ptr1
-    lda #MODE_IMP
-    sta @curr_instr_mode
-    jmp @found_addr_mode
-    :
-    cmp #'#'
-    bne :+
-    ; immediate addressing mode
-    inx
+	; ptr1 in .X
 	jsr find_non_whitespace
-    stx ptr1
-    lda #MODE_IMM
-    sta @curr_instr_mode
-    jmp @found_addr_mode
-    :
-    cmp #'('
-    bne @not_ind_addressing
+	stx ptr1
+@find_addr_mode:
+	lda $00, X
+	bne :+
+	; implied addressing mode
+	;stx ptr1
+	lda #MODE_IMP
+	sta @curr_instr_mode
+	jmp @found_addr_mode
+	:
+	cmp #'#'
+	bne :+
+	; immediate addressing mode
+	inx
+	jsr find_non_whitespace
+	stx ptr1
+	lda #MODE_IMM
+	sta @curr_instr_mode
+	jmp @found_addr_mode
+	:
+	cmp #'('
+	bne @not_ind_addressing
 @ind_addressing:
-    inx
-    stx ptr1
-    lda #')'
-    jsr strchr
-    cpx #0
-    bne :+
-    jmp first_parse_error ; no matching )
-    :
-    txy
-    ldx ptr1
-    lda #','
-    jsr strchr
-    cpx #0
-    bne :+
+	inx
+	stx ptr1
+	lda #')'
+	jsr strchr
+	cpx #0
+	bne :+
+	jmp first_parse_error ; no matching )
+	:
+	txy
+	ldx ptr1
+	lda #','
+	jsr strchr
+	cpx #0
+	bne :+
 
-    lda #0
-    sta $00, Y
-    lda #MODE_IND
-    sta @curr_instr_mode
-    jmp @found_addr_mode
-    :
-    stx ptr2
-    cpy ptr2 ; is ) after the , ?
-    bcc @ind_y_addressing ; either (ind, X) or (ind), Y
+	lda #0
+	sta $00, Y
+	lda #MODE_IND
+	sta @curr_instr_mode
+	jmp @found_addr_mode
+	:
+	stx ptr2
+	cpy ptr2 ; is ) after the , ?
+	bcc @ind_y_addressing ; either (ind, X) or (ind), Y
 @ind_x_addressing:
-    stz $00, X
+	stz $00, X
 
-    lda #MODE_INX
-    sta @curr_instr_mode
-    jmp @found_addr_mode
+	lda #MODE_INX
+	sta @curr_instr_mode
+	jmp @found_addr_mode
 @ind_y_addressing:
-    lda #0
-    sta $00, Y
-    
-    lda #MODE_INY
-    sta @curr_instr_mode
-    jmp @found_addr_mode
+	lda #0
+	sta $00, Y
+	
+	lda #MODE_INY
+	sta @curr_instr_mode
+	jmp @found_addr_mode
 
 @not_ind_addressing:
-    stx ptr1
-    lda #','
-    jsr strchr
-    cpx #0
-    bne @not_abs_addressing
+	stx ptr1
+	lda #','
+	jsr strchr
+	cpx #0
+	bne @not_abs_addressing
 
-    ldx ptr1
-    jsr strlen
-    cmp #1
-    bne @not_accum_addressing
+	ldx ptr1
+	jsr strlen
+	cmp #1
+	bne @not_accum_addressing
 
-    lda $00, X
-    cmp #'A'
-    beq :+
-    cmp #'a'
-    bne @not_accum_addressing
-    :
+	lda $00, X
+	cmp #'A'
+	beq :+
+	cmp #'a'
+	bne @not_accum_addressing
+	:
 
-    inx
-    stx ptr1
+	inx
+	stx ptr1
 
-    lda #MODE_ACC
-    sta @curr_instr_mode
-    jmp @found_addr_mode
+	lda #MODE_ACC
+	sta @curr_instr_mode
+	jmp @found_addr_mode
 @not_accum_addressing:
 	lda @curr_instr_num
 	jsr is_branching_instruction
@@ -435,345 +435,345 @@ first_parse:
 	jmp @found_addr_mode
 
 	:
-    lda #MODE_ABS
-    sta @curr_instr_mode
-    jmp @found_addr_mode
+	lda #MODE_ABS
+	sta @curr_instr_mode
+	jmp @found_addr_mode
 @not_abs_addressing:
-    stz $00, X
-    inx
-    jsr find_last_whitespace
-    dex
-    jsr makeupper
-    lda $00, X
-    cmp #'Y'
-    bne :+
-    
-    lda #MODE_ABY
-    sta @curr_instr_mode
-    jmp @found_addr_mode
-    :
-    cmp #'X'
-    bne :+
+	stz $00, X
+	inx
+	jsr find_last_whitespace
+	dex
+	jsr makeupper
+	lda $00, X
+	cmp #'Y'
+	bne :+
+	
+	lda #MODE_ABY
+	sta @curr_instr_mode
+	jmp @found_addr_mode
+	:
+	cmp #'X'
+	bne :+
 
-    lda #MODE_ABX
-    sta @curr_instr_mode
-    jmp @found_addr_mode
-    :
-    ; no such addr mode ;
-    jmp first_parse_error
+	lda #MODE_ABX
+	sta @curr_instr_mode
+	jmp @found_addr_mode
+	:
+	; no such addr mode ;
+	jmp first_parse_error
 @found_addr_mode:
-    lda #'$'
-    jsr CHROUT
+	lda #'$'
+	jsr CHROUT
 
-    lda @curr_instr_num
-    jsr GET_HEX_NUM
-    jsr CHROUT
-    txa
-    jsr CHROUT
+	lda @curr_instr_num
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
 
-    lda #' '
-    jsr CHROUT
-    lda #'$'
-    jsr CHROUT
-    
-    lda @curr_instr_mode
-    jsr GET_HEX_NUM
-    jsr CHROUT
-    txa
-    jsr CHROUT
+	lda #' '
+	jsr CHROUT
+	lda #'$'
+	jsr CHROUT
+	
+	lda @curr_instr_mode
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
 
-    lda #' '
-    jsr CHROUT
-    lda #'"'
-    jsr CHROUT
+	lda #' '
+	jsr CHROUT
+	lda #'"'
+	jsr CHROUT
 
-    lda ptr1
-    ldx ptr1 + 1
-    jsr print_str
+	lda ptr1
+	ldx ptr1 + 1
+	jsr print_str
 
-    lda #'"'
-    jsr CHROUT
-    lda #$d
-    jsr CHROUT
+	lda #'"'
+	jsr CHROUT
+	lda #$d
+	jsr CHROUT
 
-    ldx ptr1
-    jsr strlen
-    clc
-    adc #4 ; \0, instr_mode, inst_num, C_INSTRUCTION
-    jsr alloc_extmem_space_for_line
+	ldx ptr1
+	jsr strlen
+	clc
+	adc #4 ; \0, instr_mode, inst_num, C_INSTRUCTION
+	jsr alloc_extmem_space_for_line
 
 
-    stx ptr2
+	stx ptr2
 
-    jsr set_extmem_wbank
+	jsr set_extmem_wbank
 
-    lda #ptr2
-    jsr set_extmem_wptr
+	lda #ptr2
+	jsr set_extmem_wptr
 
-    ldy #0
-    lda #C_INSTRUCTION
-    jsr writef_byte_extmem_y
+	ldy #0
+	lda #C_INSTRUCTION
+	jsr writef_byte_extmem_y
 
-    iny
-    lda @curr_instr_num
-    jsr writef_byte_extmem_y
+	iny
+	lda @curr_instr_num
+	jsr writef_byte_extmem_y
 
-    iny
-    lda @curr_instr_mode
-    jsr writef_byte_extmem_y
+	iny
+	lda @curr_instr_mode
+	jsr writef_byte_extmem_y
 
-    iny
-    ldx ptr1
-    :
-    lda (ptr1)
-    jsr writef_byte_extmem_y
-    cmp #0
-    beq :+
-    iny
-    inx
-    stx ptr1
-    bne :-
-    :
+	iny
+	ldx ptr1
+	:
+	lda (ptr1)
+	jsr writef_byte_extmem_y
+	cmp #0
+	beq :+
+	iny
+	inx
+	stx ptr1
+	bne :-
+	:
 
-    jmp @end_parse_line
+	jmp @end_parse_line
 
 @end_parse_line:
-    lda eof_flag
-    bne :+
-    jmp first_parse
-    :
+	lda eof_flag
+	bne :+
+	jmp first_parse
+	:
 	bra second_parse
 
 @curr_instr_num:
-    .byte 0
+	.byte 0
 @curr_instr_mode:
-    .byte 0
+	.byte 0
 
 second_parse:
 	lda #2
 	jsr print_parse_msg
 
-    ldx starting_pc
-    stx current_pc
-    
-    jsr res_extmem_bank
-    sta labels_values_banks + 0
+	ldx starting_pc
+	stx current_pc
+	
+	jsr res_extmem_bank
+	sta labels_values_banks + 0
 
-    ldx #0
-    stx labels_values_banks_last_index
+	ldx #0
+	stx labels_values_banks_last_index
 
-    ldx #$A000
-    stx ptr0
+	ldx #$A000
+	stx ptr0
 
 @second_parse_loop:
-    jsr start_second_third_parse_loop_iter
-    cmp #C_INSTRUCTION
-    bne @not_directive
+	jsr start_second_third_parse_loop_iter
+	cmp #C_INSTRUCTION
+	bne @not_directive
 
-    ; C_INSTRUCTION INSTR_NUM INSTR_MODE
-    ldy #1
-    rep #$20
-    .a16
-    jsr readf_byte_extmem_y ; get INSTR_NUM and INSTR_MODE
-    sta ptr2 ; write to ptr2
-    and #$FF00 ; we want INSTR_MODE
-    xba
-    tax
-    lda instruction_mode_lengths, X
-    and #$00FF
-    clc
-    adc current_pc
-    sta current_pc
+	; C_INSTRUCTION INSTR_NUM INSTR_MODE
+	ldy #1
+	rep #$20
+	.a16
+	jsr readf_byte_extmem_y ; get INSTR_NUM and INSTR_MODE
+	sta ptr2 ; write to ptr2
+	and #$FF00 ; we want INSTR_MODE
+	xba
+	tax
+	lda instruction_mode_lengths, X
+	and #$00FF
+	clc
+	adc current_pc
+	sta current_pc
 
-    sep #$20
-    .a8
-    ; Most indirect addressing instructions use 2 bytes, but JMP and JSR (ind) and (ind,x) use 3.
-    lda ptr2 + 1 ; INSTR_MODE
-    cmp #MODE_IND
-    beq :+
-    cmp #MODE_INX
-    beq :+
-    jmp @end_second_parse_loop_iter
-    :
+	sep #$20
+	.a8
+	; Most indirect addressing instructions use 2 bytes, but JMP and JSR (ind) and (ind,x) use 3.
+	lda ptr2 + 1 ; INSTR_MODE
+	cmp #MODE_IND
+	beq :+
+	cmp #MODE_INX
+	beq :+
+	jmp @end_second_parse_loop_iter
+	:
 
-    lda ptr2 ; INSTR_NUM
-    cmp #INSTR_JMP
-    beq :+
-    cmp #INSTR_JSR
-    bne :++
-    :
-    ldx current_pc ; increment pc if INSTR_MODE = MODE_IND or MODE_INX, INSTR_NUM = jmp or jsr
-    inx
-    stx current_pc
-    :
+	lda ptr2 ; INSTR_NUM
+	cmp #INSTR_JMP
+	beq :+
+	cmp #INSTR_JSR
+	bne :++
+	:
+	ldx current_pc ; increment pc if INSTR_MODE = MODE_IND or MODE_INX, INSTR_NUM = jmp or jsr
+	inx
+	stx current_pc
+	:
 
-    jmp @end_second_parse_loop_iter
+	jmp @end_second_parse_loop_iter
 
 @not_directive:
-    cmp #C_LABEL
-    bne @second_parse_directive
+	cmp #C_LABEL
+	bne @second_parse_directive
 
 @second_parse_label:
-    ; set value of label
-    ldx #line_buf
-    ldy #1
-    :
-    jsr readf_byte_extmem_y
-    sta $00, X
-    cmp #0
-    beq :+
-    inx
-    iny
-    bne :-
-    :
+	; set value of label
+	ldx #line_buf
+	ldy #1
+	:
+	jsr readf_byte_extmem_y
+	sta $00, X
+	cmp #0
+	beq :+
+	inx
+	iny
+	bne :-
+	:
 
-    ldx #line_buf
-    ldy current_pc
-    jsr set_label_value
+	ldx #line_buf
+	ldy current_pc
+	jsr set_label_value
 
-    jmp @end_second_parse_loop_iter
+	jmp @end_second_parse_loop_iter
 
 @second_parse_directive:
-    ; decipher if directive has data
-    ; first copy data to prog mem to make stuff easier ;
-    ldx #line_buf
-    ldy #1
-    :
-    jsr readf_byte_extmem_y
-    sta $00, X
-    cmp #0
-    beq :+
-    inx
-    iny
-    bne :-
-    :
-    inx
-    iny ; increment .X & .Y so string isn't appended
-    :
-    jsr readf_byte_extmem_y
-    sta $00, X
-    cmp #0
-    beq :+
-    inx
-    iny
-    bne :-
-    :
+	; decipher if directive has data
+	; first copy data to prog mem to make stuff easier ;
+	ldx #line_buf
+	ldy #1
+	:
+	jsr readf_byte_extmem_y
+	sta $00, X
+	cmp #0
+	beq :+
+	inx
+	iny
+	bne :-
+	:
+	inx
+	iny ; increment .X & .Y so string isn't appended
+	:
+	jsr readf_byte_extmem_y
+	sta $00, X
+	cmp #0
+	beq :+
+	inx
+	iny
+	bne :-
+	:
 
-    ldx #line_buf
-    jsr get_directive_num
-    cmp #$FF ; is this a valid directive
-    bne :+
-    jmp invalid_directive_err
-    :
-    xba
-    lda #0
-    xba
-    tax
-    lda directive_data_lens, X
-    bne :+
-    jmp @second_parse_no_data_directive ; these have no data
-    :
-    
-    cmp #$FF
-    beq @determine_data_size
+	ldx #line_buf
+	jsr get_directive_num
+	cmp #$FF ; is this a valid directive
+	bne :+
+	jmp invalid_directive_err
+	:
+	xba
+	lda #0
+	xba
+	tax
+	lda directive_data_lens, X
+	bne :+
+	jmp @second_parse_no_data_directive ; these have no data
+	:
+	
+	cmp #$FF
+	beq @determine_data_size
 
-    ; data size = ( # of entries ) << (.A - 1)
-    ; # of entries = # of commas + 1
-    ; count commas in str
-    sta @data_size_shifts
+	; data size = ( # of entries ) << (.A - 1)
+	; # of entries = # of commas + 1
+	; count commas in str
+	sta @data_size_shifts
 
-    ldx #line_buf
-    jsr strlen
-    iny ; point to data part of directive
-    ; now we can count commas in rest of the string
-    ldx #1
+	ldx #line_buf
+	jsr strlen
+	iny ; point to data part of directive
+	; now we can count commas in rest of the string
+	ldx #1
 @count_comma_loop:
-    lda $00, Y
-    beq @end_count_comma_loop
-    cmp #','
-    bne :+
-    inx ; found a comma
-    :
-    iny
-    bne @count_comma_loop
+	lda $00, Y
+	beq @end_count_comma_loop
+	cmp #','
+	bne :+
+	inx ; found a comma
+	:
+	iny
+	bne @count_comma_loop
 @end_count_comma_loop:
-    rep #$20
-    .a16
-    txa ; number of commas
-    
-    ; shift .A left (@data_size_shifts - 1) times
-    :
-    dec @data_size_shifts
-    beq :+ ; end of loop
-    asl A
-    bra :-
-    :
+	rep #$20
+	.a16
+	txa ; number of commas
+	
+	; shift .A left (@data_size_shifts - 1) times
+	:
+	dec @data_size_shifts
+	beq :+ ; end of loop
+	asl A
+	bra :-
+	:
 
-    clc
-    adc current_pc
-    sta current_pc
+	clc
+	adc current_pc
+	sta current_pc
 
-    sep #$20
-    .a8
+	sep #$20
+	.a8
 
-    jmp @end_second_parse_loop_iter
+	jmp @end_second_parse_loop_iter
 @data_size_shifts:
-    .word 0
+	.word 0
 
 @determine_data_size:
-    txa
-    sta @data_size_shifts ; store DIR_NUM to tmp variable if needed
+	txa
+	sta @data_size_shifts ; store DIR_NUM to tmp variable if needed
 
-    cmp #DIR_STR
-    beq :+
-    cmp #DIR_STRZ
-    beq :+
-    jmp @not_str_directive ; if matches neither, branch ahead
-    :
-    ; find quotes
-    ldx #line_buf
-    jsr strlen
-    tyx
-    inx ; go to first char of data
-    stx ptr1
-    jsr find_non_whitespace
-    lda $00, X
-    cmp #'"'
-    beq :+
-    jmp str_not_quoted_error
-    :
-    stx ptr1
-    jsr find_last_whitespace
-    dex
-    lda $00, X
-    cmp #'"'
-    beq :+
-    jmp str_not_quoted_error
-    :
-    stz $00, X
-    ldx ptr1
-    inx ; go past quote
+	cmp #DIR_STR
+	beq :+
+	cmp #DIR_STRZ
+	beq :+
+	jmp @not_str_directive ; if matches neither, branch ahead
+	:
+	; find quotes
+	ldx #line_buf
+	jsr strlen
+	tyx
+	inx ; go to first char of data
 	stx ptr1
-    jsr strlen
-    ldy @data_size_shifts
-    cpy #DIR_STRZ
-    bne :+
-    inc A ; add one for \0 byte
-    :
-    pha
+	jsr find_non_whitespace
+	lda $00, X
+	cmp #'"'
+	beq :+
+	jmp str_not_quoted_error
+	:
+	stx ptr1
+	jsr find_last_whitespace
+	dex
+	lda $00, X
+	cmp #'"'
+	beq :+
+	jmp str_not_quoted_error
+	:
+	stz $00, X
+	ldx ptr1
+	inx ; go past quote
+	stx ptr1
+	jsr strlen
+	ldy @data_size_shifts
+	cpy #DIR_STRZ
+	bne :+
+	inc A ; add one for \0 byte
+	:
+	pha
 	rep #$21 ; clear carry
-    .a16
-    and #$00FF
-    adc current_pc
-    sta current_pc
-    sep #$20
-    .a8
+	.a16
+	and #$00FF
+	adc current_pc
+	sta current_pc
+	sep #$20
+	.a8
 	pla
 	pha ; push data size back to stack
 	clc
 	adc #3 ; 3 bytes: C_DIRECTIVE_PROCESSED & 2 bytes for size of data
-    ; we are going to set entry in lines table to include data, so we don't have to do it later
-    jsr alloc_extmem_data_space
+	; we are going to set entry in lines table to include data, so we don't have to do it later
+	jsr alloc_extmem_data_space
 	; pointer in .X
 	stx ptr2
 	sta r2 ; for memmove_extmem later, dest bank
@@ -838,8 +838,8 @@ second_parse:
 	ldx #0
 	pla ; pull data size back off stack
 	jsr memmove_extmem
-    
-    bra @end_second_parse_loop_iter
+	
+	bra @end_second_parse_loop_iter
 
 @not_str_directive:
 	cmp #DIR_RES
@@ -848,103 +848,103 @@ second_parse:
 	bra @end_second_parse_loop_iter
 @not_res_directive:
 	; error here, invalid directive
-    jmp invalid_directive_err
+	jmp invalid_directive_err
 
 @second_parse_no_data_directive:
-    txa
-    sta @data_size_shifts
-    cmp #DIR_EQU
-    beq :+
-    jmp @not_equ_directive
-    :
-    ; set label equal to value after the space ;
-    ldx #line_buf
-    jsr strlen
-    tyx
-    inx ; go to first char of data
-    stx ptr1
-    jsr find_whitespace_char
-    lda $00, X
-    bne :+
-    ; there is no whitespace
-    jmp invalid_directive_err
-    :
-    sta @data_size_shifts ; tmp storage
-    stz $00, X
-    stx ptr2
-    inx
-    jsr find_non_whitespace
-    lda $00, X
-    bne :+
-    ldx ptr2 ; there is nothing after the whitespace !
-    lda @data_size_shifts
-    sta $00, X
-    jmp invalid_directive_err
-    :
-    ldy ptr1
-    phy
-    jsr determine_symbol_value
-    txy
-    plx
-    jsr set_label_value 
-    
-    bra @end_second_parse_loop_iter
+	txa
+	sta @data_size_shifts
+	cmp #DIR_EQU
+	beq :+
+	jmp @not_equ_directive
+	:
+	; set label equal to value after the space ;
+	ldx #line_buf
+	jsr strlen
+	tyx
+	inx ; go to first char of data
+	stx ptr1
+	jsr find_whitespace_char
+	lda $00, X
+	bne :+
+	; there is no whitespace
+	jmp invalid_directive_err
+	:
+	sta @data_size_shifts ; tmp storage
+	stz $00, X
+	stx ptr2
+	inx
+	jsr find_non_whitespace
+	lda $00, X
+	bne :+
+	ldx ptr2 ; there is nothing after the whitespace !
+	lda @data_size_shifts
+	sta $00, X
+	jmp invalid_directive_err
+	:
+	ldy ptr1
+	phy
+	jsr determine_symbol_value
+	txy
+	plx
+	jsr set_label_value 
+	
+	bra @end_second_parse_loop_iter
 
 @not_equ_directive:
-    ; error here, invalid directive
-    jmp invalid_directive_err
+	; error here, invalid directive
+	jmp invalid_directive_err
 
 @end_second_parse_loop_iter:
-    lda #'$'
-    jsr CHROUT
-    
-    lda current_pc + 1
-    jsr GET_HEX_NUM
-    jsr CHROUT
-    txa
-    jsr CHROUT
+	lda #'$'
+	jsr CHROUT
+	
+	lda current_pc + 1
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
 
-    lda current_pc
-    jsr GET_HEX_NUM
-    jsr CHROUT
-    txa
-    jsr CHROUT
-    
-    lda #$d
-    jsr CHROUT
+	lda current_pc
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	
+	lda #$d
+	jsr CHROUT
 
-    ldx ptr0 ; lines_extmem_ptr through loop
-    cpx lines_extmem_ptr
-    bcs :+
-    jmp @second_parse_loop
-    :
+	ldx ptr0 ; lines_extmem_ptr through loop
+	cpx lines_extmem_ptr
+	bcs :+
+	jmp @second_parse_loop
+	:
 
 third_parse:
 	lda #3
 	jsr print_parse_msg
 	
-    ; open file for output
-    lda output_filename_pointer
-    ldx output_filename_pointer + 1
-    ldy #'W' ; open file for writing
-    jsr open_file
-    cmp #$FF
-    bne :+
-    ; error occurred
-    lda #OPEN_WRITE_FAIL_ERR
-    jmp gen_error
-    :
-    sta output_fd
+	; open file for output
+	lda output_filename_pointer
+	ldx output_filename_pointer + 1
+	ldy #'W' ; open file for writing
+	jsr open_file
+	cmp #$FF
+	bne :+
+	; error occurred
+	lda #OPEN_WRITE_FAIL_ERR
+	jmp gen_error
+	:
+	sta output_fd
 	
 	ldx starting_pc
 	stx current_pc
 	
 	ldx #$A000
-    stx ptr0
+	stx ptr0
 
 @third_parse_loop:
 	; this code identical to start of second_parse_loop
-    jsr start_second_third_parse_loop_iter
+	jsr start_second_third_parse_loop_iter
 	; have type of command (instruction / directive / label) in .A
 	; ptr1 contains entry and extmem rbank & rptr calls are done	
 	;ldy #0
@@ -1091,47 +1091,47 @@ third_parse:
 	
 @third_parse_unprocessed_directive:
 	; first copy data to prog mem to make stuff easier ;
-    ldx #line_buf
-    ldy #1
-    :
-    jsr readf_byte_extmem_y
-    sta $00, X
-    cmp #0
-    beq :+
-    inx
-    iny
-    bne :-
-    :
-    inx
-    iny ; increment .X & .Y so string isn't appended
-    :
-    jsr readf_byte_extmem_y
-    sta $00, X
-    cmp #0
-    beq :+
-    inx
-    iny
-    bne :-
-    :
+	ldx #line_buf
+	ldy #1
+	:
+	jsr readf_byte_extmem_y
+	sta $00, X
+	cmp #0
+	beq :+
+	inx
+	iny
+	bne :-
+	:
+	inx
+	iny ; increment .X & .Y so string isn't appended
+	:
+	jsr readf_byte_extmem_y
+	sta $00, X
+	cmp #0
+	beq :+
+	inx
+	iny
+	bne :-
+	:
 	; a lot of this code is copied from second_parse_directive ;
 	; let's look at the directive ;
 	ldx #line_buf
-    jsr get_directive_num
-    cmp #$FF ; Has been checked before but why not do it again
-    bne :+
-    jmp invalid_directive_err
-    :
+	jsr get_directive_num
+	cmp #$FF ; Has been checked before but why not do it again
+	bne :+
+	jmp invalid_directive_err
+	:
 	xba
-    lda #0
-    xba
-    tax
-    lda directive_data_lens, X
-    beq :+
+	lda #0
+	xba
+	tax
+	lda directive_data_lens, X
+	beq :+
 	cmp #$FF ; $FF's should have been parsed already
 	bne :++
 	:
-    jmp @end_third_parse_loop_iter ; these have no data, can ignore
-    :
+	jmp @end_third_parse_loop_iter ; these have no data, can ignore
+	:
 	jsr handle_fixed_len_directives_data
 	jmp @end_third_parse_loop_iter
 
@@ -1151,16 +1151,16 @@ third_parse:
 	jsr CHROUT
 	
 	ldx ptr0 ; lines_extmem_ptr through loop
-    cpx lines_extmem_ptr
-    bcs :+
-    jmp @third_parse_loop
-    :
+	cpx lines_extmem_ptr
+	bcs :+
+	jmp @third_parse_loop
+	:
 @end_third_parse:
-    lda output_fd
-    jsr close_file
+	lda output_fd
+	jsr close_file
 	
-    lda #0
-    rts
+	lda #0
+	rts
 
 LABEL_VALUE_SIZE = 32
 
@@ -1287,39 +1287,39 @@ write_byte_output:
 
 start_second_third_parse_loop_iter:
 	lda lines_extmem_bank
-    jsr set_extmem_rbank
+	jsr set_extmem_rbank
 
-    lda #ptr0
-    jsr set_extmem_rptr
+	lda #ptr0
+	jsr set_extmem_rptr
 
-    ldx ptr0
-    ldy #0
-    jsr readf_byte_extmem_y
-    pha
-    
-    inx
-    stx ptr0
-    jsr readf_byte_extmem_y
-    sta ptr1
+	ldx ptr0
+	ldy #0
+	jsr readf_byte_extmem_y
+	pha
+	
+	inx
+	stx ptr0
+	jsr readf_byte_extmem_y
+	sta ptr1
 
-    inx
-    stx ptr0
-    jsr readf_byte_extmem_y
-    sta ptr1 + 1
+	inx
+	stx ptr0
+	jsr readf_byte_extmem_y
+	sta ptr1 + 1
 
-    inx
-    stx ptr0
+	inx
+	stx ptr0
 
-    pla
-    jsr set_extmem_rbank
+	pla
+	jsr set_extmem_rbank
 
-    lda #ptr1
-    jsr set_extmem_rptr
+	lda #ptr1
+	jsr set_extmem_rptr
 
-    ; get type of command (instruction / directive / label)
-    
-    ldy #0
-    jmp readf_byte_extmem_y ; return to caller after fetching byte from extmem
+	; get type of command (instruction / directive / label)
+	
+	ldy #0
+	jmp readf_byte_extmem_y ; return to caller after fetching byte from extmem
 	
 
 get_instruction_opcode:
@@ -1749,298 +1749,298 @@ perform_operation:
 ; errors if label is already defined
 ;
 set_label_value:
-    phx
-    phy
-    jsr find_label_value
-    ply
-    plx
-    cmp #0
-    beq :+ 
-    ; label already defined
-    jmp label_already_defined_err
-    :
+	phx
+	phy
+	jsr find_label_value
+	ply
+	plx
+	cmp #0
+	beq :+ 
+	; label already defined
+	jmp label_already_defined_err
+	:
 
-    stx tmp_label
-    sty tmp_value
+	stx tmp_label
+	sty tmp_value
 
-    ldx labels_values_banks_last_index
-    lda labels_values_banks, X
-    jsr set_extmem_wbank
+	ldx labels_values_banks_last_index
+	lda labels_values_banks, X
+	jsr set_extmem_wbank
 
-    lda #ptr0
-    jsr set_extmem_wptr
+	lda #ptr0
+	jsr set_extmem_wptr
 
-    ldx ptr0
-    phx ; save ptr0
+	ldx ptr0
+	phx ; save ptr0
 
-    ldx labels_values_ptr
-    stx ptr0
+	ldx labels_values_ptr
+	stx ptr0
 
-    ldy #30
-    rep #$20
-    .a16
-    lda tmp_value
-    jsr writef_byte_extmem_y
-    sep #$20
-    .a8
+	ldy #30
+	rep #$20
+	.a16
+	lda tmp_value
+	jsr writef_byte_extmem_y
+	sep #$20
+	.a8
 
-    ldy #0
-    ldx tmp_label
-    :
-    lda $00, X
-    beq :+
-    jsr writef_byte_extmem_y
-    inx
-    iny
-    cpy #29
-    bcc :- ; loop back if not \0 or reached label length limit
-    :
-    lda #0
-    jsr writef_byte_extmem_y
+	ldy #0
+	ldx tmp_label
+	:
+	lda $00, X
+	beq :+
+	jsr writef_byte_extmem_y
+	inx
+	iny
+	cpy #29
+	bcc :- ; loop back if not \0 or reached label length limit
+	:
+	lda #0
+	jsr writef_byte_extmem_y
 
-    plx
-    stx ptr0
-    ; increment labels_values_ptr by $20
-    
-    rep #$21
-    .a16
-    lda labels_values_ptr
-    ; carry cleared from 
-    adc #LABEL_VALUE_SIZE
-    sta labels_values_ptr
-    sep #$20
-    .a8
-    ldx labels_values_ptr
-    cpx #$C000
-    bcs :+
-    rts
-    :   
+	plx
+	stx ptr0
+	; increment labels_values_ptr by $20
+	
+	rep #$21
+	.a16
+	lda labels_values_ptr
+	; carry cleared from 
+	adc #LABEL_VALUE_SIZE
+	sta labels_values_ptr
+	sep #$20
+	.a8
+	ldx labels_values_ptr
+	cpx #$C000
+	bcs :+
+	rts
+	:   
 
-    ldx labels_values_banks_last_index
-    lda labels_values_banks, X
-    and #1
-    beq :+
+	ldx labels_values_banks_last_index
+	lda labels_values_banks, X
+	and #1
+	beq :+
 
-    jsr res_extmem_bank
-    ldx labels_values_banks_last_index
-    sta labels_values_banks, X
+	jsr res_extmem_bank
+	ldx labels_values_banks_last_index
+	sta labels_values_banks, X
 
-    bra :++
-    :
+	bra :++
+	:
 
-    inc A
-    inx
-    sta labels_values_banks, X
+	inc A
+	inx
+	sta labels_values_banks, X
 
-    :
-    inc labels_values_banks_last_index
-    rts
+	:
+	inc labels_values_banks_last_index
+	rts
 
 ;
 ; finds the value of a label passed in .X
 ; on return, .A holds whether it was found and .X holds the value (if it was)
 ;
 find_label_value:
-    stx tmp_label
+	stx tmp_label
 
-    ldx ptr0
-    phx
+	ldx ptr0
+	phx
 
-    ldx labels_values_banks_last_index
-    stx @label_values_banks_index
+	ldx labels_values_banks_last_index
+	stx @label_values_banks_index
 
-    lda labels_values_banks, X
-    jsr set_extmem_rbank
+	lda labels_values_banks, X
+	jsr set_extmem_rbank
 
-    ldx labels_values_ptr
-    stx ptr0
+	ldx labels_values_ptr
+	stx ptr0
 
-    lda #ptr0
-    jsr set_extmem_rptr
+	lda #ptr0
+	jsr set_extmem_rptr
 
 @check_loop:
-    rep #$20
-    .a16
-    lda ptr0
-    sec
-    sbc #LABEL_VALUE_SIZE
-    sta ptr0
-    sep #$20
-    .a8
-    ldx ptr0
-    cpx #$A000
-    bcs :+
+	rep #$20
+	.a16
+	lda ptr0
+	sec
+	sbc #LABEL_VALUE_SIZE
+	sta ptr0
+	sep #$20
+	.a8
+	ldx ptr0
+	cpx #$A000
+	bcs :+
 
-    dec @label_values_banks_index
-    bmi @end_check_loop
-    ldx @label_values_banks_index
-    lda labels_values_banks, X
-    jsr set_extmem_rbank
+	dec @label_values_banks_index
+	bmi @end_check_loop
+	ldx @label_values_banks_index
+	lda labels_values_banks, X
+	jsr set_extmem_rbank
 
-    ldx #$C000 - 32
-    stx ptr0
+	ldx #$C000 - 32
+	stx ptr0
 
-    :
+	:
 
-    ldx tmp_label
-    ldy #0
-    jsr strcmp_mainmem_extmem
-    bne @check_loop
+	ldx tmp_label
+	ldy #0
+	jsr strcmp_mainmem_extmem
+	bne @check_loop
 
 @found_label:
-    ldy #30
-    rep #$20
-    .a16
-    jsr readf_byte_extmem_y ; get value
-    tax
-    sep #$20
-    .a8
-    lda #1
-    bra @pull_off_stack
+	ldy #30
+	rep #$20
+	.a16
+	jsr readf_byte_extmem_y ; get value
+	tax
+	sep #$20
+	.a8
+	lda #1
+	bra @pull_off_stack
 
 @end_check_loop:
-    ldx #0
+	ldx #0
 	txa ; lda #0
 
 @pull_off_stack:
-    ply
-    sty ptr0
-    rts
+	ply
+	sty ptr0
+	rts
 
 @label_values_banks_index:
-    .word 0
+	.word 0
 
 tmp_label:
-    .word 0
+	.word 0
 tmp_value:
-    .word 0
+	.word 0
 
 labels_values_ptr:
-    .word $A000
+	.word $A000
 labels_values_banks_last_index:
-    .word 0
+	.word 0
 labels_values_banks:
-    .res 128
+	.res 128
 
 ;
 ; compares a string in prog mem in .X to a string in extmem that has its bank/ptr calls already set up
 ; .Y should also be set by caller
 ;
 strcmp_mainmem_extmem:
-    :
-    jsr readf_byte_extmem_y
-    sec
-    sbc $00, X
-    bne :++ ; not equal, exit early
-    lda $00, X
-    beq :+ ; strings are equal
-    inx
-    iny
-    bne :- ; check other characters in string
+	:
+	jsr readf_byte_extmem_y
+	sec
+	sbc $00, X
+	bne :++ ; not equal, exit early
+	lda $00, X
+	beq :+ ; strings are equal
+	inx
+	iny
+	bne :- ; check other characters in string
 
-    :
-    lda #0
-    :
-    rts
+	:
+	lda #0
+	:
+	rts
 
 ;
 ; gets the directive num for a string passed in .X
 ; .A = $FF if the directive is invalid, otherwise returns the number
 ;
 get_directive_num:
-    ; .X stays preserved throughout function
+	; .X stays preserved throughout function
 
-    ldy #directive_strs
-    sty ptr1
+	ldy #directive_strs
+	sty ptr1
 
-    ldy #0
-    sty @directive_strs_index
+	ldy #0
+	sty @directive_strs_index
 
 @compare_loop:
-    ldy ptr1
-    jsr strcmp
-    cmp #0
-    beq @found_dir
+	ldy ptr1
+	jsr strcmp
+	cmp #0
+	beq @found_dir
 
-    ; not equal
-    lda @directive_strs_index
-    inc A
-    cmp #DIRECTIVES_STRS_LEN
-    bcc :+
+	; not equal
+	lda @directive_strs_index
+	inc A
+	cmp #DIRECTIVES_STRS_LEN
+	bcc :+
 
-    lda #$FF ; not found
-    rts
-    :
-    sta @directive_strs_index
+	lda #$FF ; not found
+	rts
+	:
+	sta @directive_strs_index
 
-    rep #$21 ; clear carry
-    .a16
-    lda ptr1
-    adc #DIRECTIVE_STRSIZE
-    sta ptr1
-    sep #$20
-    .a8    
-    
-    bra @compare_loop
-    
+	rep #$21 ; clear carry
+	.a16
+	lda ptr1
+	adc #DIRECTIVE_STRSIZE
+	sta ptr1
+	sep #$20
+	.a8	
+	
+	bra @compare_loop
+	
 @found_dir:
-    lda @directive_strs_index
-    rts
+	lda @directive_strs_index
+	rts
 
 @directive_strs_index:
-    .word 0
+	.word 0
 
 get_next_line_input:
-    ldy #0
-    :
-    phy
-    ldx input_fd
-    jsr fgetc
-    ply
-    cpx #0
-    bne @read_err
+	ldy #0
+	:
+	phy
+	ldx input_fd
+	jsr fgetc
+	ply
+	cpx #0
+	bne @read_err
 
-    cmp #$d ; newline
-    beq @newline
+	cmp #$d ; newline
+	beq @newline
 
-    sta line_buf, Y
+	sta line_buf, Y
 
-    iny
-    cpy #128
-    bne :-
+	iny
+	cpy #128
+	bne :-
 
-    dey
+	dey
 
 @newline:
-    lda #0
-    sta line_buf, Y
+	lda #0
+	sta line_buf, Y
 
-    rts
+	rts
 
 @read_err:
-    jsr @newline 
-    lda #1
-    sta eof_flag
+	jsr @newline 
+	lda #1
+	sta eof_flag
 
-    rts
+	rts
 
 eof_flag:
-    .word 0
+	.word 0
 
 next_extmem_data_bank:
-    lda last_extmem_data_bank
-    and #1
-    bne :+
+	lda last_extmem_data_bank
+	and #1
+	bne :+
 
-    lda last_extmem_data_bank
-    inc A
-    sta last_extmem_data_bank
-    rts
+	lda last_extmem_data_bank
+	inc A
+	sta last_extmem_data_bank
+	rts
 
-    :
-    jsr res_extmem_bank
-    sta last_extmem_data_bank
-    rts
+	:
+	jsr res_extmem_bank
+	sta last_extmem_data_bank
+	rts
 
 
 alloc_extmem_space_for_line:
@@ -2050,8 +2050,8 @@ alloc_extmem_space_for_line:
 	rep #$21 ; clear carry
 	.a16
 	lda lines_extmem_ptr
-    adc #3
-    sta lines_extmem_ptr
+	adc #3
+	sta lines_extmem_ptr
 	sep #$20
 	.a8
 	
@@ -2059,308 +2059,308 @@ alloc_extmem_space_for_line:
 	rts
 	
 alloc_extmem_data_space:
-    ; .A = size of data
-    rep #$20
-    .a16
-    and #$00FF
-    sta @data_size
-    clc
-    adc extmem_data_ptr
-    tax
-    sep #$20
-    .a8
-    cpx #$C000
-    
-    lda last_extmem_data_bank
+	; .A = size of data
+	rep #$20
+	.a16
+	and #$00FF
+	sta @data_size
+	clc
+	adc extmem_data_ptr
+	tax
+	sep #$20
+	.a8
+	cpx #$C000
+	
+	lda last_extmem_data_bank
 
-    bcc :+
-    ldx #$A000
-    stx extmem_data_ptr
-    jsr next_extmem_data_bank
-    rep #$20
-    .a16
-    lda @data_size
-    clc
-    adc #$A000
-    tax
-    sep #$20
-    .a8
-    lda last_extmem_data_bank
-    :
+	bcc :+
+	ldx #$A000
+	stx extmem_data_ptr
+	jsr next_extmem_data_bank
+	rep #$20
+	.a16
+	lda @data_size
+	clc
+	adc #$A000
+	tax
+	sep #$20
+	.a8
+	lda last_extmem_data_bank
+	:
 
-    phx
-    pha
+	phx
+	pha
 
-    lda lines_extmem_bank
-    jsr set_extmem_wbank
+	lda lines_extmem_bank
+	jsr set_extmem_wbank
 
-    ldx #lines_extmem_ptr
-    ldy #0
-    pla
-    pha
-    jsr vwrite_byte_extmem_y
+	ldx #lines_extmem_ptr
+	ldy #0
+	pla
+	pha
+	jsr vwrite_byte_extmem_y
 
-    iny
-    lda extmem_data_ptr
-    jsr vwrite_byte_extmem_y
+	iny
+	lda extmem_data_ptr
+	jsr vwrite_byte_extmem_y
 
-    iny
-    lda extmem_data_ptr + 1
-    jsr vwrite_byte_extmem_y
+	iny
+	lda extmem_data_ptr + 1
+	jsr vwrite_byte_extmem_y
 
-    pla
-    ldx extmem_data_ptr
+	pla
+	ldx extmem_data_ptr
 
-    ply
-    sty extmem_data_ptr
-    rts
+	ply
+	sty extmem_data_ptr
+	rts
 
 @data_size:
-    .word 0
+	.word 0
 
 get_instr_num:
-    ldy #0
-    sty @min
-    ldy #INSTRUCTION_LIST_SIZE
-    sty @max
+	ldy #0
+	sty @min
+	ldy #INSTRUCTION_LIST_SIZE
+	sty @max
 @loop:
-    lda @min
-    cmp @max
-    bcc :+
-    lda #$FF
-    rts ; not found
-    :
-    adc @max
-    lsr A
-    sta @mid
+	lda @min
+	cmp @max
+	bcc :+
+	lda #$FF
+	rts ; not found
+	:
+	adc @max
+	lsr A
+	sta @mid
 
-    rep #$20
-    .a16
-    and #$00FF
-    asl A
-    asl A
-    adc #instruction_strs
-    tay
-    sep #$20
-    .a8
-    jsr strcmp
-    cmp #0
-    beq @found
+	rep #$20
+	.a16
+	and #$00FF
+	asl A
+	asl A
+	adc #instruction_strs
+	tay
+	sep #$20
+	.a8
+	jsr strcmp
+	cmp #0
+	beq @found
 
-    bmi @before_alpha
+	bmi @before_alpha
 @after_alpha:
-    lda @mid
-    inc A
-    sta @min
-    bra @loop
+	lda @mid
+	inc A
+	sta @min
+	bra @loop
 @before_alpha:
-    lda @mid
-    sta @max
-    bra @loop
+	lda @mid
+	sta @max
+	bra @loop
 @found:
-    lda @mid
-    rts
+	lda @mid
+	rts
 
 @min:
-    .word 0
+	.word 0
 @max:
-    .word 0
+	.word 0
 @mid:
-    .word 0
+	.word 0
 
 
 ;
 ; compares str in .X to in .Y
 ;
 strcmp:
-    phx
-    phy
-    jsr @check_loop
-    ply
-    plx
-    rts
+	phx
+	phy
+	jsr @check_loop
+	ply
+	plx
+	rts
 
 @check_loop:
-    lda $00, X
-    cmp $00, Y
-    bne @not_equal
+	lda $00, X
+	cmp $00, Y
+	bne @not_equal
 
-    cmp #0
-    bne :+
-    rts
-    :
-    inx
-    iny
-    bra @check_loop
+	cmp #0
+	bne :+
+	rts
+	:
+	inx
+	iny
+	bra @check_loop
 @not_equal:
-    sec
-    sbc $00, Y
-    rts
+	sec
+	sbc $00, Y
+	rts
 
 ;
 ; takes string in .X, returns length in .A and pointer to \0 at end of string in .Y
 ; preserves .X
 ;
 strlen:
-    phx
-    ldy #0
-    :
-    lda $00, X
-    beq :+
-    iny
-    inx
-    bne :-
-    :
-    tya
-    txy ; end of string goes into .Y
-    plx
-    rts
+	phx
+	ldy #0
+	:
+	lda $00, X
+	beq :+
+	iny
+	inx
+	bne :-
+	:
+	tya
+	txy ; end of string goes into .Y
+	plx
+	rts
 
 strchr:
-    cmp $00, X
-    beq @found
-    pha
-    lda $00, X
-    beq :+
-    pla
-    inx
-    bra strchr
-    :
-    pla
-    ldx #0
-    rts
+	cmp $00, X
+	beq @found
+	pha
+	lda $00, X
+	beq :+
+	pla
+	inx
+	bra strchr
+	:
+	pla
+	ldx #0
+	rts
 @found:
-    rts
+	rts
 
 is_whitespace_char:
-    pha
-    cmp #' '
-    beq @yes
-    cmp #9 ; \t
-    beq @yes
-    cmp #$a ; \n
-    beq @yes
-    cmp #0
-    beq @yes
-    cmp #$d ; \r
-    beq @yes
+	pha
+	cmp #' '
+	beq @yes
+	cmp #9 ; \t
+	beq @yes
+	cmp #$a ; \n
+	beq @yes
+	cmp #0
+	beq @yes
+	cmp #$d ; \r
+	beq @yes
 
-    ; no
-    clc
-    pla
-    rts
+	; no
+	clc
+	pla
+	rts
 @yes:
-    sec
-    pla
-    rts
+	sec
+	pla
+	rts
 
 makeupper:
-    phx
+	phx
 @loop:
-    lda $00, X
-    beq @done
-    cmp #'a'
-    bcc :+
-    cmp #'z' + 1
-    bcs :+
-    ; carry clear
-    sbc #$20 - 1
-    sta $00, X
-    :
-    inx
-    bne @loop
+	lda $00, X
+	beq @done
+	cmp #'a'
+	bcc :+
+	cmp #'z' + 1
+	bcs :+
+	; carry clear
+	sbc #$20 - 1
+	sta $00, X
+	:
+	inx
+	bne @loop
 @done:
-    plx
-    rts
+	plx
+	rts
 
 ;
 ; returns pointer to first non-whitespace character in .X, otherwise returns pointer to null terminator if there are none
 ;
 find_non_whitespace:
-    lda $00, X
-    beq :+
-    jsr is_whitespace_char
-    bcs @cont
-    :
+	lda $00, X
+	beq :+
+	jsr is_whitespace_char
+	bcs @cont
+	:
 
-    rts
+	rts
 @cont:
-    inx
-    bne find_non_whitespace
-    rts
+	inx
+	bne find_non_whitespace
+	rts
 
 ;
 ; returns pointer to first whitespace character in .X (returns null terminator if there are none)
 ;
 find_whitespace_char:
-    lda $00, X
-    beq :+
-    jsr is_whitespace_char
-    bcc @cont
-    :
+	lda $00, X
+	beq :+
+	jsr is_whitespace_char
+	bcc @cont
+	:
 
-    rts
+	rts
 @cont:
-    inx
-    bne find_whitespace_char
-    rts
+	inx
+	bne find_whitespace_char
+	rts
 
 ;
 ; finds first ';' in a string
 ;
 find_comment:
-    lda $00, X
-    bne :+
-    rts
-    :
-    cmp #';'
-    beq :+
-    inx
-    bra find_comment
+	lda $00, X
+	bne :+
+	rts
+	:
+	cmp #';'
+	beq :+
+	inx
+	bra find_comment
 
-    :
-    rts
+	:
+	rts
 
 ;
 ; find_whitespace_char_or_comma
 ;
 find_whitespace_char_or_comma:
-    lda $00, X
-    beq :+
+	lda $00, X
+	beq :+
 	cmp #','
 	beq :+
-    jsr is_whitespace_char
-    bcc @cont
-    :
+	jsr is_whitespace_char
+	bcc @cont
+	:
 
-    rts
+	rts
 @cont:
-    inx
-    bne find_whitespace_char_or_comma
-    rts
+	inx
+	bne find_whitespace_char_or_comma
+	rts
 
 find_last_whitespace:
-    ldy #1
+	ldy #1
 
-    :
-    lda $00, X
-    beq :+
-    iny
-    inx
-    bne :-
+	:
+	lda $00, X
+	beq :+
+	iny
+	inx
+	bne :-
 
-    :
-    dey
-    beq @start_str
-    dex
-    lda $00, X
-    jsr is_whitespace_char
-    bcs :-
+	:
+	dey
+	beq @start_str
+	dex
+	lda $00, X
+	jsr is_whitespace_char
+	bcs :-
 
-    inx
-    rts
+	inx
+	rts
 @start_str:
-    rts
+	rts
 
 is_branching_instruction:
 	cmp #INSTR_BCC
@@ -2517,35 +2517,35 @@ range_error:
 	.asciiz "for a branch instruction"
 
 label_already_defined_err:
-    phx
+	phx
 
-    jsr print_gen_err_str
+	jsr print_gen_err_str
 
-    lda #<@label_already_defined_str_p1
-    ldx #>@label_already_defined_str_p1
-    jsr print_str
+	lda #<@label_already_defined_str_p1
+	ldx #>@label_already_defined_str_p1
+	jsr print_str
 
-    plx
-    rep #$20
-    .a16
-    txa
-    sep #$20
-    .a8
-    xba
-    tax
-    xba
-    jsr print_str
+	plx
+	rep #$20
+	.a16
+	txa
+	sep #$20
+	.a8
+	xba
+	tax
+	xba
+	jsr print_str
 
-    lda #<@label_already_defined_str_p2
-    ldx #>@label_already_defined_str_p2
-    jsr print_str
+	lda #<@label_already_defined_str_p2
+	ldx #>@label_already_defined_str_p2
+	jsr print_str
 
-    jmp print_newline_exit
+	jmp print_newline_exit
 
 @label_already_defined_str_p1:
-    .asciiz "label '"
+	.asciiz "label '"
 @label_already_defined_str_p2:
-    .asciiz "' already defined"
+	.asciiz "' already defined"
 
 undefined_symbol_err:
 	stx ptr0
@@ -2565,11 +2565,11 @@ undefined_symbol_err:
 	.asciiz "Encountered undefined symbol '"
 
 invalid_directive_err:
-    jsr print_gen_err_str
-    
-    lda #<@invalid_dir_str
-    ldx #>@invalid_dir_str
-    jsr print_str
+	jsr print_gen_err_str
+	
+	lda #<@invalid_dir_str
+	ldx #>@invalid_dir_str
+	jsr print_str
 	
 	jsr print_line_buf
 	
@@ -2588,62 +2588,62 @@ invalid_directive_err:
 	tax
 	xba
 	jsr print_str
-    jsr print_quote_terminate
+	jsr print_quote_terminate
 @invalid_dir_str:
-    .asciiz "Invalid directive: '."
+	.asciiz "Invalid directive: '."
 
 first_parse_error:
-    jsr print_gen_err_str
+	jsr print_gen_err_str
 
-    lda #<@invalid_line_str
-    ldx #>@invalid_line_str
-    jsr print_str
+	lda #<@invalid_line_str
+	ldx #>@invalid_line_str
+	jsr print_str
 
-    bra print_line_buf_quote_terminate
+	bra print_line_buf_quote_terminate
 @invalid_line_str:
-    .asciiz "Invalid line: '"
+	.asciiz "Invalid line: '"
 
 print_line_buf:
 	lda #<line_buf
-    ldx #>line_buf
-    jmp print_str
+	ldx #>line_buf
+	jmp print_str
 	
 print_line_buf_quote_terminate:
-    jsr print_line_buf
+	jsr print_line_buf
 print_quote_terminate:
-    lda #SINGLE_QUOTE
-    jsr CHROUT
+	lda #SINGLE_QUOTE
+	jsr CHROUT
 
-    jmp print_newline_exit
+	jmp print_newline_exit
 
 str_not_quoted_error:
-    jsr print_gen_err_str
+	jsr print_gen_err_str
 
-    lda #<@str_not_quoted_str_p1
-    ldx #>@str_not_quoted_str_p1
-    jsr print_str    
+	lda #<@str_not_quoted_str_p1
+	ldx #>@str_not_quoted_str_p1
+	jsr print_str	
 
-    lda #<line_buf
-    ldx #>line_buf
-    jsr print_str
+	lda #<line_buf
+	ldx #>line_buf
+	jsr print_str
 
-    lda #<@str_not_quoted_str_p2
-    ldx #>@str_not_quoted_str_p2
-    jsr print_str
+	lda #<@str_not_quoted_str_p2
+	ldx #>@str_not_quoted_str_p2
+	jsr print_str
 
-    lda ptr1
-    ldx ptr1 + 1
-    jsr print_str
+	lda ptr1
+	ldx ptr1 + 1
+	jsr print_str
 
-    lda #SINGLE_QUOTE
-    jsr CHROUT
+	lda #SINGLE_QUOTE
+	jsr CHROUT
 
-    jmp print_newline_exit
+	jmp print_newline_exit
 
 @str_not_quoted_str_p1:
-    .asciiz "Directive '"
+	.asciiz "Directive '"
 @str_not_quoted_str_p2:
-    .asciiz "' must be followed by double-quoted string literal, instead followed by '"
+	.asciiz "' must be followed by double-quoted string literal, instead followed by '"
 
 print_parse_msg:
 	xba
@@ -2669,51 +2669,51 @@ print_parse_msg:
 	.byte $d, 0
 
 print_gen_err_str:
-    lda #<general_err_str
-    ldx #>general_err_str
-    jmp print_str
+	lda #<general_err_str
+	ldx #>general_err_str
+	jmp print_str
 
 
 gen_error:
-    pha
+	pha
 
-    jsr print_gen_err_str
-    
-    lda #0
-    xba
-    pla
-    asl A
-    tax
+	jsr print_gen_err_str
+	
+	lda #0
+	xba
+	pla
+	asl A
+	tax
 
-    inx
-    lda error_str_list, X
-    tay
-    dex
-    lda error_str_list, X
-    tyx
-    jsr print_str
+	inx
+	lda error_str_list, X
+	tay
+	dex
+	lda error_str_list, X
+	tyx
+	jsr print_str
 
 print_newline_exit:
-    lda #$d
-    jsr CHROUT 
+	lda #$d
+	jsr CHROUT 
 
-    lda #1   
+	lda #1   
 
-    ldx #$01FD
-    txs
-    rts
+	ldx #$01FD
+	txs
+	rts
 
 error_str_list:
-    .word $FFFF, two_inputs_str, no_such_file_str, open_write_fail_str
+	.word $FFFF, two_inputs_str, no_such_file_str, open_write_fail_str
 
 two_inputs_str:
-    .asciiz "Input file already provided"
+	.asciiz "Input file already provided"
 no_such_file_str:
-    .asciiz "No such file exists"
+	.asciiz "No such file exists"
 open_write_fail_str:
-    .asciiz "Couldn't open output file for writing"
+	.asciiz "Couldn't open output file for writing"
 general_err_str:
-    .asciiz "Error: "
+	.asciiz "Error: "
 
 parse_strs:
 	.word 0, first_str, second_str, third_str
@@ -2725,18 +2725,18 @@ third_str:
 	.asciiz "third"	
 
 argc:
-    .word 0
+	.word 0
 input_fd:
-    .word 0
+	.word 0
 output_fd:
-    .word 0
+	.word 0
 output_filename_pointer:
-    .word 0
+	.word 0
 starting_pc:
-    .word 0
+	.word 0
 
 current_pc:
-    .word 0
+	.word 0
 
 a_out_str:
 	.asciiz "a.out"
@@ -2746,13 +2746,13 @@ a_out_str:
 ;
 directive_strs:
 /* 0s equal to 5 - strlen */
-    .byte "byte", 0
-    .byte "word", 0
-    .byte "dw", 0, 0, 0
-    .byte "res", 0, 0
-    .byte "equ", 0, 0
-    .byte "str", 0, 0
-    .byte "strz", 0
+	.byte "byte", 0
+	.byte "word", 0
+	.byte "dw", 0, 0, 0
+	.byte "res", 0, 0
+	.byte "equ", 0, 0
+	.byte "str", 0, 0
+	.byte "strz", 0
 
 DIR_BYTE = 0
 DIR_WORD = 1
@@ -2769,83 +2769,83 @@ DIRECTIVE_STRSIZE = 5
 ; 1+ (excl. $FF) means data is in multiples of that many bytes
 ; $FF means data size varies (needs to calc'd)
 directive_data_lens:
-    .byte 1 ; byte, * 1 = << (1 - 1)
-    .byte 2 ; word, * 2 = << (2 - 1)
-    .byte 3 ; dw, * 4 = << (3 - 1)
-    .byte $FF ; res
-    .byte 0 ; equ
-    .byte $FF ; str
-    .byte $FF ; strz
+	.byte 1 ; byte, * 1 = << (1 - 1)
+	.byte 2 ; word, * 2 = << (2 - 1)
+	.byte 3 ; dw, * 4 = << (3 - 1)
+	.byte $FF ; res
+	.byte 0 ; equ
+	.byte $FF ; str
+	.byte $FF ; strz
 
 ;
 ; Instruction data ;
 ;
 instruction_strs:
-    .asciiz "ADC" ; 0
-    .asciiz "AND" ; 1
-    .asciiz "ASL" ; 2
-    .asciiz "BCC" ; 3
-    .asciiz "BCS" ; 4
-    .asciiz "BEQ" ; 5
-    .asciiz "BIT" ; 6
-    .asciiz "BMI" ; 7
-    .asciiz "BNE" ; 8
-    .asciiz "BPL" ; 9
-    .asciiz "BRK" ; 10
-    .asciiz "BVC" ; 11
-    .asciiz "BVS" ; 12
-    .asciiz "CLC" ; 13
-    .asciiz "CLD" ; 14
-    .asciiz "CLI" ; 15
-    .asciiz "CLV" ; 16
-    .asciiz "CMP" ; 17
-    .asciiz "CPX" ; 18
-    .asciiz "CPY" ; 19
-    .asciiz "DEC" ; 20
-    .asciiz "DEX" ; 21
-    .asciiz "DEY" ; 22
-    .asciiz "EOR" ; 23
-    .asciiz "INC" ; 24
-    .asciiz "INX" ; 25
-    .asciiz "INY" ; 26
-    .asciiz "JMP" ; 27
-    .asciiz "JSR" ; 28
-    .asciiz "LDA" ; 29
-    .asciiz "LDX" ; 30
-    .asciiz "LDY" ; 31
-    .asciiz "LSR" ; 32
-    .asciiz "NOP" ; 33
-    .asciiz "ORA" ; 34
-    .asciiz "PHA" ; 35
-    .asciiz "PHP" ; 36
-    .asciiz "PHX" ; 37
-    .asciiz "PHY" ; 38
-    .asciiz "PLA" ; 39
-    .asciiz "PLP" ; 40
-    .asciiz "PLX" ; 41
-    .asciiz "PLY" ; 42
-    .asciiz "ROL" ; 43
-    .asciiz "ROR" ; 44
-    .asciiz "RTI" ; 45
-    .asciiz "RTS" ; 46
-    .asciiz "SBC" ; 47
-    .asciiz "SEC" ; 48
-    .asciiz "SED" ; 49
-    .asciiz "SEI" ; 50
-    .asciiz "STA" ; 51
-    .asciiz "STP" ; 52
-    .asciiz "STX" ; 53
-    .asciiz "STY" ; 54
-    .asciiz "STZ" ; 55
-    .asciiz "TAX" ; 56
-    .asciiz "TAY" ; 57
-    .asciiz "TXY" ; 58
-    .asciiz "TYX" ; 59
-    .asciiz "TSX" ; 60
-    .asciiz "TXA" ; 61
-    .asciiz "TXS" ; 62
-    .asciiz "TYA" ; 63
-    .asciiz "WAI" ; 64
+	.asciiz "ADC" ; 0
+	.asciiz "AND" ; 1
+	.asciiz "ASL" ; 2
+	.asciiz "BCC" ; 3
+	.asciiz "BCS" ; 4
+	.asciiz "BEQ" ; 5
+	.asciiz "BIT" ; 6
+	.asciiz "BMI" ; 7
+	.asciiz "BNE" ; 8
+	.asciiz "BPL" ; 9
+	.asciiz "BRK" ; 10
+	.asciiz "BVC" ; 11
+	.asciiz "BVS" ; 12
+	.asciiz "CLC" ; 13
+	.asciiz "CLD" ; 14
+	.asciiz "CLI" ; 15
+	.asciiz "CLV" ; 16
+	.asciiz "CMP" ; 17
+	.asciiz "CPX" ; 18
+	.asciiz "CPY" ; 19
+	.asciiz "DEC" ; 20
+	.asciiz "DEX" ; 21
+	.asciiz "DEY" ; 22
+	.asciiz "EOR" ; 23
+	.asciiz "INC" ; 24
+	.asciiz "INX" ; 25
+	.asciiz "INY" ; 26
+	.asciiz "JMP" ; 27
+	.asciiz "JSR" ; 28
+	.asciiz "LDA" ; 29
+	.asciiz "LDX" ; 30
+	.asciiz "LDY" ; 31
+	.asciiz "LSR" ; 32
+	.asciiz "NOP" ; 33
+	.asciiz "ORA" ; 34
+	.asciiz "PHA" ; 35
+	.asciiz "PHP" ; 36
+	.asciiz "PHX" ; 37
+	.asciiz "PHY" ; 38
+	.asciiz "PLA" ; 39
+	.asciiz "PLP" ; 40
+	.asciiz "PLX" ; 41
+	.asciiz "PLY" ; 42
+	.asciiz "ROL" ; 43
+	.asciiz "ROR" ; 44
+	.asciiz "RTI" ; 45
+	.asciiz "RTS" ; 46
+	.asciiz "SBC" ; 47
+	.asciiz "SEC" ; 48
+	.asciiz "SED" ; 49
+	.asciiz "SEI" ; 50
+	.asciiz "STA" ; 51
+	.asciiz "STP" ; 52
+	.asciiz "STX" ; 53
+	.asciiz "STY" ; 54
+	.asciiz "STZ" ; 55
+	.asciiz "TAX" ; 56
+	.asciiz "TAY" ; 57
+	.asciiz "TXY" ; 58
+	.asciiz "TYX" ; 59
+	.asciiz "TSX" ; 60
+	.asciiz "TXA" ; 61
+	.asciiz "TXS" ; 62
+	.asciiz "TYA" ; 63
+	.asciiz "WAI" ; 64
 
 INSTRUCTION_LIST_SIZE = 65
 
@@ -2955,15 +2955,15 @@ instruction_modes:
 .SEGMENT "BSS"
 
 line_buf:
-    .res 128 + 1
+	.res 128 + 1
 
 lines_extmem_bank:
-    .word 0
+	.word 0
 lines_extmem_ptr:
-    .word 0
+	.word 0
 
 last_extmem_data_bank:
-    .word 0
+	.word 0
 extmem_data_ptr:
-    .word 0
+	.word 0
 
