@@ -23,7 +23,7 @@ The following utilities are mostly similar in function to the POSIX utilities, w
 - kill
   - no options
 - ls
-
+  - only options are `-a` and `-b` (disable color)
 - mkdir
 - mv
 - ps
