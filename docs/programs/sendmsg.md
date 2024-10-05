@@ -18,4 +18,4 @@ Both `-c` and `-s` can be used more than once to craft a message. The first argu
 
 <br/>
 
-More information on cx16os's hook system can be found [here](/docs/system_hooks.md)
+More information on cx16os's hook system can be found [here](/docs/system_hooks.md).
