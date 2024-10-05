@@ -18,7 +18,14 @@ valid operators:
   - `^`: bitwise XOR
   - `L`: arithmetic shift left
   - `R`: logical shift right
-  
+
+valid values for expressions (and instructions):
+  - a label `label_name`
+  - a decimal number `num`
+  - a hexadecimal number `$hex_num`
+  - 1 single-quoted character `'c'`
+  - an expression
+
 <br />
 
 `<` and `>` are used to get the low and high bytes of a value, respectively, and can be used only next to labels, but can be used in expressions
