@@ -26,10 +26,19 @@ The following utilities are mostly similar in function to the POSIX utilities, w
 - ls
   - only options are `-a` and `-b` (disable color)
 - mkdir
+  - no options
 - mv
+  - no options
 - ps
+  - no options
 - pwd
+  - no options
 - rm
+  - no options
 - rmdir
+  - no options
 - strings
 - xxd
+  - no options
+
+
