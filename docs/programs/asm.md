@@ -38,6 +38,39 @@ For an example of a program that assemblers under asm, look [here](/src/osfiles/
 
 <br />
 
+supported instructions (grouped by function):
+- LDA, LDX, LDY
+- STA, STX, STY, STZ
+- TAX, TAY, TXY, TXA, TYA, TYX
+- ADC, SBC, AND, EOR, ORA
+- ASL, LSR, ROL, ROR
+
+- DEC, DEX, DEY
+- INC, INX, INY
+
+- CMP, CPX, CPY
+
+- BIT
+
+- CLC, CLD, CLI, CLV
+- SEC, SED, SEI
+
+- BCC, BNE, BPL, BVC
+- BCS, BEQ, BMI, BVS
+
+- PHA, PHP, PHX, PHY
+- PLA, PLP, PLX, PLY
+- JMP, JSR, RTS
+- BRK, RTI
+- TSX, TXS
+
+- NOP
+- STP, WAI
+
+*Note: within cx16os, the 65816 always runs in native 65816 mode. If the TXS instruction is ran in 8-bit native mode, the high byte of the stack pointer will be set to $00, likely causing a crash.*
+
+<br />
+
 directives:
   - `.byte value`: Allocates 1 byte of space for `value`, which can be an expression
   - `.word value`: Allocates 2 bytes of space for `value`, which can be an expression
