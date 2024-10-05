@@ -84,4 +84,6 @@ directives:
 
 limitations:
 - no `.include` or `.incbin` directives
+- expression system somewhat limited
+- `.res` directive not implemented
 - maximum file length of 2,730 lines ($8000 / 3)
