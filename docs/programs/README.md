@@ -6,6 +6,7 @@ The following utilities are mostly similar in function to the POSIX utilities, w
 - basename
   - no options
 - cat
+  - does not read from stdin if no arguments are given
   - no options
 - clear
   - no options
@@ -17,6 +18,7 @@ The following utilities are mostly similar in function to the POSIX utilities, w
 - dirname
   - no options
 - echo
+  - no options (they are echo'd to stdout)
 - ed
   - no options (first argument is a file to open)
   - no regex support
@@ -38,7 +40,11 @@ The following utilities are mostly similar in function to the POSIX utilities, w
 - rmdir
   - no options
 - strings
+  - does not read from stdin if no file arguments are provided
+  - only options are `-f`, `-t`, `-n`, and `-h`
 - xxd
+  - does not read from stdin if no file arguments are provided
   - no options
+
 
 
