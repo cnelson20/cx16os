@@ -10,8 +10,8 @@ all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mk
 clean:
 	rm *.o
 	
-clear:
-	find . -type f  -regextype posix-egrep ! -regex "\./(\S*\.\S*|[A-Z]\S*)"
+wipe_binaries:
+	find . -type f  -regextype posix-egrep ! -regex "\./(\S*\.\S*|[A-Z]\S*)" -delete
 
 bindir: $(MNT_DIR)/bin
 	
