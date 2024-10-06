@@ -8,6 +8,8 @@ The following programs each have their own documentation page:
 
 - [sendmsg](sendmsg.md) - sends messages through the 8 general hooks to other programs
 
+- [swapterm](swapterm.md) - switch between up to 4 terminal windows
+
 <br />
 
 The following programs are mostly similar in function to the POSIX utilities, with more detail listed under each program:
