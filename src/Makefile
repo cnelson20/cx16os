@@ -28,6 +28,10 @@ clean:
 	-rm -r mnt/
 	-rm -r mnt_dir/
 
+clear:
+	-make clean
+	-make clear -C programs/
+
 build: os.prg programs
 	cp os.prg mnt/OS.PRG
 	cp AUTOBOOT.X16 mnt/
