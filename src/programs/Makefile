@@ -12,3 +12,9 @@ clean:
 	-make clean -C c/
 	-make clean -C cc65/
 	-make clean -C asm/
+	
+clear:
+	-make clear -C c/
+	-make clear -C cc65/
+	-make clear -C asm/
+

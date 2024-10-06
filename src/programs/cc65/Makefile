@@ -18,3 +18,6 @@ $(OBJS): %.o: %.s routines.inc
 
 clean:
 	-rm *.o
+	
+clear:
+	rm cx16os.lib

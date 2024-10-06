@@ -14,6 +14,9 @@ clean:
 	rm *.s
 	rm *.o
 
+clear:
+	find . -type f  -regextype posix-egrep ! -regex "\./(\S*\.\S*|[A-Z]\S*)" -delete
+
 bindir: $(MNT_DIR)/bin
 
 $(MNT_DIR)/bin:	
