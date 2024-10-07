@@ -41,7 +41,6 @@ PV_PWD := PV_PWD_PREFIX + 4 ; holds process PWD
 PV_TMP_FILENAME_PREFIX := PV_PWD + sys_max_filelen
 PV_TMP_FILENAME := PV_TMP_FILENAME_PREFIX + 2
 
-
 ;
 ; bin/ directory (a pseudo PATH), pwd, base_dir (~)
 ;
