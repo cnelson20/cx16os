@@ -241,6 +241,11 @@ custom_irq_816_handler:
 	sta STORE_PROG_RAMBANK
 	sta @curr_ram_bank_in_use
 	
+	lda ROM_BANK
+	sta STORE_PROG_ROMBANK
+	
+	stz ROM_BANK
+	
 	tsc
 	sec 
 	adc #$14
@@ -1008,6 +1013,7 @@ new_prog_args:
 setup_process_info:
 	sty RAM_BANK ; .Y holds new bank
 	sty STORE_PROG_RAMBANK
+	stz STORE_PROG_ROMBANK
 	
 	push_ax ; KZP0
 	
@@ -1312,7 +1318,10 @@ switch_control_bank:
 	sep #$20
 	.a8
 	pha
-
+	
+	lda STORE_PROG_ROMBANK
+	sta ROM_BANK
+	
 	lda STORE_PROG_RAMBANK
 	sta RAM_BANK
 	
