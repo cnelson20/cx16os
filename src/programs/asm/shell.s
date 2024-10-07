@@ -116,9 +116,9 @@ prog_args_error_str:
 	.asciiz "invalid argument"
 
 shrc_filename:
-	.asciiz ".shrc"
+	.asciiz "~/.shrc"
 bootrc_filename:
-	.asciiz ".bootrc"
+	.asciiz "~/.bootrc"
 
 welcome:
 	lda print_startup_msg_flag
