@@ -31,6 +31,7 @@ clean:
 clear:
 	-make clean
 	-make clear -C programs/
+	-rm cx16os.img
 
 build: os.prg programs
 	cp os.prg mnt/OS.PRG
