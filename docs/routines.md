@@ -12,7 +12,7 @@
 | $9D0F | [`get_args`](#9d0f-get_args) | | .AX, .Y | | &mdash; |
 | $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | | | &cross; |
 | $9D15 | [`parse_num`](#9d15-parse_num) | .AX | .AX | .Y | &check; |
-| $9D18 | [`hex_num_to_string`](#9d18-hex_num_to_string) | .A | .A, .X | | &check; |
+| $9D18 | [`hex_num_to_string / GET_HEX_NUM`](#9d18-hex_num_to_string) | .A | .A, .X | | &check; |
 | $9D1B | [`kill_process`](#9d1b-kill_process) | .A | .A, .X | | &check; |
 | $9D1E | [`open_file`](#9d1e-open_file) | .AX, .Y | .A, .X | | &mdash; |
 | $9D21 | [`close_file`](#9d21-close_file) | .A | | .X, .Y | &mdash; |
