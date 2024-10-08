@@ -628,27 +628,59 @@ parse_env_var:
 
 @repl_arg_hex_num:
 	pha ; push val
-	lda #4
+	
+	lda #2 ; 1 digit number + \0
+	sta @shift_val
+	
+	pla
+	pha
+	
+	cmp #10
+	bcc :+
+	inc @shift_val ; another byte for 10s digit
+	cmp #100
+	bcc :+
+	inc @shift_val ; another for 100s digit
+	:
+	
+	lda @shift_val
 	jsr shift_output
 	
 	ldy curr_arg
 	lda args_offset_arr, Y
 	tay
-	lda #'$'
-	sta output, Y
-	iny
 	pla ; pull val back
 	phy
-	jsr GET_HEX_NUM
+	ldx #0
+	jsr bin_to_bcd16 ; Convert val to bcd string, .X = hundreds digit, .A = tens & ones digit
 	ply
+	cpx #0
+	beq :+
+	pha
+	txa
+	jsr GET_HEX_NUM
+	txa
 	sta output, Y
 	iny
+	pla ; Since num >= 100, always want to include tens digit
+	jsr GET_HEX_NUM
+	bra :++
+	:
+	jsr GET_HEX_NUM ; get last 2 digits
+	cmp #'0' ; is the tens digit 0?
+	beq :++ ; if so, branch ahead
+	:
+	sta output, Y
+	iny
+	:
 	txa
 	sta output, Y
 	iny
 	lda #0
-	sta output, Y	
+	sta output, Y
 	rts
+@shift_val:
+	
 
 search_env_vars:
 	lda env_extmem_bank ; is the bank initialized?
@@ -1022,6 +1054,8 @@ check_special_cmds:
 	tax
 	tya
 	
+	stz last_return_val
+	
 	jsr chdir
 	cmp #0
 	beq :+
@@ -1029,6 +1063,9 @@ check_special_cmds:
 	lda #<cd_error_string
 	ldx #>cd_error_string
 	jsr print_str	
+	
+	lda #1
+	sta last_return_val
 	
 	:
 	lda #1
@@ -1059,8 +1096,11 @@ check_special_cmds:
 	ldx #>string_source
 	jsr cmd_cmp
 	bne @not_source
-
+	
+	stz last_return_val
+	
 	jsr open_shell_file
+	sta last_return_val
 
 	lda #1
 	rts
@@ -1311,6 +1351,8 @@ open_shell_file:
 	lda #<source_inception_str
 	ldx #>source_inception_str
 	jsr print_str
+	
+	lda #1
 	rts
 @not_within_script:
 
@@ -1320,7 +1362,10 @@ open_shell_file:
 
 	lda #<source_err_string
 	ldx #>source_err_string
-	jmp print_str ; print and return
+	jsr print_str ; print and return
+	
+	lda #1
+	rts
 	:
 
 	ldy #1
@@ -1363,6 +1408,8 @@ open_shell_file:
 
 	lda #1
 	sta curr_running_script
+	
+	lda #0 ; open_shell_file success
 	rts
 
 @open_error:
@@ -1389,7 +1436,10 @@ open_shell_file:
 	jsr CHROUT
 
 	lda #$d
-	jmp CHROUT
+	jsr CHROUT
+	
+	lda #1
+	rts
 	
 get_next_arg:
 	dec argc
