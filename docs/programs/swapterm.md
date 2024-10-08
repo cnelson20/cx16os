@@ -16,5 +16,7 @@ Programs can switch terminals by sending a command through hook 1 in the format 
 
 To change the terminal of the shell you are using, you could use `sendmsg -h 1 -c $$ -c [termno]`.
 
+<br />
+
 Limitations:
 - PLOT_X and PLOT_Y control characters are not supported
