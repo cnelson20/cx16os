@@ -324,7 +324,7 @@ Return values:
 - Number to convert in .AX
 - Example outputs:
   - .AX = 512 --> .A = $12, .X = $05, .Y = $00
-  - .AX = 63 --> .A = $63, .X = $05, .Y = $00
+  - .AX = 63 --> .A = $63, .X = $00, .Y = $00
 - Can be used in conjunction with the [`hex_num_to_string`](#9d18-hex_num_to_string) function to print decimal numbers
 
 Return values:
