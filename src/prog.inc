@@ -54,6 +54,7 @@ call_table_mem_start := $9D00
 KERNAL_FILENUM = 2
 
 FIRST_PROGRAM_BANK = $10
+MAX_ALIVE_PROCESSES = (($100 - $10) / 2)
 
 sys_max_filelen = 128
 MAX_FILELEN = sys_max_filelen

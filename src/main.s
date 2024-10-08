@@ -538,6 +538,7 @@ program_exit:
 	tax
 	lda KZP1
 	sta return_table, X
+	stz process_instance_banks, X
 	
 	pha_byte KZP0
 	jsr close_process_files_int
@@ -889,9 +890,16 @@ set_process_bank_used:
 	:
 	sta process_val_to_store
 
-
 	lda #DEFAULT_PRIORITY
 	sta process_priority_table, X
+	
+	lda process_table, X ; load instance id back into .A
+	and #$7F ; Go from $80 - $FF to $00 - $7F range
+	pha ; Push iid to stack
+	txa ; Move pid from .X to .A
+	plx ; Pull iid to .X
+	sta process_instance_banks, X
+	
 	rts
 
 process_val_to_store:
@@ -1499,39 +1507,43 @@ setup_call_table:
 ; various variables / tables for os use ;
 ;
 
+PROCESS_TABLE_SIZE = $100
+INSTANCE_TABLE_SIZE = $80
+
 ; holds which ram banks have processes ;
 .export process_table
 process_table := $9000
-PROCESS_TABLE_SIZE = $100
 
 other_process_tables := process_table + PROCESS_TABLE_SIZE
 
+; map from iids to pids
+.export process_instance_banks
+process_instance_banks := other_process_tables
+
 ; holds priority for processes - higher means more time to run ;
 .export process_priority_table
-process_priority_table := other_process_tables
-PROCESS_PRIORITY_SIZE = PROCESS_TABLE_SIZE	
+process_priority_table := process_instance_banks + INSTANCE_TABLE_SIZE
 	
 ; holds order of active processes
 .export process_parents_table
-process_parents_table := process_priority_table + PROCESS_PRIORITY_SIZE
-PROCESS_PARENTS_SIZE = PROCESS_TABLE_SIZE
+process_parents_table := process_priority_table + PROCESS_TABLE_SIZE
 
 ; holds return values for programs ;
 .export return_table
-return_table = process_parents_table + PROCESS_PARENTS_SIZE
-RETURN_TABLE_SIZE = $80
+return_table = process_parents_table + PROCESS_TABLE_SIZE
 
+; instance table of alive processes
 .export active_processes_table
-active_processes_table := return_table + RETURN_TABLE_SIZE
-ACTIVE_PROCESSES_TABLE_SIZE = $80
+active_processes_table := return_table + INSTANCE_TABLE_SIZE
+ACTIVE_PROCESSES_TABLE_SIZE = MAX_ALIVE_PROCESSES
 
 ; for fill operations
 END_PROCESS_TABLES = active_processes_table + ACTIVE_PROCESSES_TABLE_SIZE
 
-; pointer to top of above stack ;
 .export active_process
 active_process:
 	.byte 0
+; pointer to top of above stack ;
 .export active_processes_table_index
 active_processes_table_index:
 	.byte 0
