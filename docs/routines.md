@@ -148,7 +148,9 @@ Return values:
 ---
 
 ### $9D18: hex_num_to_string
+- Also known as `GET_HEX_NUM`
 - Converts the 8-bit number in .A to its base-16 ASCII equivalent
+- Preserves .Y
 
 Return values:
 - .X = ASCII conversion of num's hi nybble
