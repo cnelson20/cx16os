@@ -10,6 +10,8 @@ The following programs each have their own documentation page:
 
 - [swapterm](swapterm.md) - switch between up to 4 terminal windows
 
+- [neofetch](neofetch.md) - display system info
+
 <br />
 
 The following programs are mostly similar in function to the POSIX utilities, with more detail listed under each program:
