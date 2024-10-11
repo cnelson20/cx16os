@@ -14,8 +14,13 @@ ptr3 = $36
 CMD_MAX_SIZE = 128
 
 LEFT_CURSOR = $9D
+RIGHT_CURSOR = $1D
+BACKSPACE = $14
+DEL = $19
+
 SINGLE_QUOTE = 39
 
+SWAP_COLORS = 1
 COLOR_WHITE = 5
 COLOR_GREEN = $1E
 COLOR_BLUE = $1F
@@ -222,7 +227,11 @@ new_line:
 	lda #$20 ; space
 	jsr CHROUT
 	
-	lda #'_'
+	lda #SWAP_COLORS
+	jsr CHROUT
+	lda #' '
+	jsr CHROUT
+	lda #SWAP_COLORS
 	jsr CHROUT
 	lda #LEFT_CURSOR
 	jsr CHROUT
@@ -249,6 +258,7 @@ skip_print_prompt:
 	lda #0
 	jsr send_byte_chrout_hook
 	
+	stz high_input_strlen
 	stz input
 	ldx #0
 wait_for_input:
@@ -274,16 +284,27 @@ wait_for_input:
 	
 @key_buff_not_empty:
 
-
 	cmp #$0D ; return
-	beq command_entered
+	beq :+
 	cmp #$8D ; shifted return
-	beq command_entered
+	bne :++
+	:
+	jmp command_entered
+	:
 	
 	cmp #$14 ; backspace
-	beq backspace
+	bne :+
+	jmp backspace
+	:
 	cmp #$19 ; delete
-	beq backspace
+	bne :+
+	jmp delete
+	:
+
+	cmp #LEFT_CURSOR
+	beq left_cursor
+	cmp #RIGHT_CURSOR
+	beq right_cursor
 	
 	; if char < $20 and not one of above chars, ignore
 	cmp #$20
@@ -294,65 +315,215 @@ wait_for_input:
 	bcc :+
 	jmp wait_for_input
 	:
-char_entered:
-	sta input, X
-	inx
+char_entered:	
+	ldy curr_running_script
+	bne :+
+	jsr CHROUT ; print character
+	:
 	
 	pha
-	lda curr_running_script
-	cmp #1
+	phx
+	jsr move_input_chars_forward
+	plx
 	pla
-	bcs :+
+	sta input, X
+	inx
+	cpx high_input_strlen
+	bcc :+
+	stx high_input_strlen
+	:
+	
+	phx
+	lda #0
+	jsr send_byte_chrout_hook
+	plx
+	
+	jmp wait_for_input
 
+high_input_strlen:
+	.byte 0
+
+left_cursor:
+	cpx #0
+	beq @end_left_cursor
+	
+	lda #LEFT_CURSOR
 	jsr CHROUT
 	
-	lda #'_'
+	dex
+	
+	lda #SWAP_COLORS
+	jsr CHROUT
+	lda input, X
+	jsr CHROUT
+	lda #SWAP_COLORS
+	jsr CHROUT
+	lda input + 1, X ; input, X + 1
+	bne :+
+	lda #$20
+	:
 	jsr CHROUT
 	lda #LEFT_CURSOR
 	jsr CHROUT
-	lda #0
+	jsr CHROUT
+	
 	phx
+	lda #0
 	jsr send_byte_chrout_hook
 	plx
+	
+@end_left_cursor:	
+	jmp wait_for_input
 
-	:	
+right_cursor:
+	lda input, X
+	beq @end_right_cursor 
+	
+	lda input, X
+	jsr CHROUT	
+	inx
+	lda #SWAP_COLORS
+	jsr CHROUT
+	lda input, X
+	bne :+ 
+	lda #' '
+	:
+	jsr CHROUT
+	lda #SWAP_COLORS
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+	
+	phx
+	lda #0
+	jsr send_byte_chrout_hook
+	plx
+@end_right_cursor:
+	jmp wait_for_input
+
+delete:
+	lda input, X
+	beq :+ ; if input strlen is 0, dont delete
+	inx
+	lda input, X
+	bne :++ ; if character to delete is \0, dont
+	:
+	jmp wait_for_input
+	:
+	lda #1
+	sta backspace_not_empty_mode
+	jsr backspace_not_empty
 	jmp wait_for_input
 	
 backspace:
 	cpx #0
-	bne backspace_not_empty
+	bne :+ 
 	jmp wait_for_input
+	:
+	stz backspace_not_empty_mode
+	jsr backspace_not_empty
+	jmp wait_for_input
+
+backspace_not_empty_mode:
+	.byte 0 ; 0 = backspace, 1 = delete
 backspace_not_empty:
+	phx
+	:
+	lda input, X
+	sta input - 1, X
+	beq :+
+	inx
+	bne :-
+	:
+	plx
 	dex
+	
+	phx
+	lda ptr0
+	pha
+	
+	lda backspace_not_empty_mode
+	bne :+
+	ldy curr_running_script
+	bne :+
+	lda #' '
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+	jsr CHROUT
+	:
+	
+	lda #1
+	sta ptr0 ; times to LEFT_CURSOR at end
+@print_loop:
+	lda input, X
+	beq @end_print_loop
+	ldy curr_running_script
+	bne :+
+	jsr CHROUT
+	inc ptr0 ; print one time, need to go back
+	:
+	inx
+	bne @print_loop
+@end_print_loop:
+	ldy curr_running_script
+	bne :++
+	lda #' '
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	:
+	jsr CHROUT
+	dec ptr0
+	bne :-
+	:	
+	
+	pla
+	sta ptr0
+	plx
+	
+	lda #SWAP_COLORS
+	jsr CHROUT
+	lda input, X
+	bne :+
+	lda #' '
+	:
+	jsr CHROUT
+	lda #SWAP_COLORS
+	jsr CHROUT
 	lda #LEFT_CURSOR
 	jsr CHROUT
 	
-	lda #'_'
-	jsr CHROUT
-	lda #$20
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-	jsr CHROUT
-	lda #0
+	; backspace not implemented
+	
 	phx
+	lda #0
 	jsr send_byte_chrout_hook
 	plx
 	
-	jmp wait_for_input
+	rts
 
 command_entered:
 	lda curr_running_script
 	bne :+
-
-	lda #$20
+	
+	lda input, X
+	bne :+
+	lda #' '
+	:
 	jsr CHROUT
 	lda #$0d
 	jsr CHROUT
 	
 	:
 	stz in_quotes
-	stz input, X	
+	
+	ldx #0
+	:
+	lda input, X
+	beq :+
+	inx
+	bne :-
+	: ; get strlen(input)
 	cpx #0
 	bne not_empty_line
 	jmp new_line
@@ -575,6 +746,69 @@ copy_back_args:
 	sta output, Y
 	sty command_length
 	rts
+
+move_input_chars_forward:	
+	phx
+	lda ptr0
+	pha ; save ptr0
+	
+	stz @print_count
+	
+	stx ptr0
+	dec ptr0
+@find_null_term_loop:
+	lda input, X
+	beq @end_find_null_term_loop
+	
+	ldy curr_running_script
+	bne :+
+	jsr CHROUT
+	inc @print_count
+	:
+	inx	
+	bne @find_null_term_loop
+@end_find_null_term_loop:
+	
+	; copying loop ;
+@copy_forward_loop:
+	lda input, X
+	sta input + 1, X
+	dex
+	cpx ptr0
+	bne @copy_forward_loop
+	
+	lda @print_count
+	beq :++
+	lda #LEFT_CURSOR
+	:
+	jsr CHROUT
+	dec @print_count
+	bne :-
+	:
+	
+	pla
+	sta ptr0
+	plx
+	
+	ldy curr_running_script
+	bne @running_script_dont_print
+	lda #SWAP_COLORS
+	jsr CHROUT
+	inx
+	lda input, X
+	bne :+
+	lda #' '
+	:
+	jsr CHROUT
+	lda #SWAP_COLORS
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+@running_script_dont_print:
+	rts
+
+@print_count:
+	.byte 0
 
 parse_env_var:
 	ldx curr_arg
