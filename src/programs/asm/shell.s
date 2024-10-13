@@ -52,11 +52,6 @@ prog_args_loop:
 	sta stay_alive_after_input_eof
 	bra prog_args_loop
 	:
-	cmp #'s' ; skip
-	bne :+
-	stz print_startup_msg_flag
-	bra prog_args_loop
-	:
 	cmp #'c' ; command
 	bne :+
 	jsr get_next_arg
@@ -66,7 +61,6 @@ prog_args_loop:
 	sta first_command_addr
 	lda ptr0 + 1
 	sta first_command_addr + 1
-	stz print_startup_msg_flag
 	bra prog_args_loop
 	:
 
@@ -126,13 +120,6 @@ bootrc_filename:
 	.asciiz "~/.bootrc"
 
 welcome:
-	lda print_startup_msg_flag
-	beq :+
-	lda #<welcome_string
-	ldx #>welcome_string
-	jsr print_str
-	:
-
 	stz new_stdin_fileno
 	stz new_stdout_fileno
 
@@ -1803,8 +1790,6 @@ curr_script_is_bootrc:
 	.byte 0
 stay_alive_after_input_eof:
 	.byte 0
-print_startup_msg_flag:
-	.byte 1
 first_command_addr:
 	.word 0
 argc:
