@@ -549,7 +549,7 @@ nspace_found:
 seperate_words_loop:
 	lda input, Y
 	beq end_loop
-	cmp #$22 ; quotes
+	cmp #'"' ; double quote
 	bne char_not_quote
 	; if in quotes, toggle quoted mode and dont include in command 
 	lda in_quotes

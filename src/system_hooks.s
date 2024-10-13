@@ -281,7 +281,7 @@ putc_v:
     txa
     
     ; need to handle quote mode ;
-	cmp #$22 ; "
+	cmp #'"' ; "
 	bne :+
 	pha
 	lda #$80
