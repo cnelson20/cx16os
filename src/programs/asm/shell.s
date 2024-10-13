@@ -169,7 +169,7 @@ new_line:
 	stz next_stay_alive_after_eof
 	:
 @no_exit_after_exec:
-	lda last_background_alive
+	lda last_background_alive ; if last_background_alive proc died, set var to 0
 	beq :+
 	lda last_background_pid
 	jsr get_process_info
@@ -318,6 +318,9 @@ char_entered:
 	cpx high_input_strlen
 	bcc :+
 	stx high_input_strlen
+	;inx ; move_input_chars_forward does this
+	;stz input, X
+	;dex
 	:
 	
 	phx
@@ -491,8 +494,7 @@ backspace_not_empty:
 
 command_entered:
 	lda curr_running_script
-	bne :+
-	
+	bne :++
 	lda input, X
 	bne :+
 	lda #' '
@@ -500,10 +502,9 @@ command_entered:
 	jsr CHROUT
 	lda #$0d
 	jsr CHROUT
-	
 	:
-	stz in_quotes
 	
+	stz in_quotes
 	ldx #0
 	:
 	lda input, X
