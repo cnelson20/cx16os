@@ -279,6 +279,9 @@ wait_for_input:
 	jmp command_entered
 	:
 	
+	ldy curr_running_script
+	bne @no_script_movement_chars
+	
 	cmp #$14 ; backspace
 	bne :+
 	jmp backspace
@@ -293,6 +296,7 @@ wait_for_input:
 	cmp #RIGHT_CURSOR
 	beq right_cursor
 	
+@no_script_movement_chars:
 	; if char < $20 and not one of above chars, ignore
 	cmp #$20
 	bcc wait_for_input
@@ -306,21 +310,21 @@ char_entered:
 	ldy curr_running_script
 	bne :+
 	jsr CHROUT ; print character
-	:
-	
 	pha
 	phx
 	jsr move_input_chars_forward
 	plx
 	pla
+	:
+	
 	sta input, X
 	inx
 	cpx high_input_strlen
 	bcc :+
 	stx high_input_strlen
-	;inx ; move_input_chars_forward does this
-	;stz input, X
-	;dex
+	inx ; for scripts when move_input_chars_forward doesn't already do this
+	stz input, X
+	dex
 	:
 	
 	phx
@@ -735,7 +739,7 @@ copy_back_args:
 	sty command_length
 	rts
 
-move_input_chars_forward:	
+move_input_chars_forward:
 	phx
 	lda ptr0
 	pha ; save ptr0
@@ -748,11 +752,8 @@ move_input_chars_forward:
 	lda input, X
 	beq @end_find_null_term_loop
 	
-	ldy curr_running_script
-	bne :+
 	jsr CHROUT
 	inc @print_count
-	:
 	inx	
 	bne @find_null_term_loop
 @end_find_null_term_loop:
@@ -778,8 +779,6 @@ move_input_chars_forward:
 	sta ptr0
 	plx
 	
-	ldy curr_running_script
-	bne @running_script_dont_print
 	lda #SWAP_COLORS
 	jsr CHROUT
 	inx
@@ -792,7 +791,6 @@ move_input_chars_forward:
 	jsr CHROUT
 	lda #LEFT_CURSOR
 	jsr CHROUT
-@running_script_dont_print:
 	rts
 
 @print_count:
