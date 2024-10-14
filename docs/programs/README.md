@@ -12,6 +12,8 @@ The following programs each have their own documentation page:
 
 - [neofetch](neofetch.md) - display system info
 
+- [shell](shell.md) - the default cx16os shell
+
 <br />
 
 The following programs are mostly similar in function to the POSIX utilities, with more detail listed under each program:
