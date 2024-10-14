@@ -240,6 +240,8 @@ skip_print_prompt:
 	:
 	lda #1
 	sta exit_after_exec
+	stz first_command_addr
+	stz first_command_addr + 1
 	jmp not_empty_line
 @not_auto_command:
 	lda #0
