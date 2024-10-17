@@ -27,6 +27,7 @@ READST := $FFB7
 MEMTOP := $FF99
 RDTIM  := $FFDE
 
+screen_mode := $FF5F
 enter_basic := $FF47
 memory_fill := $FEE4
 memory_copy := $FEE7
