@@ -16,6 +16,7 @@ Options:
 Special commands:
 - `cd directory`: Attempt to chdir to `directory`
 - `setenv name value`: Set variable `name` to `value`. It can be accessed by `$name` going forward.
+- `source filename`: Run each line in `filename` as a series of commands
 
 Special shell variables:
 - `$?`: the return value of the last command ran
