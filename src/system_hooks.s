@@ -885,8 +885,8 @@ try_unlock_vera_regs:
 	;sta VERA::VIDEO
 
 	; reset mapbase for layer1
-	;lda #$D8 ; mapbase is at $1B000
-	;sta VERA::L1::MAP_BASE
+	lda #$D8 ; mapbase is at $1B000
+	sta VERA::L1::MAP_BASE
 
 	lda default_screen_mode
 	clc
