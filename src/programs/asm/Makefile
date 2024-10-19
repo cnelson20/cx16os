@@ -5,7 +5,7 @@ MNT_DIR = ../../mnt
 
 FLAGS = -t none --cfg-path $(INCL_DIR) --asm-include-dir $(INCL_DIR) -C $(INCL_DIR)/cx16os_asm.cfg
 
-all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir guiterm gui sendmsg crshmon color strings cron swapterm asm neofetch dirname basename
+all: bindir shell echo ps kill looptest args cat xxd clear ls pwd ed rm mv cp mkdir rmdir guiterm gui sendmsg crshmon color strings cron swapterm asm neofetch dirname basename scripter
 
 clean:
 	rm *.o
@@ -44,6 +44,10 @@ splitterm: splitterm.s $(INCL_DIR)/routines.inc
 	cp $@ $(MNT_DIR)/bin
 
 swapterm: swapterm.s $(INCL_DIR)/routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
+	cp $@ $(MNT_DIR)/bin
+
+scripter: scripter.s $(INCL_DIR)/routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
 	cp $@ $(MNT_DIR)/bin
 
