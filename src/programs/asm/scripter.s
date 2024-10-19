@@ -187,22 +187,48 @@ define_variable:
 	; figure out variable type, and put it mem somewhere
 	
 	rts
-	
+
+;
+; TODO: steal code from shell or asm to save vars (preferably asm?)
+;
+
 ;
 ; Pass variable name in .X
 ;
-; .Y = 0 means int, .Y = 1 means not defined, .Y > 1 means string in bank .Y
+; .A = FF means not defined, 0 means int, 1 means string
 ;
 get_variable_value:
-	lda #0
+	stx ptr2
+
+	ldx #0
+	stx @current_bank_index
+@next_bank:
+	ldx @current_bank_index
+	lda extmem_banks, X
+	jsr set_extmem_rbank
+	ldx #START_EXTMEM
+	stx @current_addr
+@next_addr:
+	ldx @current_addr
+	ldy #0
+	
+	
+	lda #$FF
 	ldx #0
 	txy
 	rts
+@current_bank_index:
+	.word 0
+@current_addr:
+	.word 0
 	
 ; do this once variables work
 exec_program:
 	rts
 
+;
+; read bytes from fd into line_buff until NEWLINE or EOF is encountered
+;
 read_next_file_line:
 	ldy #line_buff
 	sty ptr0
@@ -227,7 +253,6 @@ end_of_line:
 	lda #0
 	sta (ptr0)
 	rts
-
 
 ;
 ; strlen
