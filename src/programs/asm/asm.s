@@ -1480,7 +1480,7 @@ determine_symbol_value:
 	jmp undefined_symbol_err
 	:
 	jsr is_whitespace_char
-	bne :+
+	bcs :+
 	jsr find_whitespace_char
 	stz $00, X
 	ldx ptr2
