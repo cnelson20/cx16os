@@ -216,15 +216,6 @@ define_variable:
 	inx
 	stz $00, X
 	
-	ldx ptr0
-	jsr find_label_value
-	cmp #0 ; not already defined
-	beq :+
-	
-	ldx #var_already_defined_err_str
-	ldy ptr0
-	jmp print_quote_error_terminate
-	:
 	; figure out variable type, and put it mem somewhere
 	ldx ptr1
 	lda $00, X
@@ -285,6 +276,8 @@ define_variable:
 	jsr set_label_value
 	rts
 
+
+
 exec_program:
 	inx
 	stx ptr0
@@ -309,6 +302,12 @@ exec_program:
 	stx ptr2
 	ldx ptr1
 	jsr find_label_value
+	cmp #0
+	bne :+
+	ldx #undefined_symbol_err_str
+	ldy ptr1
+	jmp print_quote_error_terminate
+	:
 	sta @var_bank
 	stx @var_value
 	cmp #VAR_BANK_INT
@@ -826,6 +825,20 @@ determine_symbol_value:
 	plx
 	
 	lda $00, X
+	cmp #'*'
+	bne @not_line_num
+	inx
+	lda $00, X
+	beq :+
+	dex
+	bra @not_line_num
+	:
+	lda #VAR_BANK_INT
+	ldx curr_line_num
+	rts
+@not_line_num:
+	
+	lda $00, X
 	cmp #'<'
 	bne @not_low_byte
 	; take low byte of rest
@@ -951,6 +964,7 @@ perform_operation:
 	tax
 	sep #$20
 	.a8
+	lda #VAR_BANK_INT
 	rts
 @not_add:
 	
@@ -965,6 +979,7 @@ perform_operation:
 	tax
 	sep #$20
 	.a8
+	lda #VAR_BANK_INT
 	rts
 @not_subtract:
 	
@@ -978,6 +993,7 @@ perform_operation:
 	tax
 	sep #$20
 	.a8
+	lda #VAR_BANK_INT
 	rts
 @not_or:
 
@@ -991,6 +1007,7 @@ perform_operation:
 	tax
 	sep #$20
 	.a8
+	lda #VAR_BANK_INT
 	rts
 @not_and:
 	
@@ -1004,6 +1021,7 @@ perform_operation:
 	tax
 	sep #$20
 	.a8
+	lda #VAR_BANK_INT
 	rts
 @not_xor:
 	
@@ -1026,6 +1044,7 @@ perform_operation:
 	tax
 	sep #$20
 	.a8
+	lda #VAR_BANK_INT
 	rts
 @not_left_shift:
 	
@@ -1048,6 +1067,7 @@ perform_operation:
 	tax
 	sep #$20
 	.a8
+	lda #VAR_BANK_INT
 	rts
 @not_right_shift:
 
@@ -1096,13 +1116,52 @@ set_label_value:
 	ply
 	plx
 	cmp #0
-	beq :+ 
+	beq @label_not_previously_defined
 	; label already defined
-	pla
-	ldx #var_already_defined_err_str
-	txy
-	jmp print_quote_error_terminate
+	phy ; value
+	lda last_find_value_bank
+	jsr set_extmem_wbank
+	lda #ptr0
+	jsr set_extmem_wptr
+	plx ; value
+	pla ; type
+	
+	ldy ptr0
+	phy	
+	ldy last_find_value_addr
+	sty ptr0
+	ldy #0
+	cmp #0
+	bne @redefine_str_value
+@redefine_int_value:	
+	rep #$20
+	.a16
+	txa
+	jsr writef_byte_extmem_y
+	sep #$20
+	.a8
+	bra @redefine_done
+@redefine_str_value:
+	phx
 	:
+	lda $00, X
+	jsr writef_byte_extmem_y
+	cmp #0
+	beq :+
+	inx
+	iny
+	cpy #( LABEL_VALUE_SIZE / 2 - 2 )
+	bcc :-
+	plx
+	jmp string_literal_too_long_error
+	:
+	plx
+@redefine_done:
+	plx
+	stx ptr0
+	
+	rts
+@label_not_previously_defined:
 	pla
 
 	sta tmp_type
@@ -1279,16 +1338,24 @@ find_label_value:
 	jsr readf_byte_extmem_y
 	iny 
 	cmp #0
-	bne :+
-	rep #$20 ; int value
-	.a16
+	bne @label_is_str
+@label_is_int: ; int value
+	ldx @label_values_banks_index
+	lda labels_values_banks, X
+	sta last_find_value_bank	
+	rep #$20
+	.a16	
 	jsr readf_byte_extmem_y ; get value
 	tax
+	tya
+	clc
+	adc ptr0
+	sta last_find_value_addr
 	sep #$20
 	.a8
 	lda #VAR_BANK_INT
 	bra @pull_off_stack
-	: ; string value
+@label_is_str: ; string value
 	ldx @label_values_banks_index
 	lda labels_values_banks, X
 	pha
@@ -1300,6 +1367,8 @@ find_label_value:
 	sep #$20 ; calc addr of str
 	.a8
 	pla
+	sta last_find_value_bank
+	stx last_find_value_addr
 	bra @pull_off_stack
 
 @end_check_loop:
@@ -1319,6 +1388,11 @@ tmp_label:
 tmp_value:
 	.word 0
 tmp_type:
+	.word 0
+
+last_find_value_bank:
+	.word 0
+last_find_value_addr:
 	.word 0
 
 labels_values_ptr:
@@ -1856,7 +1930,7 @@ string_literal_err_str:
 too_long_err_str:
 	.asciiz "' exceeds maximum length"
 undefined_symbol_err_str:
-	.asciiz "undefined symbol: '"
+	.asciiz "undefined symbol '"
 invalid_str_literal_err_str:
 	.asciiz "invalid string literal '"
 invalid_op_err_str:
