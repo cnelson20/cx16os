@@ -648,7 +648,6 @@ run_kernal_routine:
 	:
 	
 	; do routine
-	stp
 	lda routine_status_reg_value
 	pha
 	rep #$20
@@ -659,7 +658,6 @@ run_kernal_routine:
 	per :+ - 1
 	jmp (ptr0)
 	:
-	stp
 	php
 	rep #$FF
 	sta routine_a_reg_value
