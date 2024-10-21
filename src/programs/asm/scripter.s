@@ -30,6 +30,7 @@ ptr3 := $36
 
 CARRIAGE_RETURN = $d
 LINE_FEED = $a
+TAB = 9
 NEWLINE = CARRIAGE_RETURN
 SINGLE_QUOTE = $27
 
@@ -1531,11 +1532,11 @@ is_whitespace_char:
 	beq @yes
 	cmp #' '
 	beq @yes
-	cmp #$a ; \n
+	cmp #LINE_FEED ; \n
 	beq @yes
 	cmp #NEWLINE ; \r
 	beq @yes
-	cmp #9 ; \t
+	cmp #TAB ; \t
 	beq @yes	
 @no:
 	clc
