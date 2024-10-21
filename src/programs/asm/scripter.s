@@ -660,8 +660,15 @@ run_kernal_routine:
 	jmp (ptr0)
 	:
 	stp
+	php
 	rep #$FF
+	sta routine_a_reg_value
+	stx routine_x_reg_value
+	sty routine_y_reg_value
 	sep #$20
+	pla
+	sta routine_status_reg_value
+	; in future, possible to set some var according to results of call
 	
 	rts
 @string_vars_buff_used:
