@@ -1133,7 +1133,10 @@ set_label_value:
 	ldy #0
 	cmp #0
 	bne @redefine_str_value
-@redefine_int_value:	
+@redefine_int_value:
+	lda #0
+	jsr writef_byte_extmem_y
+	iny
 	rep #$20
 	.a16
 	txa
@@ -1142,6 +1145,9 @@ set_label_value:
 	.a8
 	bra @redefine_done
 @redefine_str_value:
+	lda #1
+	jsr writef_byte_extmem_y
+	iny
 	phx
 	:
 	lda $00, X
@@ -1150,7 +1156,7 @@ set_label_value:
 	beq :+
 	inx
 	iny
-	cpy #( LABEL_VALUE_SIZE / 2 - 2 )
+	cpy #( LABEL_VALUE_SIZE / 2 - 1 )
 	bcc :-
 	plx
 	jmp string_literal_too_long_error
@@ -1344,9 +1350,10 @@ find_label_value:
 	lda labels_values_banks, X
 	sta last_find_value_bank	
 	rep #$20
-	.a16	
+	.a16
 	jsr readf_byte_extmem_y ; get value
 	tax
+	dey
 	tya
 	clc
 	adc ptr0
@@ -1368,7 +1375,9 @@ find_label_value:
 	.a8
 	pla
 	sta last_find_value_bank
+	dex
 	stx last_find_value_addr
+	inx
 	bra @pull_off_stack
 
 @end_check_loop:
