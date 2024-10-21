@@ -1,3 +1,6 @@
-$prog "args"
+$prog "echo"
 $msg "Hello, World"
+$routine 0xFF62
+
+@$routine .A = 6
 -$prog "$msg"
