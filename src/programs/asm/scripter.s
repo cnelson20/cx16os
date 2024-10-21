@@ -6,7 +6,7 @@ scripter - cx16os v basic scripting language
 
 non-os routine lines must start with one of the following:
 $ : define a variable
-^ : define a variable using the result of a os routine
+@ : run a os routine
 - : execute a program and wait for it to finish
 
 */
@@ -70,7 +70,10 @@ parse_options:
 	; option is just '-'
 	ldx #invalid_option_str
 	ldy ptr0
-	jmp print_quote_error_terminate
+	lda #SINGLE_QUOTE
+	jsr print_error
+	lda #1
+	jmp terminate
 	:
 	
 	cmp #'e'
@@ -83,7 +86,10 @@ parse_options:
 	; option does not exist
 	ldx #invalid_option_str
 	ldy ptr0
-	jmp print_quote_error_terminate
+	lda #SINGLE_QUOTE
+	jsr print_error
+	lda #1
+	jmp terminate
 	
 @end_parse_options:
 	lda input_file_ptr + 1
@@ -94,7 +100,7 @@ parse_options:
 	lda #0
 	jsr print_error
 	lda #1
-	rts
+	jmp terminate
 	:
 main:
 	lda input_file_ptr
@@ -105,11 +111,19 @@ main:
 	bne :+
 	ldx #file_error_str_p1
 	ldy input_file_ptr
-	jmp print_quote_error_terminate
+	lda #SINGLE_QUOTE
+	jsr print_error
+	lda #1
+	jmp terminate
 	:
 	sta fd
 	stz eof_reached
-
+	
+	jsr set_kernal_routine_labels
+	
+	ldx #1
+	stx curr_line_num
+	
 parse_file_loop:	
 	jsr read_next_file_line
 	lda echo_commands
@@ -159,18 +173,30 @@ parse_file_loop:
 	jsr exec_program
 	bra @finished_parsing_line
 	:
+	cmp #'@'
+	bne :+
+	jsr run_kernal_routine
+	bra @finished_parsing_line
+	:
 	
-	
+	ldx #invalid_start_of_line_err_str
+	ldy #0
+	lda #0
+	jsr print_error
+	lda #1
+	jmp terminate
 @finished_parsing_line:
+	ldx curr_line_num
+	inx
+	stx curr_line_num
+	
 	lda eof_reached
 	bne :+
 	jmp parse_file_loop
 	:
 	
-	stp	
 	lda #0
 	rts
-
 ;
 ; define_variable
 ;
@@ -386,7 +412,6 @@ exec_program:
 	jmp @find_vars_loop
 @end_find_vars_loop:
 	; Now we want to go through the string, and replace spaces with null terminators unless they are quoted
-	stp
 	stz @quoted
 	stz @num_args
 	ldx ptr0
@@ -458,7 +483,6 @@ exec_program:
 	
 @end_find_whitespace_loop:
 	; call exec
-	stp
 	lda #1
 	sta r0
 	stz r2
@@ -491,6 +515,224 @@ exec_program:
 	.byte 0
 @quoted_ptr:
 	.word 0
+
+run_kernal_routine:
+	inx
+	stx ptr0
+	jsr find_whitespace_char
+	lda $00, X
+	beq :+
+	stz $00, X
+	inx
+	:
+	stx ptr1
+	
+	ldx ptr0
+	jsr find_label_value
+	cmp #0
+	bne :+
+	ldx #undefined_symbol_err_str
+	ldy ptr0
+	jmp print_quote_error_terminate
+	:
+	cmp #1
+	beq :+
+	ldx ptr0
+	jmp routine_not_int_error
+	:
+	stx ptr0 ; write addr of the routine to ptr0
+	
+	ldx #0
+	stx routine_a_reg_value
+	stx routine_x_reg_value
+	stx routine_y_reg_value
+	stx @string_vars_buff_used
+	lda #$30
+	sta routine_status_reg_value
+@parse_args_loop:
+	ldx ptr1
+	lda #','
+	jsr strchr
+	cpx #0
+	bne :+
+	ldx ptr1
+	jsr strlen
+	tyx
+	:
+	lda $00, X
+	beq :+
+	stz $00, X
+	inx
+	:
+	phx
+	ldx ptr1
+	jsr find_non_whitespace_char
+	stx ptr1
+	lda #'='
+	jsr strchr
+	cpx #0
+	bne :+
+	ldx ptr1
+	jmp invalid_routine_arg_error
+	:
+	stz $00, X
+	inx
+	jsr find_non_whitespace_char
+	stx ptr2
+	jsr find_non_whitespace_char_rev
+	lda $00, X
+	beq :+
+	inx
+	stz $00, X
+	:
+	ldx ptr2
+	jsr determine_symbol_value
+	cmp #VAR_BANK_INT
+	bne @str_value
+@int_value:
+	stx ptr2
+	bra @parse_reg
+@str_value:
+	ldy @string_vars_buff_used
+	beq :+
+	jsr print_error_line_num
+	ldx #only_str_literal_arg_err_str
+	ldy #0
+	lda #0
+	jsr print_error_without_scripter
+	lda #1
+	jmp terminate
+	:
+	sta r3
+	stx r1
+	stz r2
+	ldx #string_vars_buff
+	stx r0
+	stx ptr2
+	lda #<(LABEL_VALUE_SIZE / 2)
+	ldx #>(LABEL_VALUE_SIZE / 2)
+	jsr memmove_extmem
+	lda #1
+	sta @string_vars_buff_used
+@parse_reg:
+	ldx ptr1
+	jsr find_non_whitespace_char_rev
+	lda $00, X
+	beq :+
+	inx
+	stz $00, X
+	:
+	ldx ptr1
+	lda $00, X
+	cmp #'.'
+	bne @not_6502_reg
+	ldy ptr2 ; value to write to reg
+	jsr figure_reg
+	cmp #0
+	beq @end_parse_loop_iter
+	; invalid register
+	ldx #invalid_reg_err_str
+	ldy ptr1
+	jmp print_quote_error_terminate
+@not_6502_reg:
+	; error for now, eventually add rX registers ;
+	ldx #invalid_reg_err_str
+	ldy ptr1
+	jmp print_quote_error_terminate
+@end_parse_loop_iter:	
+	plx
+	lda $00, X
+	beq :+
+	stx ptr1
+	jmp @parse_args_loop
+	:
+	
+	; do routine
+	stp
+	lda routine_status_reg_value
+	pha
+	rep #$20
+	lda routine_a_reg_value
+	ldx routine_x_reg_value
+	ldy routine_y_reg_value
+	plp
+	per :+ - 1
+	jmp (ptr0)
+	:
+	stp
+	rep #$FF
+	sep #$20
+	
+	rts
+@string_vars_buff_used:
+	.word 0
+routine_a_reg_value:
+	.word 0
+routine_x_reg_value:
+	.word 0
+routine_y_reg_value:
+	.word 0
+routine_status_reg_value:
+	.byte 0
+
+figure_reg:
+	inx
+	; .X points to reg name (P, A, AX, X, Y)
+	lda $00, X
+	cmp #'P'
+	bne :+
+	lda $00, X
+	bne @failure
+	tya
+	sta routine_status_reg_value
+	bra @success
+	:
+	cmp #'X'
+	bne :+
+	lda $00, X
+	bne @failure
+	sty routine_x_reg_value
+	bra @success
+	:
+	cmp #'Y'
+	bne :+
+	inx
+	lda $00, X
+	bne @failure ; must be .Y and not .YZ
+	sty routine_y_reg_value
+	bra @success
+	:
+	cmp #'A'
+	bne @failure
+	inx
+	lda $00, X
+	bne :+
+	sty routine_a_reg_value
+	bra @success
+	:
+	cmp #'X'
+	bne @failure ; must be .A or .AX
+	inx
+	lda $00, X
+	bne @failure
+	; write .Y
+	rep #$20
+	.a16
+	tya
+	sep #$20
+	.a8
+	sta routine_a_reg_value
+	stz routine_a_reg_value + 1
+	xba
+	sta routine_x_reg_value
+	stz routine_x_reg_value + 1
+	bra @success
+@success:
+	lda #0
+	rts
+@failure:
+	lda #1
+	rts
 
 ;
 ; determine_symbol_value
@@ -1297,6 +1539,37 @@ is_whitespace_char:
 	sec
 	rts
 
+set_kernal_routine_labels:
+	ldx #kernal_routines_list
+@loop:
+	cpx #kernal_routines_list_end
+	bcs @end
+	jsr strlen
+	iny
+	phy
+	phx
+	ldx $00, Y
+	txy ; value of label
+	plx
+	lda #0 ; int
+	jsr set_label_value
+	
+	plx
+	inx
+	inx ; sizeof(word) = 2
+	bra @loop
+@end:
+	rts
+
+kernal_routines_list:
+	.asciiz "getc"
+	.word $9D00
+	.asciiz "putc"
+	.word $9D03
+	.asciiz "print_str"
+	.word $9D09
+kernal_routines_list_end:
+
 ;
 ; print_usage
 ;
@@ -1309,6 +1582,46 @@ print_usage:
 	
 	lda #1
 	jmp terminate
+
+;
+; invalid_routine_arg_error
+;
+invalid_routine_arg_error:
+	phx
+	jsr print_error_line_num
+	
+	ldax_addr invalid_routine_arg_err_str
+	jsr print_str
+	
+	plx
+	ldy #provided_quote_err_str
+	lda #0
+	jsr print_error_without_scripter
+	
+	lda #1
+	jmp terminate
+
+;
+; routine_not_int_error
+;
+routine_not_int_error:
+	phx
+	jsr print_error_line_num
+	
+	ldax_addr @routine_not_int_err_str_p1
+	jsr print_str
+	
+	plx
+	ldy #@routine_not_int_err_str_p2
+	lda #0
+	jsr print_error_without_scripter
+	
+	lda #1
+	jmp terminate
+@routine_not_int_err_str_p1:
+	.asciiz "routine '"
+@routine_not_int_err_str_p2:
+	.asciiz "' must be int value"
 
 ;
 ; string_within_expression_error
@@ -1385,8 +1698,15 @@ string_literal_too_long_error:
 ; calls print_error with .A = a single quote character
 ;
 print_quote_error_terminate:
+	phx
+	phy
+	
+	jsr print_error_line_num
+	
+	ply
+	plx
 	lda #SINGLE_QUOTE ; single quote
-	jsr print_error	
+	jsr print_error_without_scripter
 	
 	lda #1
 	jmp terminate
@@ -1438,6 +1758,59 @@ print_error_wo_entry:
 	lda #1
 	rts
 
+;
+; print_error_line_num
+;
+print_error_line_num:
+	lda input_file_ptr
+	ldx input_file_ptr + 1
+	jsr print_str
+	lda #':'
+	jsr CHROUT
+	lda curr_line_num
+	ldx curr_line_num + 1
+	jsr bin_to_bcd16
+	pha
+	phx
+	tya
+	jsr GET_HEX_NUM
+	sta r0
+	stx r0 + 1
+	plx
+	txa
+	jsr GET_HEX_NUM
+	sta r1
+	stx r1 + 1
+	pla
+	jsr GET_HEX_NUM
+	sta r2
+	stx r2 + 1
+	ldx #r0
+	ldy #0
+	:
+	lda $00, X
+	cmp #'0'
+	bne :+
+	stz $00, X
+	inx
+	iny
+	cpy #6 - 1
+	bcc :-
+	:
+	rep #$20
+	txa
+	sep #$20
+	xba
+	tax
+	xba
+	jsr print_str
+	lda #':'
+	jsr CHROUT
+	lda #' '
+	jsr CHROUT
+
+	rts
+	
 terminate:
 	ldx #$01FD
 	txs
@@ -1450,6 +1823,8 @@ eof_reached:
 argc:
 	.byte 0
 
+curr_line_num:
+	.word 0
 echo_commands:
 	.byte 0
 input_file_ptr:
@@ -1460,6 +1835,16 @@ scripter_name_err_str:
 error_literal_str:
 	.asciiz "error: "
 
+invalid_reg_err_str:
+	.asciiz "undefined register '"
+only_str_literal_arg_err_str:
+	.asciiz "only 1 arg to routine can be str literal"
+invalid_routine_arg_err_str:
+	.asciiz "args must be in fmt 'arg=value', '"
+provided_quote_err_str:
+	.asciiz "' provided"
+invalid_start_of_line_err_str:
+	.asciiz "line must start with one of $, -, or @"
 string_literal_err_str:
 	.asciiz "string literal '"
 too_long_err_str:
@@ -1472,12 +1857,13 @@ invalid_op_err_str:
 	.asciiz "Invalid operation '"
 var_already_defined_err_str:
 	.asciiz "variable already defined: '"
+error_executing_prog_err_str:
+	.asciiz "unable to execute prog '"
+
 invalid_option_str:
 	.asciiz "invalid option '"
 no_input_file_err_str:
 	.asciiz "no input file provided"
-error_executing_prog_err_str:
-	.asciiz "unable to execute prog '"
 file_error_str_p1:
 	.asciiz "unable to open file '"
 file_error_str_p2:
