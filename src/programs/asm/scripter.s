@@ -113,8 +113,7 @@ main:
 	
 	ldx #1
 	stx curr_line_num
-parse_file_loop:	
-	stp
+parse_file_loop:
 	jsr get_next_line	
 	
 	lda echo_commands
@@ -213,14 +212,6 @@ line_space_curr_addr:
 	.word $A000
 
 get_next_line:
-	ldx curr_line_num
-	cpx total_num_lines
-	beq :+
-	bcc :+
-	; exceeds max line number
-	stp
-	:
-	
 	rep #$20
 	.a16
 	stz ptr0
@@ -250,6 +241,7 @@ get_next_line:
 	.a8
 	lda line_addr_banks, X
 	jsr set_extmem_rbank
+	
 	plx ; 16-bit pull of addr to read from
 	ldy #0
 	jsr pread_extmem_xy
@@ -261,11 +253,18 @@ get_next_line:
 	sta r1
 	sep #$20
 	.a8
+	iny
+	iny
+	jsr pread_extmem_xy
+	pha
 	stz r2
 	ldx #line_buff
 	stx r0
-	lda #<MAX_LINE_SIZE
-	ldx #>MAX_LINE_SIZE
+	ldx #0
+	pla
+	bne :+
+	inx
+	:
 	jsr memmove_extmem
 	
 	rts
@@ -520,8 +519,9 @@ define_variable:
 	jsr set_label_value
 	rts
 
-
-
+;
+; exec_program
+;
 exec_program:
 	inx
 	stx ptr0
@@ -760,6 +760,9 @@ exec_program:
 @quoted_ptr:
 	.word 0
 
+;
+; run_kernal_routine
+;
 run_kernal_routine:
 	inx
 	stx ptr0
@@ -924,6 +927,11 @@ routine_y_reg_value:
 routine_status_reg_value:
 	.byte 0
 
+;
+; figure_reg
+;
+; given a ptr to a str in .X and a value in .Y, write .Y to the appr routine_*_reg_value var or error
+;
 figure_reg:
 	inx
 	; .X points to reg name (P, A, AX, X, Y)
@@ -983,6 +991,9 @@ figure_reg:
 	lda #1
 	rts
 
+;
+; test_conditional
+;
 test_conditional:
 	inx
 	jsr find_non_whitespace_char
@@ -1051,10 +1062,19 @@ goto_line:
 	jmp goto_dest_not_int_error
 	:
 	
+	cpx #0
+	beq @invalid_line_num
+	cpx total_num_lines
+	beq :+
+	bcs @invalid_line_num
+	:
+
 	dex ; curr_line_num gets incremented, so decrement here to cancel it out
 	stx curr_line_num
 	rts 
-
+@invalid_line_num:
+	jmp goto_invalid_line_num_error
+	
 ;
 ; determine_symbol_value
 ;
@@ -1991,6 +2011,42 @@ print_usage:
 	jmp terminate
 
 ;
+; goto_invalid_line_num_error
+;
+goto_invalid_line_num_error:
+	phx
+	jsr print_error_line_num
+	
+	ldax_addr @invalid_goto_line_err_str
+	jsr print_str
+	
+	plx
+	phx
+	rep #$20
+	txa
+	xba
+	tax
+	xba
+	sep #$20
+	jsr print_num_error
+	
+	plx
+	cpx #0
+	beq :+
+	ldax_addr @exceeds_num_lines_err_str
+	jsr print_str	
+	:
+	lda #NEWLINE
+	jsr CHROUT
+	
+	lda #1
+	jmp terminate
+
+@invalid_goto_line_err_str:
+	.asciiz "cannot goto line "
+@exceeds_num_lines_err_str:
+	.asciiz ": exceeds num lines in file"
+;
 ; invalid_routine_arg_error
 ;
 invalid_routine_arg_error:
@@ -2194,6 +2250,20 @@ print_error_line_num:
 	jsr CHROUT
 	lda curr_line_num
 	ldx curr_line_num + 1
+	jsr print_num_error
+	lda #':'
+	jsr CHROUT
+	lda #' '
+	jsr CHROUT
+
+	rts
+
+;
+; print_num_error
+;
+; prints a num in .AX
+;
+print_num_error:	
 	jsr bin_to_bcd16
 	pha
 	phx
@@ -2228,13 +2298,7 @@ print_error_line_num:
 	xba
 	tax
 	xba
-	jsr print_str
-	lda #':'
-	jsr CHROUT
-	lda #' '
-	jsr CHROUT
-
-	rts
+	jmp print_str
 	
 terminate:
 	ldx #$01FD
