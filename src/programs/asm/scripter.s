@@ -8,6 +8,8 @@ non-os routine lines must start with one of the following:
 $ : define a variable
 @ : run a os routine
 - : execute a program and wait for it to finish
+? : conditional
+% : goto
 
 */
 
@@ -35,6 +37,8 @@ NEWLINE = CARRIAGE_RETURN
 SINGLE_QUOTE = $27
 
 VAR_BANK_INT = 1
+
+MAX_LINE_SIZE = 256
 
 init:
 	jsr get_args
@@ -105,31 +109,12 @@ parse_options:
 	:
 main:
 	jsr set_kernal_routine_labels
-	
-	ldx #0
-	stx exec_halted_goto_line
-	stz exec_halted_goto
-open_input_file:
-	lda input_file_ptr
-	ldx input_file_ptr + 1
-	ldy #0 ; read
-	jsr open_file
-	cmp #$FF
-	bne :+
-	ldx #file_error_str_p1
-	ldy input_file_ptr
-	lda #SINGLE_QUOTE
-	jsr print_error
-	lda #1
-	jmp terminate
-	:
-	sta fd
-	stz eof_reached
+	jsr read_lines_from_file
 	
 	ldx #1
 	stx curr_line_num
-	
 parse_file_loop:	
+	stp
 	jsr get_next_line	
 	
 	lda echo_commands
@@ -139,11 +124,6 @@ parse_file_loop:
 	jsr print_str
 	lda #NEWLINE
 	jsr CHROUT
-	:
-	
-	lda exec_halted_goto
-	beq :+
-	jmp finished_parsing_line
 	:
 	
 	; parse the line
@@ -212,27 +192,254 @@ finished_parsing_line:
 	inx
 	stx curr_line_num
 	
-	ldx exec_halted_goto_line
-	cpx curr_line_num
-	bne :+
-	stz exec_halted_goto
+	cpx total_num_lines
+	beq :+
+	bcs :++
 	:
-	
-	lda eof_reached
-	bne :+
 	jmp parse_file_loop
 	:
 	
 	lda #0
 	rts
 
-exec_halted_goto:
-	.byte 0
-exec_halted_goto_line:
+line_addr_banks:
+	.res 4, 0
+line_addr_banks_size:
 	.word 0
 
+line_space_curr_bank:
+	.word 0
+line_space_curr_addr:
+	.word $A000
+
 get_next_line:
+	ldx curr_line_num
+	cpx total_num_lines
+	beq :+
+	bcc :+
+	; exceeds max line number
+	stp
+	:
+	
+	rep #$20
+	.a16
+	stz ptr0
+	lda curr_line_num
+	asl A
+	rol ptr0
+	asl A
+	rol ptr0
+	tax
+	and #$1FFF
+	ora #$A000
+	pha ; 16-bit push
+	txa
+	sep #$20
+	.a8
+	lda ptr0
+	xba
+	rep #$20
+	.a16
+	lsr A
+	lsr A
+	lsr A
+	lsr A
+	lsr A
+	tax
+	sep #$20
+	.a8
+	lda line_addr_banks, X
+	jsr set_extmem_rbank
+	plx ; 16-bit pull of addr to read from
+	ldy #0
+	jsr pread_extmem_xy
+	sta r3
+	iny
+	rep #$20
+	.a16
+	jsr pread_extmem_xy
+	sta r1
+	sep #$20
+	.a8
+	stz r2
+	ldx #line_buff
+	stx r0
+	lda #<MAX_LINE_SIZE
+	ldx #>MAX_LINE_SIZE
+	jsr memmove_extmem
+	
+	rts
+	
+read_lines_from_file:
+	lda input_file_ptr
+	ldx input_file_ptr + 1
+	ldy #0 ; read
+	jsr open_file
+	cmp #$FF
+	bne :+
+	ldx #file_error_str_p1
+	ldy input_file_ptr
+	lda #SINGLE_QUOTE
+	jsr print_error
+	lda #1
+	jmp terminate
+	:
+	sta fd
+	
+	jsr res_extmem_bank
+	sta line_space_curr_bank
+	inc A
+	sta line_addr_banks + 0
+	sta ptr3
+	jsr set_extmem_wbank
+	ldx #START_EXTMEM
+	stx r0
+	ldx #END_EXTMEM - START_EXTMEM
+	stx r1
+	lda #0
+	jsr fill_extmem
+	
+	lda #1
+	sta line_addr_banks_size
+	
+	stz eof_reached
+	
+	ldx #START_EXTMEM + 4
+	stx ptr2
+	
+	ldx #1
+	stx curr_line_num
+@read_loop:
 	jsr read_next_file_line
+	ldx #line_buff
+	jsr strlen
+	tax
+	inx
+	phx
+	jsr alloc_space_extmem
+	
+	stx ptr0
+	sta ptr1
+	; ptr1 holds bank of where we will write line_buff
+	; ptr1 + 1 holds bank of where we will write ptr to that data
+	lda ptr3
+	jsr set_extmem_wbank
+	
+	ldx ptr2
+	ldy #0
+	lda ptr1 ; write bank first, then 2 bytes of addr
+	jsr pwrite_extmem_xy
+	iny
+	rep #$20
+	lda ptr0
+	jsr pwrite_extmem_xy
+	pla
+	pha ; pull strlen + 1
+	sep #$20
+	iny
+	iny
+	jsr pwrite_extmem_xy
+	
+	ldx ptr0
+	stx r0
+	lda ptr1
+	sta r2
+	ldx #line_buff
+	stx r1
+	stz r3
+	plx
+	rep #$20
+	txa
+	xba
+	tax
+	xba
+	sep #$20
+	jsr memmove_extmem
+
+@end_read_loop_iteration:
+	lda eof_reached
+	bne @end_read_loop
+	
+	ldx curr_line_num
+	inx
+	stx curr_line_num
+	
+	
+	rep #$21 ; clear carry too
+	.a16
+	lda ptr2
+	adc #4
+	sta ptr2
+	cmp #END_EXTMEM
+	sep #$20
+	.a8
+	bcc @not_out_extmem
+	
+	lda ptr3
+	and #1
+	bne :+
+	lda ptr3
+	inc A
+	bra :++
+	:
+	jsr res_extmem_bank
+	:
+	
+	ldx line_addr_banks_size
+	sta line_addr_banks, X
+	sta ptr3
+	inc line_addr_banks_size
+	
+	jsr set_extmem_wbank
+	ldx #START_EXTMEM
+	stx r0
+	stx ptr2
+	ldx #END_EXTMEM - START_EXTMEM
+	stx r1
+	lda #0
+	jsr fill_extmem
+@not_out_extmem:
+	jmp @read_loop
+	
+@end_read_loop:	
+	ldx curr_line_num
+	stx total_num_lines
+	rts
+
+;
+; alloc_space_extmem
+;
+; return bank in .A and address in .X for .X bytes in extmem somewhere
+;
+alloc_space_extmem:
+	rep #$21 ; clear carry too
+	.a16
+	txa
+	adc line_space_curr_addr
+	tay
+	sep #$20
+	.a8
+	cpy #END_EXTMEM + 1
+	bcc @not_out_space_in_bank
+	phx
+	lda line_space_curr_bank
+	and #1
+	bne :+
+	lda line_space_curr_bank
+	inc A
+	bra :++
+	:
+	jsr res_extmem_bank
+	:
+	sta line_space_curr_bank	
+	ldy #START_EXTMEM
+	sty line_space_curr_addr
+	plx
+	bra alloc_space_extmem
+@not_out_space_in_bank:
+	ldx line_space_curr_addr
+	sty line_space_curr_addr
+	lda line_space_curr_bank
 	rts
 
 ;
@@ -844,20 +1051,9 @@ goto_line:
 	jmp goto_dest_not_int_error
 	:
 	
-	stx exec_halted_goto_line
-	lda #1
-	sta exec_halted_goto
-	
-	ldx curr_line_num
-	cpx exec_halted_goto_line
-	bcs :+
-	rts
-	:
-	lda fd
-	jsr close_file
-	
-	plx ; pop return address off stack
-	jmp open_input_file
+	dex ; curr_line_num gets incremented, so decrement here to cancel it out
+	stx curr_line_num
+	rts 
 
 ;
 ; determine_symbol_value
@@ -2054,6 +2250,8 @@ argc:
 
 curr_line_num:
 	.word 0
+total_num_lines:
+	.word 0
 echo_commands:
 	.byte 0
 input_file_ptr:
@@ -2110,4 +2308,4 @@ usage_string:
 string_vars_buff:
 	.res LABEL_VALUE_SIZE / 2
 line_buff:
-	.res 256
+	.res MAX_LINE_SIZE
