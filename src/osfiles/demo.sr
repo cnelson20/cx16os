@@ -1,6 +1,9 @@
 $prog "echo"
-$msg "Hello, World"
-$routine 0xFF62
 
-@$routine .A = 6
--$prog "$msg"
+$count 0
+$iter 5
+
+$label *
+-$prog $count
+$count $count + 1
+? $count - $iter, % $label

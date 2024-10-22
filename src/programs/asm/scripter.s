@@ -130,7 +130,8 @@ open_input_file:
 	stx curr_line_num
 	
 parse_file_loop:	
-	jsr read_next_file_line
+	jsr get_next_line	
+	
 	lda echo_commands
 	beq :+
 	lda #<line_buff
@@ -229,6 +230,10 @@ exec_halted_goto:
 	.byte 0
 exec_halted_goto_line:
 	.word 0
+
+get_next_line:
+	jsr read_next_file_line
+	rts
 
 ;
 ; define_variable
