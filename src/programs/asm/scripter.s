@@ -104,6 +104,12 @@ parse_options:
 	jmp terminate
 	:
 main:
+	jsr set_kernal_routine_labels
+	
+	ldx #0
+	stx exec_halted_goto_line
+	stz exec_halted_goto
+open_input_file:
 	lda input_file_ptr
 	ldx input_file_ptr + 1
 	ldy #0 ; read
@@ -120,8 +126,6 @@ main:
 	sta fd
 	stz eof_reached
 	
-	jsr set_kernal_routine_labels
-	
 	ldx #1
 	stx curr_line_num
 	
@@ -136,6 +140,11 @@ parse_file_loop:
 	jsr CHROUT
 	:
 	
+	lda exec_halted_goto
+	beq :+
+	jmp finished_parsing_line
+	:
+	
 	; parse the line
 	lda #'#'
 	ldx #line_buff
@@ -145,6 +154,7 @@ parse_file_loop:
 	stz $00, X ; remove everything after the comment
 	:
 	ldx #line_buff
+condition_entry_pt:
 	jsr find_non_whitespace_char
 	stx ptr0 ; first non-space character in line_buff
 	
@@ -158,7 +168,7 @@ parse_file_loop:
 	jsr strlen
 	cmp #0
 	bne :+
-	jmp @finished_parsing_line
+	jmp finished_parsing_line
 	:
 	
 	; strlen(line) is not zero, try to parse
@@ -167,17 +177,27 @@ parse_file_loop:
 	cmp #'$'
 	bne :+
 	jsr define_variable
-	bra @finished_parsing_line
+	bra finished_parsing_line
 	:
 	cmp #'-'
 	bne :+
 	jsr exec_program
-	bra @finished_parsing_line
+	bra finished_parsing_line
 	:
 	cmp #'@'
 	bne :+
 	jsr run_kernal_routine
-	bra @finished_parsing_line
+	bra finished_parsing_line
+	:
+	cmp #'?'
+	bne :+
+	jsr test_conditional
+	bra finished_parsing_line
+	:
+	cmp #'%'
+	bne :+
+	jsr goto_line
+	bra finished_parsing_line
 	:
 	
 	ldx #invalid_start_of_line_err_str
@@ -186,10 +206,16 @@ parse_file_loop:
 	jsr print_error
 	lda #1
 	jmp terminate
-@finished_parsing_line:
+finished_parsing_line:
 	ldx curr_line_num
 	inx
 	stx curr_line_num
+	
+	ldx exec_halted_goto_line
+	cpx curr_line_num
+	bne :+
+	stz exec_halted_goto
+	:
 	
 	lda eof_reached
 	bne :+
@@ -198,6 +224,12 @@ parse_file_loop:
 	
 	lda #0
 	rts
+
+exec_halted_goto:
+	.byte 0
+exec_halted_goto_line:
+	.word 0
+
 ;
 ; define_variable
 ;
@@ -738,6 +770,89 @@ figure_reg:
 @failure:
 	lda #1
 	rts
+
+test_conditional:
+	inx
+	jsr find_non_whitespace_char
+	stx ptr0
+	lda #','
+	jsr strchr
+	cpx #0
+	beq :+
+	stz $00, X
+	inx
+	:
+	stx ptr1
+	
+	ldx ptr0
+	jsr find_non_whitespace_char_rev
+	lda $00, X
+	beq :+
+	inx
+	:
+	stz $00, X
+	ldx ptr0
+	jsr determine_symbol_value
+	cmp #VAR_BANK_INT
+	beq :+
+	sta r3
+	stx r1
+	ldx #@tmp_var
+	stx r0
+	stz r2
+	lda #<1
+	ldx #>1
+	jsr memmove_extmem
+	lda #0
+	xba
+	lda @tmp_var
+	tax ; if strlen != 0, do conditional
+	:
+	; if .X != 0, do cond
+	cpx #0
+	bne :+
+	rts
+	:
+	ldx ptr1
+	jmp condition_entry_pt
+@tmp_var:
+	.byte 0
+
+;
+; goto_line
+;
+goto_line:
+	inx
+	jsr find_non_whitespace_char
+	stx ptr0
+	jsr find_non_whitespace_char_rev
+	lda $00, X
+	beq :+
+	inx
+	stz $00, X
+	:
+	ldx ptr0
+	jsr determine_symbol_value
+	cmp #VAR_BANK_INT
+	beq :+
+	ldx ptr0
+	jmp goto_dest_not_int_error
+	:
+	
+	stx exec_halted_goto_line
+	lda #1
+	sta exec_halted_goto
+	
+	ldx curr_line_num
+	cpx exec_halted_goto_line
+	bcs :+
+	rts
+	:
+	lda fd
+	jsr close_file
+	
+	plx ; pop return address off stack
+	jmp open_input_file
 
 ;
 ; determine_symbol_value
@@ -1475,7 +1590,9 @@ strlen:
 	inx
 	bne :-
 	:
+	rep #$20
 	tya
+	sep #$20
 	txy
 	plx
 	rts
@@ -1691,26 +1808,44 @@ invalid_routine_arg_error:
 	jmp terminate
 
 ;
+; goto_dest_not_int_error
+;
+goto_dest_not_int_error:
+	phx
+	jsr print_error_line_num
+	
+	ldax_addr @goto_dest_err_str
+	jsr print_str
+	
+	plx
+	ldy #must_be_int_val_err_str
+	lda #0
+	jsr print_error_without_scripter
+	
+	lda #1
+	jmp terminate
+@goto_dest_err_str:
+	.asciiz "goto dest '"
+
+;
 ; routine_not_int_error
 ;
 routine_not_int_error:
 	phx
 	jsr print_error_line_num
 	
-	ldax_addr @routine_not_int_err_str_p1
+	ldax_addr @routine_not_int_err_str
 	jsr print_str
 	
 	plx
-	ldy #@routine_not_int_err_str_p2
+	ldy #must_be_int_val_err_str
 	lda #0
 	jsr print_error_without_scripter
 	
 	lda #1
 	jmp terminate
-@routine_not_int_err_str_p1:
+@routine_not_int_err_str:
 	.asciiz "routine '"
-@routine_not_int_err_str_p2:
-	.asciiz "' must be int value"
 
 ;
 ; string_within_expression_error
@@ -1924,6 +2059,8 @@ scripter_name_err_str:
 error_literal_str:
 	.asciiz "error: "
 
+must_be_int_val_err_str:
+	.asciiz "' must be int value"
 invalid_reg_err_str:
 	.asciiz "undefined register '"
 only_str_literal_arg_err_str:
