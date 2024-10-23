@@ -10,6 +10,8 @@ $ : define a variable
 - : execute a program and wait for it to finish
 ? : conditional
 % : goto
+> : user input
+# : line number label
 
 */
 
@@ -116,6 +118,53 @@ main:
 	
 	ldx #1
 	stx curr_line_num
+preparse_loop:
+	
+	jsr get_next_line
+	ldx #line_buff
+	jsr find_non_whitespace_char
+	lda $00, X
+	cmp #'#'
+	bne @not_line_number_label
+	inx
+	stx ptr0
+	jsr find_non_whitespace_char_rev
+	lda $00, X
+	beq :+
+	inx
+	stz $00, X
+	:
+	ldx ptr0
+	lda $00, X
+	cmp #'$'
+	bne :+
+	jsr find_whitespace_char
+	lda $00, X
+	beq :++
+	:
+	ldy ptr0
+	ldx #line_label_not_var_err_str
+	jsr print_quote_error_terminate	
+	:
+	ldx ptr0
+	ldy curr_line_num
+	lda #0
+	jsr set_label_value
+@not_line_number_label:	
+	ldx curr_line_num
+	inx
+	stx curr_line_num
+	
+	cpx total_num_lines
+	beq :+
+	bcs :++
+	:
+	jmp preparse_loop
+	:
+
+	; at this point we can really "run" the file	
+	ldx #1
+	stx curr_line_num
 parse_file_loop:
 	jsr get_next_line	
 	
@@ -186,6 +235,10 @@ condition_entry_pt:
 	bne :+
 	jsr input_line_to_var
 	bra finished_parsing_line
+	:
+	cmp #'#'
+	bne :+
+	bra finished_parsing_line ; done in first parse
 	:
 	
 	ldx #invalid_start_of_line_err_str
@@ -1148,7 +1201,7 @@ input_line_to_var:
 	cmp #'$'
 	beq :++
 	:
-	txy
+	ldy ptr0
 	ldx #input_not_var_err_str
 	jsr print_quote_error_terminate
 	:
@@ -2102,6 +2155,8 @@ find_whitespace_char_or_quote:
 	beq :+
 	cmp #'"'
 	beq :+
+	cmp #SINGLE_QUOTE
+	beq :+
 	jsr is_whitespace_char
 	bcs :+
 	inx
@@ -2571,6 +2626,8 @@ error_literal_str:
 
 must_be_int_val_err_str:
 	.asciiz "' must be int value"
+line_label_not_var_err_str:
+	.asciiz "'#' must be followed by label name, instead got '"
 input_not_var_err_str:
 	.asciiz "'>' must be followed by var name, instead got '"
 invalid_reg_err_str:
