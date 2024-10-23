@@ -35,6 +35,7 @@ LINE_FEED = $a
 TAB = 9
 NEWLINE = CARRIAGE_RETURN
 SINGLE_QUOTE = $27
+LEFT_CURSOR = $9D
 
 VAR_BANK_INT = 1
 
@@ -108,8 +109,10 @@ parse_options:
 	jmp terminate
 	:
 main:
-	jsr set_kernal_routine_labels
 	jsr read_lines_from_file
+	
+	jsr set_special_var_labels
+	jsr set_kernal_routine_labels
 	
 	ldx #1
 	stx curr_line_num
@@ -126,7 +129,7 @@ parse_file_loop:
 	:
 	
 	; parse the line
-	lda #'#'
+	lda #';'
 	ldx #line_buff
 	jsr strchr
 	cpx #0
@@ -177,6 +180,11 @@ condition_entry_pt:
 	cmp #'%'
 	bne :+
 	jsr goto_line
+	bra finished_parsing_line
+	:
+	cmp #'>'
+	bne :+
+	jsr input_line_to_var
 	bra finished_parsing_line
 	:
 	
@@ -403,6 +411,10 @@ read_lines_from_file:
 @end_read_loop:	
 	ldx curr_line_num
 	stx total_num_lines
+	
+	lda fd
+	jsr close_file
+	
 	rts
 
 ;
@@ -524,6 +536,7 @@ define_variable:
 ;
 exec_program:
 	inx
+	jsr find_non_whitespace_char
 	stx ptr0
 @find_vars_loop:
 	lda $00, X
@@ -531,6 +544,8 @@ exec_program:
 	jmp @end_find_vars_loop
 	:
 	cmp #'$'
+	beq :+
+	cmp #'#'
 	beq :+
 	inx
 	bra @find_vars_loop
@@ -545,6 +560,11 @@ exec_program:
 	:
 	stx ptr2
 	ldx ptr1
+	lda $00, X
+	cmp #'#'
+	bne :+
+	inx
+	:
 	jsr find_label_value
 	cmp #0
 	bne :+
@@ -746,6 +766,14 @@ exec_program:
 	
 	jsr wait_process
 	
+	xba
+	lda #0
+	xba
+	tay
+	ldx #return_reg_var_str
+	xba
+	jsr set_label_value	
+	
 	rts
 
 @var_value:
@@ -913,7 +941,30 @@ run_kernal_routine:
 	sep #$20
 	pla
 	sta routine_status_reg_value
-	; in future, possible to set some var according to results of call
+	; set some vars according to results of call
+	
+	ldx #a_reg_var_str
+	ldy routine_a_reg_value
+	lda #0
+	jsr set_label_value
+	
+	ldx #x_reg_var_str
+	ldy routine_x_reg_value
+	lda #0
+	jsr set_label_value
+	
+	ldx #y_reg_var_str
+	ldy routine_y_reg_value
+	lda #0
+	jsr set_label_value
+	
+	lda routine_x_reg_value
+	xba
+	lda routine_a_reg_value
+	tay
+	ldx #ax_reg_var_str
+	lda #0
+	jsr set_label_value
 	
 	rts
 @string_vars_buff_used:
@@ -1074,7 +1125,139 @@ goto_line:
 	rts 
 @invalid_line_num:
 	jmp goto_invalid_line_num_error
+
+;
+; input_line_to_var
+;
+input_line_to_var:
+	inx
+	jsr find_non_whitespace_char
+	stx ptr0
+	jsr find_non_whitespace_char_rev
+	lda $00, X
+	beq :+
+	inx
+	stz $00, X
+	:
+	ldx ptr0
+	jsr find_whitespace_char
+	lda $00, X
+	bne :+ ; if end of first word is not end of line, error
+	ldx ptr0
+	lda $00, X
+	cmp #'$'
+	beq :++
+	:
+	txy
+	ldx #input_not_var_err_str
+	jsr print_quote_error_terminate
+	:
 	
+	jsr strlen
+	ldy #string_vars_buff
+	mvn #$00, #$00
+	
+	; get input
+	jsr get_line_from_user
+	
+	ldx #string_vars_buff
+	ldy #line_buff
+	lda #1
+	jmp set_label_value ; do this and return
+
+get_line_from_user:
+	lda #'_'
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+
+	lda #0
+	jsr send_byte_chrout_hook
+	
+	ldx #0
+@input_loop:
+	jsr getc
+	cmp #0
+	beq @input_loop
+	
+	cmp #NEWLINE
+	beq @newline
+	
+	cmp #$14 ; backspace
+	beq @backspace
+	cmp #$19 ; delete
+	beq @backspace
+	
+	cpx #MAX_LINE_SIZE - 1
+	bcs @input_loop
+	
+	; if a special char not one of the ones above, ignore ;
+	pha
+	cmp #$20
+	bcc @inv_chr
+	cmp #$7F
+	bcc @val_chr
+	cmp #$A1
+	bcs @val_chr
+	
+@inv_chr:	
+	pla
+	jmp @input_loop
+@val_chr:
+	pla
+	
+	jsr CHROUT
+	sta line_buff, X
+	
+	lda #'_'
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+
+	phx
+	lda #0
+	jsr send_byte_chrout_hook
+	plx
+	
+	inx
+	jmp @input_loop
+	
+@backspace:
+	cpx #0
+	beq @input_loop
+	dex
+	lda #' '
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+	jsr CHROUT
+	lda #' '
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+	
+	lda #'_'
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+
+	phx
+	lda #0
+	jsr send_byte_chrout_hook
+	plx
+
+	jmp @input_loop
+	
+@newline:
+	stz line_buff, X
+	
+	lda #' '
+	jsr CHROUT
+	lda #NEWLINE
+	jsr CHROUT ; print newline
+	
+	rts
+
 ;
 ; determine_symbol_value
 ;
@@ -1995,7 +2178,67 @@ kernal_routines_list:
 	.word $9D03
 	.asciiz "print_str"
 	.word $9D09
+	.asciiz "get_process_info"
+	.word $9D0C
+	.asciiz "parse_num"
+	.word $9D15
+	.asciiz "hex_num_to_string"
+	.word $9D18
+	.asciiz "kill_process"
+	.word $9D1B
+	.asciiz "open_file"
+	.word $9D1E
+	.asciiz "close_file"
+	.word $9D21
+	.asciiz "chdir"
+	.word $9D30
+	.asciiz "wait_process"
+	.word $9D5D
+	.asciiz "unlink"
+	.word $9D66
+	.asciiz "mkdir"
+	.word $9D6F
+	.asciiz "rmdir"
+	.word $9D72
+	.asciiz "get_general_hook_info"
+	.word $9D81
+	.asciiz "send_message_general_hook"
+	.word $9D84
+	.asciiz "send_byte_chrout_hook"
+	.word $9D87
+	.asciiz "bin_to_bcd16"
+	.word $9D99
+	.asciiz "get_sys_info"
+	.word $9DAB
 kernal_routines_list_end:
+
+set_special_var_labels:
+	ldx #a_reg_var_str
+	jsr @lday_0_set_label_value
+	ldx #x_reg_var_str
+	jsr @lday_0_set_label_value
+	ldx #y_reg_var_str
+	jsr @lday_0_set_label_value
+	ldx #ax_reg_var_str
+	jsr @lday_0_set_label_value
+	ldx #return_reg_var_str
+	jsr @lday_0_set_label_value
+	
+@lday_0_set_label_value:
+	ldy #0
+	tya
+	jmp set_label_value	
+	
+a_reg_var_str:
+	.asciiz ".A"
+ax_reg_var_str:
+	.asciiz ".AX"
+x_reg_var_str:
+	.asciiz ".X"
+y_reg_var_str:
+	.asciiz ".Y"
+return_reg_var_str:
+	.asciiz "RETURN"
 
 ;
 ; print_usage
@@ -2328,6 +2571,8 @@ error_literal_str:
 
 must_be_int_val_err_str:
 	.asciiz "' must be int value"
+input_not_var_err_str:
+	.asciiz "'>' must be followed by var name, instead got '"
 invalid_reg_err_str:
 	.asciiz "undefined register '"
 only_str_literal_arg_err_str:
