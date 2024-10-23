@@ -119,34 +119,20 @@ main:
 	ldx #1
 	stx curr_line_num
 preparse_loop:
-	
 	jsr get_next_line
 	ldx #line_buff
-	jsr find_non_whitespace_char
 	lda $00, X
 	cmp #'#'
 	bne @not_line_number_label
-	inx
-	stx ptr0
-	jsr find_non_whitespace_char_rev
-	lda $00, X
-	beq :+
-	inx
-	stz $00, X
-	:
-	ldx ptr0
-	lda $00, X
-	cmp #'$'
-	bne :+
+	
 	jsr find_whitespace_char
 	lda $00, X
-	beq :++
-	:
-	ldy ptr0
+	beq :+
+	ldy ptr0 ; # must be followed by only one word (ie #label_name)
 	ldx #line_label_not_var_err_str
 	jsr print_quote_error_terminate	
 	:
-	ldx ptr0
+	ldx #line_buff
 	ldy curr_line_num
 	lda #0
 	jsr set_label_value
@@ -177,26 +163,9 @@ parse_file_loop:
 	jsr CHROUT
 	:
 	
-	; parse the line
-	lda #';'
-	ldx #line_buff
-	jsr strchr
-	cpx #0
-	beq :+
-	stz $00, X ; remove everything after the comment
-	:
 	ldx #line_buff
 condition_entry_pt:
-	jsr find_non_whitespace_char
-	stx ptr0 ; first non-space character in line_buff
-	
-	lda $00, X
-	beq :+
-	jsr find_non_whitespace_char_rev
-	inx
-	stz $00, X
-	:
-	ldx ptr0
+	stx ptr0
 	jsr strlen
 	cmp #0
 	bne :+
@@ -372,6 +341,25 @@ read_lines_from_file:
 @read_loop:
 	jsr read_next_file_line
 	ldx #line_buff
+	jsr find_non_whitespace_char
+	stx ptr0 ; push address of first non-whitespace char in line
+	
+	lda #';' ; comment
+	jsr strchr_not_quoted
+	cpx #0
+	beq :+
+	stz $00, X
+	:
+	ldx ptr0
+	jsr find_non_whitespace_char_rev
+	lda $00, X
+	beq :+
+	inx
+	stz $00, X
+	:
+	
+	ldx ptr0
+	phx ; push first char of line
 	jsr strlen
 	tax
 	inx
@@ -404,8 +392,6 @@ read_lines_from_file:
 	stx r0
 	lda ptr1
 	sta r2
-	ldx #line_buff
-	stx r1
 	stz r3
 	plx
 	rep #$20
@@ -414,6 +400,8 @@ read_lines_from_file:
 	tax
 	xba
 	sep #$20
+	ply ; first non-whitespace char in line
+	sty r1
 	jsr memmove_extmem
 
 @end_read_loop_iteration:
@@ -526,9 +514,9 @@ define_variable:
 	
 	; figure out variable type, and put it mem somewhere
 	ldx ptr1
-	lda $00, X
-	cmp #'"'
-	beq @variable_is_str_literal ; str
+	jsr try_parse_string_literal
+	cpx #0
+	bne @variable_is_str_literal
 @variable_is_not_literal:
 	ldx ptr1
 	jsr determine_symbol_value
@@ -558,26 +546,6 @@ define_variable:
 	rts
 	
 @variable_is_str_literal:
-	inx
-	lda #'"'
-	jsr strrchr
-	cpx #0
-	bne :+
-	ldx #invalid_str_literal_err_str
-	ldy ptr1
-	jmp print_quote_error_terminate
-	:
-	stz $00, X
-	ldx ptr1
-	inx
-	stx ptr1
-	jsr strlen
-	cmp #LABEL_VALUE_SIZE / 2
-	bcc :+
-	; string literal too long
-	ldx ptr1
-	jmp string_literal_too_long_error
-	:
 	txy
 	ldx ptr0
 	lda #1 ; str
@@ -880,7 +848,7 @@ run_kernal_routine:
 @parse_args_loop:
 	ldx ptr1
 	lda #','
-	jsr strchr
+	jsr strchr_not_quoted
 	cpx #0
 	bne :+
 	ldx ptr1
@@ -913,6 +881,10 @@ run_kernal_routine:
 	inx
 	stz $00, X
 	:
+	ldx ptr2
+	jsr try_parse_string_literal
+	cpx #0
+	bne @str_value
 	ldx ptr2
 	jsr determine_symbol_value
 	cmp #VAR_BANK_INT
@@ -1141,6 +1113,7 @@ test_conditional:
 	rts
 	:
 	ldx ptr1
+	jsr find_non_whitespace_char
 	jmp condition_entry_pt
 @tmp_var:
 	.byte 0
@@ -1309,6 +1282,41 @@ get_line_from_user:
 	lda #NEWLINE
 	jsr CHROUT ; print newline
 	
+	rts
+
+;
+; try_parse_string_literal
+;
+try_parse_string_literal:
+	lda $00, X
+	cmp #'"'
+	bne @not_str_literal
+	inx
+	phx
+	lda #'"'
+	jsr strrchr
+	cpx #0
+	bne :+
+	; error
+	ldx #invalid_str_literal_err_str
+	ply
+	jmp print_quote_error_terminate
+	:
+	stz $00, X
+	plx
+	jsr strlen
+	cmp #LABEL_VALUE_SIZE / 2
+	bcc :+
+	; string literal too long
+	txy
+	ldx ptr1
+	jmp string_literal_too_long_error
+	:
+	lda #0
+	rts
+@not_str_literal:	
+	ldx #0
+	txa
 	rts
 
 ;
@@ -2100,6 +2108,43 @@ strrchr:
 	.byte 0
 @start_ptr:
 	.word 0
+
+;
+; strchr_not_quoted
+;
+; returns a ptr in .X to the first byte .A in the str .X if it is not surrounded by "
+; returns a null pointer if there are none
+;
+strchr_not_quoted:
+	stz @quoted
+	sta @compare_char
+@loop:
+	lda $00, X
+	beq @return_null ; load .X with null pointer before returning
+	cmp @compare_char
+	bne :+
+	lda @quoted
+	beq @return_found_char
+	; .A = 0
+	:
+	cmp #'"'
+	bne :+
+	lda @quoted
+	eor #1
+	sta @quoted
+	:
+	inx
+	bne @loop
+@return_null:
+	ldx #0
+@return_found_char:
+	rts
+
+@compare_char:
+	.byte 0
+@quoted:
+	.byte 0
+
 
 ;
 ; find_non_whitespace_char
