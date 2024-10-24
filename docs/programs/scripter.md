@@ -19,6 +19,12 @@ Command Basics:
 - `#` : line number label
 
 Syntax:
+`$` statement: define or set a variable
 ```
 $variable_name [expression]
+```
+
+`@` statement: run a os routine
+```
+@routine_addr [REG=value, [REG2=value2, etc.,]]
 ```
