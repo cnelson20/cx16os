@@ -19,3 +19,6 @@ Command Basics:
 - `#` : line number label
 
 Syntax:
+```
+$variable_name [expression]
+```
