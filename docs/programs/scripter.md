@@ -17,6 +17,7 @@ scripter [OPTIONS] script_file
 - `%` : goto
 - `>` : user input
 - `#` : line number label
+- `x` : exit, if in interactive mode (entered by using the `-i` flag)
 
 #### More detailed Syntax:
 
