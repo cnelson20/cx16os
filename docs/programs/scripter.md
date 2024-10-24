@@ -9,7 +9,7 @@
 scripter [OPTIONS] script_file
 ```
 
-Command Basics:
+#### Command Basics:
 - `$` : define a variable
 - `@` : run a os routine
 - `-` : execute a program and wait for it to finish
@@ -18,11 +18,14 @@ Command Basics:
 - `>` : user input
 - `#` : line number label
 
-Syntax:
+#### More detailed Syntax:
+
 `$` statement: define or set a variable
 ```
 $variable_name [expression]
 ```
+
+<br />
 
 `@` statement: run a os routine
 ```
