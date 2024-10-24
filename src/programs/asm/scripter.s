@@ -969,7 +969,15 @@ run_kernal_routine:
 	; set some vars according to results of call
 	
 	ldx #a_reg_var_str
-	ldy routine_a_reg_value
+	lda #0
+	xba
+	lda routine_a_reg_value
+	tay
+	xba
+	jsr set_label_value
+	
+	ldx #c_reg_var_str
+	ldy routine_a_reg_value ; full 16 bytes
 	lda #0
 	jsr set_label_value
 	
@@ -1014,6 +1022,7 @@ figure_reg:
 	lda $00, X
 	cmp #'P'
 	bne :+
+	inx
 	lda $00, X
 	bne @failure
 	tya
@@ -1022,6 +1031,7 @@ figure_reg:
 	:
 	cmp #'X'
 	bne :+
+	inx
 	lda $00, X
 	bne @failure
 	sty routine_x_reg_value
@@ -2310,10 +2320,15 @@ kernal_routines_list:
 	.word $9D99
 	.asciiz "get_sys_info"
 	.word $9DAB
+	; internal functions that might be useful to have
+	.asciiz "strlen"
+	.word strlen
 kernal_routines_list_end:
 
 set_special_var_labels:
 	ldx #a_reg_var_str
+	jsr @lday_0_set_label_value
+	ldx #c_reg_var_str
 	jsr @lday_0_set_label_value
 	ldx #x_reg_var_str
 	jsr @lday_0_set_label_value
@@ -2331,6 +2346,8 @@ set_special_var_labels:
 	
 a_reg_var_str:
 	.asciiz ".A"
+c_reg_var_str:
+	.asciiz ".C"
 ax_reg_var_str:
 	.asciiz ".AX"
 x_reg_var_str:
