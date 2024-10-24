@@ -91,6 +91,13 @@ parse_options:
 	bra parse_options
 	:
 	
+	cmp #'i'
+	bne :+
+	lda #1
+	sta interactive_mode
+	bra parse_options
+	:
+	
 	; option does not exist
 	ldx #invalid_option_str
 	ldy ptr0
@@ -100,6 +107,15 @@ parse_options:
 	jmp terminate
 	
 @end_parse_options:
+
+main:
+	lda interactive_mode
+	beq @non_interactive_mode
+	
+	ldx #$FFFF
+	stx total_num_lines
+	bra setup_vars
+@non_interactive_mode:
 	lda input_file_ptr + 1
 	bne :+
 	; No input file provided
@@ -110,14 +126,15 @@ parse_options:
 	lda #1
 	jmp terminate
 	:
-main:
 	jsr read_lines_from_file
-	
+setup_vars:	
 	jsr set_special_var_labels
 	jsr set_kernal_routine_labels
 	
 	ldx #1
 	stx curr_line_num
+	lda interactive_mode ; if interactive_mode, don't do this preparsing
+	bne parse_file_loop
 preparse_loop:
 	jsr get_next_line
 	ldx #line_buff
@@ -152,7 +169,7 @@ preparse_loop:
 	ldx #1
 	stx curr_line_num
 parse_file_loop:
-	jsr get_next_line	
+	jsr get_next_line ; either from the file in mem or from the user in interactive_mode
 	
 	lda echo_commands
 	beq :+
@@ -210,6 +227,18 @@ condition_entry_pt:
 	bra finished_parsing_line ; done in first parse
 	:
 	
+	cmp #'x' ; if in interactive_mode and 'x' is entered, exit
+	bne :+
+	lda interactive_mode
+	beq :+
+	inx
+	lda $00, X
+	bne :+
+	stz interactive_mode
+	lda #0
+	jmp terminate
+	:
+	
 	ldx #invalid_start_of_line_err_str
 	ldy #0
 	lda #0
@@ -242,6 +271,10 @@ line_space_curr_addr:
 	.word $A000
 
 get_next_line:
+	lda interactive_mode
+	beq :+	
+	jmp get_code_line_from_user
+	:
 	rep #$20
 	.a16
 	stz ptr0
@@ -1200,6 +1233,39 @@ input_line_to_var:
 	ldy #line_buff
 	lda #1
 	jmp set_label_value ; do this and return
+
+get_code_line_from_user:
+	lda #'>'
+	jsr CHROUT ; prompt is '>'
+	
+	jsr get_line_from_user
+	ldx #line_buff
+	stx r0
+	jsr find_non_whitespace_char
+	stx r1
+	
+	lda #';' ; comment
+	jsr strchr_not_quoted
+	cpx #0
+	beq :+
+	stz $00, X
+	:
+	ldx r1
+	jsr find_non_whitespace_char_rev
+	lda $00, X
+	beq :+
+	inx
+	stz $00, X
+	:
+	stz r2
+	stz r3
+	
+	ldx r1
+	jsr strlen
+	xba
+	tax
+	xba
+	jmp memmove_extmem
 
 get_line_from_user:
 	lda #'_'
@@ -2661,6 +2727,10 @@ print_num_error:
 	jmp print_str
 	
 terminate:
+	lda interactive_mode
+	beq :+
+	jmp parse_file_loop ; if in interactive_mode, errors shouldnt cause the prog to exit
+	:	
 	ldx #$01FD
 	txs
 	rts
@@ -2677,6 +2747,8 @@ curr_line_num:
 total_num_lines:
 	.word 0
 echo_commands:
+	.byte 0
+interactive_mode:
 	.byte 0
 input_file_ptr:
 	.word 0
@@ -2701,7 +2773,7 @@ invalid_routine_arg_err_str:
 provided_quote_err_str:
 	.asciiz "' provided"
 invalid_start_of_line_err_str:
-	.asciiz "line must start with one of $, -, or @"
+	.asciiz "line must start with one of $, -, @, ?, %, >, or #"
 string_literal_err_str:
 	.asciiz "string literal '"
 too_long_err_str:
