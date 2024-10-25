@@ -6,7 +6,7 @@
 
 ### Usage:
 ```
-scripter [OPTIONS] script_file
+scripter [OPTIONS]... FILE
 ```
 
 #### Command Basics:
@@ -23,28 +23,28 @@ scripter [OPTIONS] script_file
 
 `$` statement: define or set a variable
 ```
-$variable_name [expression]
+$variable_name [EXPRESSION]
 ```
 
 <br />
 
 `@` statement: run a asm routine
 ```
-@routine_addr [REG=value, [REG2=value2, etc.,]]
+@routine_addr [REG=value]...
 ```
 
 <br />
 
 `-` statement: run an external program
 ```
--program_name [ args ]
+-program_name [ARGS]
 ```
 
 <br />
 
 `?` statement: perform a statement conditionally
 ```
-? [condition], [ $,@,-,?,% statement ]
+? CONDITION, $@-?% STATEMENT
 ```
 
 <br />
