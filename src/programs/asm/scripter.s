@@ -2546,7 +2546,7 @@ print_usage:
 	ldx #>usage_string
 	jsr print_str
 	
-	lda #1
+	lda #0
 	jmp terminate
 
 ;
