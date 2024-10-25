@@ -42,6 +42,13 @@ $variable_name [expression]
 
 <br />
 
+`?` statement: perform a statement conditionally
+```
+? [condition], [ $,@,-,?,% statement ]
+```
+
+<br />
+
 `#` statement: set a label equal to the curr line number, to use in conjunction `%` statements
 ```
 #label_name
