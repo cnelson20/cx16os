@@ -42,6 +42,19 @@ $variable_name [expression]
 
 <br />
 
+`#` statement: set a label equal to the curr line number, to use in conjunction `%` statements
+```
+#label_name
+```
+<br />
+
+`>` statement: get a line of input from the user
+```
+>$variable_to_write_input
+```
+
+<br />
+
 #### Special variables:
 - `.A`: 8-bit value of A register after the last asm routine completed
 - `.C`: 16-bit value of A/C register after the last asm routine completed
