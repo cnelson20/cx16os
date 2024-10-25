@@ -114,6 +114,8 @@ main:
 	
 	ldx #$FFFF
 	stx total_num_lines
+	
+	jsr interactive_mode_setup_lines
 	bra setup_vars
 @non_interactive_mode:
 	lda input_file_ptr + 1
@@ -142,17 +144,7 @@ preparse_loop:
 	cmp #'#'
 	bne @not_line_number_label
 	
-	jsr find_whitespace_char
-	lda $00, X
-	beq :+
-	ldy ptr0 ; # must be followed by only one word (ie #label_name)
-	ldx #line_label_not_var_err_str
-	jsr print_quote_error_terminate	
-	:
-	ldx #line_buff
-	ldy curr_line_num
-	lda #0
-	jsr set_label_value
+	jsr set_line_number_label
 @not_line_number_label:	
 	ldx curr_line_num
 	inx
@@ -223,7 +215,11 @@ condition_entry_pt:
 	bra finished_parsing_line
 	:
 	cmp #'#'
-	bne :+
+	bne :++
+	lda interactive_mode
+	beq :+
+	jsr set_line_number_label
+	:
 	bra finished_parsing_line ; done in first parse
 	:
 	
@@ -270,11 +266,31 @@ line_space_curr_bank:
 line_space_curr_addr:
 	.word $A000
 
+fill_whole_extmem_bank:
+	jsr set_extmem_wbank
+	ldx #START_EXTMEM
+	stx r0
+	ldx #END_EXTMEM - START_EXTMEM
+	stx r1
+	lda #0
+	jmp fill_extmem
+
+interactive_mode_setup_lines:
+	jsr res_extmem_bank
+	sta line_space_curr_bank
+	inc A
+	sta line_addr_banks + 0
+	sta ptr3
+	
+	ldx #0
+	stx last_line_num_read
+	ldx #1
+	stx line_addr_banks_size
+	
+	jsr fill_whole_extmem_bank
+	rts
+
 get_next_line:
-	lda interactive_mode
-	beq :+	
-	jmp get_code_line_from_user
-	:
 	rep #$20
 	.a16
 	stz ptr0
@@ -302,6 +318,82 @@ get_next_line:
 	tax
 	sep #$20
 	.a8
+	lda interactive_mode
+	beq @non_interactive_mode
+	ldy last_line_num_read
+	cpy curr_line_num
+	bcs @non_interactive_mode
+@interactive_mode_store_input:
+	lda line_addr_banks, X
+	bne @bank_alr_allocd
+	dex
+	lda line_addr_banks, X
+	and #1
+	beq :+
+	jsr res_extmem_bank
+	bra :++
+	:
+	lda line_addr_banks, X
+	inc A
+	:
+	ldx line_addr_banks_size
+	sta line_addr_banks, X
+	inx
+	stx line_addr_banks_size
+	pha
+	jsr fill_whole_extmem_bank
+	pla
+@bank_alr_allocd:	
+	pha
+	jsr get_code_line_from_user
+	pla
+	jsr set_extmem_wbank
+	
+	ldx #line_buff
+	stx r1
+	jsr strlen
+	tax
+	inx
+	phx
+	jsr alloc_space_extmem
+	sta r2
+	stx r0
+	stz r3
+	
+	plx
+	phx
+	rep #$20
+	txa
+	sep #$20
+	xba
+	tax
+	xba
+	jsr memmove_extmem
+	
+	; write to line offset
+	ply
+	plx ; need this
+	phy
+	ldy #0
+	lda r2
+	jsr pwrite_extmem_xy
+	rep #$20
+	.a16
+	iny
+	lda r0
+	jsr pwrite_extmem_xy	
+	pla
+	sep #$20
+	.a8
+	iny
+	iny
+	jsr pwrite_extmem_xy
+	
+	ldx curr_line_num
+	stx last_line_num_read
+	rts
+
+@non_interactive_mode:	
 	lda line_addr_banks, X
 	jsr set_extmem_rbank
 	
@@ -490,6 +582,9 @@ read_lines_from_file:
 	jsr close_file
 	
 	rts
+
+last_line_num_read:
+	.word 0
 
 ;
 ; alloc_space_extmem
@@ -1359,6 +1454,24 @@ get_line_from_user:
 	jsr CHROUT ; print newline
 	
 	rts
+
+;
+; set_line_number_label
+;
+set_line_number_label:
+	phx
+	jsr find_whitespace_char
+	lda $00, X
+	beq :+
+	ply
+	iny
+	ldx #line_label_not_var_err_str
+	jsr print_quote_error_terminate	
+	:
+	plx
+	ldy curr_line_num
+	lda #0
+	jmp set_label_value
 
 ;
 ; try_parse_string_literal
@@ -2729,6 +2842,9 @@ print_num_error:
 terminate:
 	lda interactive_mode
 	beq :+
+	ldx last_line_num_read
+	dex
+	stx last_line_num_read
 	jmp parse_file_loop ; if in interactive_mode, errors shouldnt cause the prog to exit
 	:	
 	ldx #$01FD
