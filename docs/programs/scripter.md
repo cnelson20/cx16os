@@ -49,15 +49,27 @@ $variable_name [EXPRESSION]
 
 <br />
 
-`#` statement: set a label equal to the curr line number, to use in conjunction `%` statements
+`%` statement: goto a line number
 ```
-#label_name
+% #LABEL_NAME
 ```
+or
+```
+% LINE_NUMBER
+```
+
 <br />
 
 `>` statement: get a line of input from the user
 ```
 >$variable_to_write_input
+```
+
+<br />
+
+`#` statement: set a label equal to the curr line number, to use in conjunction `%` statements
+```
+#label_name
 ```
 
 <br />
