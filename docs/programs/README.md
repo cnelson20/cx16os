@@ -14,6 +14,8 @@ The following programs each have their own documentation page:
 
 - [shell](shell.md) - the default cx16os shell
 
+- [scripter](scripter.md) - a scripting language
+
 <br />
 
 The following programs are mostly similar in function to the POSIX utilities, with more detail listed under each program:
