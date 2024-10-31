@@ -11,7 +11,7 @@
 .import hex_num_to_string_kernal
 .import setup_system_hooks, release_all_process_hooks
 
-.import programs_last_printed_special_char
+.import programs_last_printed_special_char, setup_process_display_vars
 
 .import check_channel_status, load_process_entry_pt
 .import file_table_count
@@ -1184,6 +1184,10 @@ setup_process_info:
 	jsr setup_process_file_table_int
 	lda RAM_BANK
 	jsr setup_process_extmem_table
+	
+	lda RAM_BANK
+	ldx current_program_id
+	jsr setup_process_display_vars
 
 @end_func:
 	lda RAM_BANK

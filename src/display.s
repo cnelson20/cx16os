@@ -64,7 +64,7 @@ setup_process_display_vars:
 	lda programs_back_color_table, X
 	sta programs_back_color_table, Y
 	lda programs_fore_color_table, X
-	sta programs_back_color_table, Y
+	sta programs_fore_color_table, Y
 	rts
 
 ;
