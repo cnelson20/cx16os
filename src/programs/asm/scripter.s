@@ -7,7 +7,7 @@ scripter - cx16os v basic scripting language
 non-os routine lines must start with one of the following:
 $ : define a variable
 @ : run a os routine
-- : execute a program and wait for it to finish
+- or ! : execute a program and wait for it to finish
 ? : conditional
 % : goto
 > : user input
@@ -190,7 +190,10 @@ condition_entry_pt:
 	bra finished_parsing_line
 	:
 	cmp #'-'
-	bne :+
+	beq :+
+	cmp #'!'
+	bne :++
+	:
 	jsr exec_program
 	bra finished_parsing_line
 	:
@@ -952,7 +955,7 @@ run_kernal_routine:
 	stx ptr1
 	
 	ldx ptr0
-	jsr find_label_value
+	jsr determine_symbol_value
 	cmp #0
 	bne :+
 	ldx #undefined_symbol_err_str
@@ -964,7 +967,26 @@ run_kernal_routine:
 	ldx ptr0
 	jmp routine_not_int_error
 	:
+	cpx #$9D00 ; routine must be >= this addr
+	bcs :+
+	stx ptr1
+	lda ptr1 + 1
+	jsr GET_HEX_NUM
+	sta string_vars_buff
+	stx string_vars_buff + 1
+	lda ptr1
+	jsr GET_HEX_NUM
+	sta string_vars_buff + 2
+	stx string_vars_buff + 3
+	stz string_vars_buff + 4
+	ldx #routine_addr_out_range
+	ldy #string_vars_buff
+	lda #0
+	jsr print_error
+	jmp terminate
+	:
 	stx ptr0 ; write addr of the routine to ptr0
+	
 	
 	ldx #0
 	stx routine_a_reg_value
@@ -1658,6 +1680,7 @@ determine_symbol_value:
 	cmp #'9' + 1
 	bcs @not_number
 @parse_number:
+	phx ; push num str
 	rep #$20
 	.a16
 	txa
@@ -1667,6 +1690,14 @@ determine_symbol_value:
 	tax
 	xba
 	jsr parse_num
+	cpy #0
+	beq :+
+	lda #0
+	ldx #invalid_num_format_err_str
+	ply
+	jmp print_quote_error_terminate
+	:
+	ply ; pull num str, disregard .Y
 	xba
 	txa ; lower byte of .X to .A
 	xba ;switch back
@@ -2782,6 +2813,9 @@ print_error_wo_entry:
 ; print_error_line_num
 ;
 print_error_line_num:
+	lda interactive_mode
+	bne :+
+	
 	lda input_file_ptr
 	ldx input_file_ptr + 1
 	jsr print_str
@@ -2795,6 +2829,7 @@ print_error_line_num:
 	lda #' '
 	jsr CHROUT
 
+	:
 	rts
 
 ;
@@ -2840,8 +2875,11 @@ print_num_error:
 	jmp print_str
 	
 terminate:
+	pha
 	lda interactive_mode
-	beq :+
+	cmp #1
+	pla
+	bcc :+
 	ldx last_line_num_read
 	dex
 	stx last_line_num_read
@@ -2874,6 +2912,10 @@ scripter_name_err_str:
 error_literal_str:
 	.asciiz "error: "
 
+invalid_num_format_err_str:
+	.asciiz "invalid number format '"
+routine_addr_out_range:
+	.asciiz "kernal routine out of range, got addr 0x"
 must_be_int_val_err_str:
 	.asciiz "' must be int value"
 line_label_not_var_err_str:
@@ -2889,7 +2931,7 @@ invalid_routine_arg_err_str:
 provided_quote_err_str:
 	.asciiz "' provided"
 invalid_start_of_line_err_str:
-	.asciiz "line must start with one of $, -, @, ?, %, >, or #"
+	.asciiz "line must start with one of $, -/!, @, ?, %, >, or #"
 string_literal_err_str:
 	.asciiz "string literal '"
 too_long_err_str:
