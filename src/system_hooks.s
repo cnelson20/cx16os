@@ -9,10 +9,9 @@
 .import surrender_process_time, schedule_timer
 .import memcpy_banks_ext
 .import check_process_owns_bank
+.import putc_v, setup_display, reset_display
 
 CHROUT_BUFF_SIZE = $1000
-PLOT_X = $0B
-PLOT_Y = $0C
 
 chrout_prog_bank:
 	.byte 0
@@ -23,17 +22,12 @@ chrout_data_addr:
 chrout_info_addr:
 	.word 0
 
-default_screen_mode:
-	.byte 0
-
 .export setup_system_hooks
 setup_system_hooks:
 	; get screen mode when cx16os starts
+	jsr setup_display
 	stz prog_using_vera_regs
-	sec
-	jsr screen_mode
-	sta default_screen_mode
-	
+		
 	jsr reset_chrout_hook
 	jsr reset_other_hooks
 	rts
@@ -254,120 +248,6 @@ write_char_chrout_hook_buff:
 	.i8
 	ldx #0
 	rts
-
-;
-; filters certain invalid chars, then calls CHROUT 
-;
-.export putc_v
-putc_v:
-	tax
-	lda current_program_id
-	lsr A
-	tay
-	lda programs_last_printed_special_char, Y
-	cmp #PLOT_X
-	bne :+
-	lda #0
-	sta programs_last_printed_special_char, Y
-	phx
-	sec
-	jsr PLOT
-	ply ; change Y position of cursor
-	clc
-	jmp PLOT
-	:
-	cmp #PLOT_Y
-	bne :+
-	lda #0
-	sta programs_last_printed_special_char, Y
-	phx
-	sec
-	jsr PLOT
-	plx ; change X position of cursor
-	clc
-	jmp PLOT
-	:
-	txa
-	
-	; need to handle quote mode ;
-	cmp #'"' ; "
-	bne :+
-	pha
-	lda #$80
-	jsr CHROUT
-	bra @valid_char
-	:
-
-	pha
-	and #$7F
-	cmp #$20
-	bcc @unusual_char
-@valid_char:
-	pla
-	jmp CHROUT	
-	
-@unusual_char:
-	tax
-	pla
-	pha
-	
-	pha
-	lda current_program_id
-	lsr A
-	tay
-	pla
-	sta programs_last_printed_special_char, Y 
-
-	cmp #$d ; '\r'
-	bne :+
-	jsr CHROUT
-	pla
-	lda #$a ; '\n'
-	jmp CHROUT
-	:
-	
-	cmp #PLOT_X
-	beq :+
-	cmp #PLOT_Y
-	bne :++
-	:
-	pla
-	rts ; just return, don't print these escaped
-	:
-
-	cmp #$80
-	bcs :+
-	lda valid_c_table_0, X ; X = A & $7F
-	bra :++
-	:
-	lda valid_c_table_1, X
-	:
-	bne @valid_char
-	
-	; needs to be appended ;
-	lda #$80
-	jsr CHROUT
-	jmp @valid_char
-
-@plot_x_bank:
-	.byte 0
-@plot_y_bank:
-	.byte 0
-
-valid_c_table_0:
-	.byte 0, 1, 0, 0, 1, 1, 0, 1 ; $00 - $07
-	.byte 1, 0, 1, 1, 1, 1, 0, 0 ; $08 - $0F
-	.byte 0, 0, 1, 1, 0, 0, 0, 0 ; $10 - $17
-	.byte 1, 0, 1, 0, 1, 1, 1, 1 ; $18 - $1F
-valid_c_table_1:
-	.byte 0, 1, 0, 0, 0, 0, 0, 0 ; $80 - $87
-	.byte 0, 0, 0, 0, 0, 0, 0, 0 ; $88 - $8F
-	.byte 1, 0, 0, 1, 0, 1, 1, 1 ; $90 - $97
-	.byte 1, 1, 1, 1, 1, 1, 1, 1 ; $98 - $9F
-
-.export programs_last_printed_special_char
-programs_last_printed_special_char:
-	.res 128, 0
 
 ;
 ; other hooks
@@ -875,25 +755,7 @@ try_unlock_vera_regs:
 	rts
 
 	:
-	lda VERA::CTRL
-	and #$7E
-	sta VERA::CTRL ; set dcsel & addrsel to zero
-
-	;lda VERA::VIDEO
-	;and #3
-	;ora #$20
-	;sta VERA::VIDEO
-
-	; reset mapbase for layer1
-	lda #$D8 ; mapbase is at $1B000
-	sta VERA::L1::MAP_BASE
-
-	lda default_screen_mode
-	clc
-	jsr screen_mode
-	
-	lda #$93
-	jsr CHROUT
+	jsr reset_display
 	
 	stz prog_using_vera_regs
 	lda #0

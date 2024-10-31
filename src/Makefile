@@ -2,7 +2,7 @@ CC = cl65.exe
 
 PROGRAM = os.prg
 
-SOURCES = main.s kernalcalls.s helpers.s helpers_int.s fileops.s extmem.s system_hooks.s
+SOURCES = main.s kernalcalls.s helpers.s helpers_int.s fileops.s extmem.s system_hooks.s display.s
 INCS = prog.inc cx16.inc macs.inc
 FLAGS = -t cx16 -m os.map -Ln os.lbl
 

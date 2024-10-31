@@ -26,8 +26,6 @@
 	
 .SEGMENT "CODE"
 
-SWAP_FGBG_COLORS = 1
-
 init:
 	clc
 	xce ; enter 816 native mode
@@ -47,13 +45,13 @@ init:
 	stz ROM_BANK
 	stz current_program_id
 	
-	lda #SWAP_FGBG_COLORS
+	lda #SWAP_COLORS
 	jsr CHROUT
-	lda #$90 ; COLOR_BLACK
+	lda #COLOR_BLACK
 	jsr CHROUT
-	lda #SWAP_FGBG_COLORS
+	lda #SWAP_COLORS
 	jsr CHROUT
-	lda #$05 ; COLOR_WHITE
+	lda #COLOR_WHITE
 	jsr CHROUT
 	
 	lda #$0f

@@ -38,6 +38,7 @@
 .import current_program_id
 .import file_table_count
 
+.import programs_fore_color_table, programs_back_color_table
 
 .export call_table
 call_table:
@@ -101,6 +102,7 @@ call_table:
 	jmp get_sys_info ; $9DAB
 	jmp pread_extmem_xy ; $9DAE
 	jmp pwrite_extmem_xy ; $9DB1
+	jmp get_console_colors ; $9DB4
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -686,4 +688,18 @@ get_sys_info:
 	restore_p_816
 	rts
 
+;
+; get_console_colors
+;
+.export get_console_colors
+get_console_colors:
+	save_p_816_8bitmode
+	lda current_program_id
+	lsr A
+	tay
+	lda programs_back_color_table, Y
+	tax
+	lda programs_fore_color_table, Y
+	restore_p_816
+	rts
 

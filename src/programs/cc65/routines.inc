@@ -14,6 +14,7 @@ exec := $9D06
 
 print_str := $9D09
 PRINT_STR := print_str
+get_console_colors := $9DB4
 
 get_process_info := $9D0C
 get_args := $9D0F
