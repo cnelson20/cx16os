@@ -40,6 +40,14 @@ init:
 	sta ptr1
 	stx ptr1 + 1
 	sty ptr2
+	
+	jsr get_console_colors
+	sta foreground_color
+	cmp #COLOR_WHITE
+	beq :+
+	lda #1
+	sta disable_color_flag
+	:
 
 	stz exit_code
 	stz dir_names_size
@@ -303,7 +311,7 @@ print_dir_loop:
 
 	lda disable_color_flag
 	bne :+
-	lda #COLOR_WHITE
+	lda foreground_color
 	jsr CHROUT
 	:
 
@@ -452,6 +460,8 @@ end_listing_addr:
 print_dotfiles_flag:
 	.byte 0
 disable_color_flag:
+	.byte 0
+foreground_color:
 	.byte 0
 
 err_num:
