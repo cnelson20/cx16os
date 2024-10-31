@@ -33,6 +33,7 @@ init:
 	sta ptr0
 	stx ptr0 + 1
 	sty argc
+	
 prog_args_loop:
 	jsr get_next_arg
 	cmp #0
@@ -61,6 +62,12 @@ prog_args_loop:
 	sta first_command_addr
 	lda ptr0 + 1
 	sta first_command_addr + 1
+	bra prog_args_loop
+	:
+	
+	cmp #'b'
+	bne :+
+	stz color_mode
 	bra prog_args_loop
 	:
 
@@ -122,6 +129,11 @@ bootrc_filename:
 welcome:
 	stz new_stdin_fileno
 	stz new_stdout_fileno
+	
+	jsr get_console_colors
+	sta fore_color
+	txa
+	sta back_color
 
 	lda curr_running_script
 	bne new_line
@@ -193,7 +205,13 @@ new_line:
 	jsr close_file
 	:
 	
+	lda color_mode
+	beq :+
 	lda #COLOR_GREEN
+	bra :++
+	:
+	lda fore_color
+	:
 	jsr CHROUT
 	lda #<stdin_filename
 	sta r0
@@ -206,8 +224,8 @@ new_line:
 	lda #<stdin_filename
 	ldx #>stdin_filename
 	jsr print_str
-
-	lda #COLOR_WHITE ; white color
+	
+	lda fore_color
 	jsr CHROUT
 	lda #'$' ; '$'
 	jsr CHROUT
@@ -1338,7 +1356,27 @@ check_special_cmds:
 	lda #1
 	rts
 @not_detach:
+	lda #<string_bw
+	ldx #>string_bw
+	jsr cmd_cmp
+	bne @not_bw
 
+	lda color_mode
+	eor #1
+	sta color_mode
+	lda #1
+	rts
+@not_bw:
+	lda #<string_color
+	ldx #>string_color
+	jsr cmd_cmp
+	bne @not_color
+	
+	jsr change_shell_colors
+	
+	lda #1
+	rts	
+@not_color:
 	lda #0
 	rts
 
@@ -1432,6 +1470,102 @@ exit_shell:
 	lda #<$01FD
 	tcs
 	lda ptr0
+	rts
+
+change_shell_colors:
+	lda num_args
+	cmp #2
+	bcc @too_few_args
+	
+	ldy args_offset_arr + 1
+	lda output, Y
+	bne @enough_args ; Not empty string
+@too_few_args:
+	; print err msg
+	lda #<color_no_args_err_string
+	ldx #>color_no_args_err_string
+	jsr print_str
+	rts
+@enough_args:
+	lda output, Y
+	jsr hex_digit_to_byte
+	cmp #$FF
+	beq @invalid_arg
+	tax
+	lda color_table, X
+	pha
+	tyx
+	inx
+	lda output, X
+	jsr hex_digit_to_byte
+	cmp #$FF
+	bne :+
+	pla
+	bra @invalid_arg
+	:
+	tax
+	lda color_table, X
+	sta fore_color
+	pla
+	sta back_color
+	
+	jsr CHROUT
+	lda #SWAP_COLORS
+	jsr CHROUT
+	lda fore_color
+	jsr CHROUT
+	lda #$93
+	jmp CHROUT
+	
+@invalid_arg:
+	phy
+	lda #<color_invalid_arg_err_string
+	ldx #>color_invalid_arg_err_string
+	jsr print_str
+	pla
+	clc
+	adc #<output
+	ldx #>output
+	bcc :+
+	inx
+	:
+	jsr print_str
+	
+	lda #SINGLE_QUOTE
+	jsr CHROUT
+	lda #$d
+	jsr CHROUT
+	rts
+			
+color_table:
+	.byte $90, $05, $1C, $9F, $9C, $1E, $1F, $9E
+	.byte $81, $95, $96, $97, $98, $99, $9A, $9B
+
+hex_digit_to_byte:
+	cmp #'0'
+	bcc @invalid
+	cmp #'9' + 1
+	bcs :+
+	sec
+	sbc #'0'
+	rts
+	:
+	cmp #'A'
+	bcc :+
+	cmp #'Z' + 1
+	bcs :+
+	sec
+	sbc #'A' - 10
+	:
+	cmp #'a'
+	bcc :+
+	cmp #'z' + 1
+	bcs :+
+	sec
+	sbc #'a' - 10
+	:
+@invalid:
+	lda #$FF
 	rts
 
 set_env_var:
@@ -1722,6 +1856,13 @@ set_env_out_space:
 	.byte "setenv: no memory left for variables"
 	.byte $d, 0
 
+color_no_args_err_string:
+	.byte "color: argument required"
+	.byte $d, 0
+color_invalid_arg_err_string:
+	.byte "color: invalid operand '"
+	.byte 0
+
 cd_error_string:
 	.byte "cd: error changing directory"
 	.byte $d, 0
@@ -1743,6 +1884,10 @@ string_source:
 	.asciiz "source"
 string_detach:
 	.asciiz "detach"
+string_bw:
+	.asciiz "bw"
+string_color:
+	.asciiz "color"
 
 ; program vars 
 
@@ -1775,6 +1920,12 @@ command_length:
 curr_arg:
 	.byte 0
 flicker_tick:
+	.byte 0
+color_mode:
+	.byte 1
+fore_color:
+	.byte 0
+back_color:
 	.byte 0
 
 next_fd:
