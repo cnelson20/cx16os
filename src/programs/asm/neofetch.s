@@ -36,6 +36,9 @@ ptr2 := $34
 	rep #$10
 	.i16
 	
+	jsr get_console_colors
+	sta fore_color
+	
 	ldx #0
 	stx info_functions_size
 	stx info_functions_index
@@ -983,7 +986,7 @@ print_colors:
 	
 	lda #SWAP_COLORS
 	jsr CHROUT
-	lda #COLOR_WHITE
+	lda fore_color
 	jsr CHROUT
 	
 	jmp print_cr
@@ -994,7 +997,7 @@ print_colors:
 	.byte COLOR_DGRAY, COLOR_LRED, COLOR_LGREEN, COLOR_ORANGE, COLOR_LBLUE, COLOR_YELLOW, COLOR_CYAN,  COLOR_WHITE
 
 print_next_info_line:
-	lda #COLOR_WHITE
+	lda fore_color
 	jsr CHROUT
 	
 	ldx info_functions_index
@@ -1047,6 +1050,8 @@ ascii_ptr:
 	.word 0
 still_print_info:
 	.byte 1
+fore_color:
+	.byte 0
 
 x16_ascii_art:
 	.byte COLOR_WHITE,  "                            ", $d
