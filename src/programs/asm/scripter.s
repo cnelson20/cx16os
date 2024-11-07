@@ -1007,6 +1007,10 @@ run_kernal_routine:
 	sta routine_status_reg_value
 @parse_args_loop:
 	ldx ptr1
+	lda $00, X
+	bne :+
+	jmp @end_parse_args_loop
+	:
 	lda #','
 	jsr strchr_not_quoted
 	cpx #0
@@ -1101,11 +1105,9 @@ run_kernal_routine:
 	jmp print_quote_error_terminate
 @end_parse_loop_iter:	
 	plx
-	lda $00, X
-	beq :+
 	stx ptr1
 	jmp @parse_args_loop
-	:
+@end_parse_args_loop:
 	
 	; do routine
 	lda routine_status_reg_value
@@ -2588,7 +2590,9 @@ kernal_routines_list:
 	.word $9DAB
 	; internal functions that might be useful to have
 	.asciiz "strlen"
-	.word strlen
+	.word strlen_user
+	.asciiz "puts"
+	.word puts_user
 kernal_routines_list_end:
 
 set_special_var_labels:
@@ -2622,6 +2626,22 @@ y_reg_var_str:
 	.asciiz ".Y"
 return_reg_var_str:
 	.asciiz "RETURN"
+
+strlen_user:
+	sep #$30
+	.a16
+	xba
+	txa
+	xba
+	rep #$10
+	tax
+	.a8
+	jmp strlen
+
+puts_user:
+	jsr print_str
+	lda #NEWLINE
+	jmp CHROUT
 
 ;
 ; print_usage
