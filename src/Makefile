@@ -37,7 +37,7 @@ build: os.prg programs
 	cp os.prg mnt/OS.PRG
 	cp AUTOBOOT.X16 mnt/
 	
-	cp osfiles/* mnt/
+	cp -r osfiles/* mnt/
 	-mkdir mnt/tmp/ mnt/etc/
 
 sd: copy build
