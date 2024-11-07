@@ -12,7 +12,7 @@ scripter [OPTIONS]... FILE
 #### Command Basics:
 - `$` : define a variable
 - `@` : run a asm routine
-- `-` : execute a program and wait for it to finish
+- `-`/`!` : execute a program and wait for it to finish
 - `?` : conditional
 - `%` : goto
 - `>` : user input
@@ -35,7 +35,7 @@ $variable_name [EXPRESSION]
 
 <br />
 
-`-` statement: run an external program
+`-` / `!` statement: run an external program
 ```
 -program_name [ARGS]
 ```
@@ -81,3 +81,4 @@ or
 - `.AX`: low bytes of A and X registers after the last asm routine completed
 - `.Y`: 16-bit value of Y register after the last asm routine completed
 - `RETURN`: return code of last external program executed
+- `.`: current line number
