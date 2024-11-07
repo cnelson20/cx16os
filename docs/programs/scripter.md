@@ -81,3 +81,4 @@ or
 - `.AX`: low bytes of A and X registers after the last asm routine completed
 - `.Y`: 16-bit value of Y register after the last asm routine completed
 - `RETURN`: return code of last external program executed
+- `.`: current line number
