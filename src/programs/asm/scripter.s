@@ -172,6 +172,8 @@ parse_file_loop:
 	jsr CHROUT
 	:
 	
+	stz interactive_mode_escaped_line
+	
 	ldx #line_buff
 condition_entry_pt:
 	stx ptr0
@@ -224,6 +226,14 @@ condition_entry_pt:
 	jsr set_line_number_label
 	:
 	bra finished_parsing_line ; done in first parse
+	:
+	
+	cmp #'\'
+	bne :+
+	lda interactive_mode
+	beq :+
+	jsr escape_code_line
+	bra finished_parsing_line
 	:
 	
 	cmp #'x' ; if in interactive_mode and 'x' is entered, exit
@@ -1313,6 +1323,22 @@ goto_line:
 	jmp goto_invalid_line_num_error
 
 ;
+; escape_code_line
+;
+escape_code_line:
+	ldy curr_line_num
+	cpy last_line_num_read
+	bne :+ ; if line was just typed in, don't run it
+	rts
+	:
+	inx
+	jsr find_non_whitespace_char
+	
+	lda #1
+	sta interactive_mode_escaped_line
+	jmp condition_entry_pt
+
+;
 ; input_line_to_var
 ;
 input_line_to_var:
@@ -1616,7 +1642,7 @@ determine_symbol_value:
 	plx
 	
 	lda $00, X
-	cmp #'*'
+	cmp #'.'
 	bne @not_line_num
 	inx
 	lda $00, X
@@ -1783,6 +1809,15 @@ perform_operation:
 	rts
 @not_subtract:
 	
+	; compare for multiplication ;
+	cmp #'*'
+	bne @not_mult
+	ldy @tmp_word
+	jsr mult16
+	lda #VAR_BANK_INT
+	rts
+@not_mult:
+	
 	; compare for OR ;
 	cmp #'|'
 	bne @not_or
@@ -1898,6 +1933,27 @@ perform_operation:
 @tmp_word:
 	.word 0
 
+
+mult16:
+	rep #$20
+	.a16
+	stx ptr1
+	sty ptr2
+	lda #0
+@loop:
+	lsr ptr2 ; if low bit of ptr2 = 1, add ptr1 to .A
+	bcc :+
+	clc
+	adc ptr1
+	:
+	asl ptr1
+	ldy ptr2
+	bne @loop
+	
+	tax
+	sep #$20
+	.a8
+    rts
 
 START_EXTMEM = $A000
 END_EXTMEM = $C000
@@ -2879,15 +2935,24 @@ terminate:
 	lda interactive_mode
 	cmp #1
 	pla
-	bcc :+
+	bcs terminate_interactive_mode
+	ldx #$01FD ; if running not in interactive_mode ,just exit
+	txs
+	rts
+terminate_interactive_mode:
+	lda interactive_mode_escaped_line
+	beq :+
+	
+	ldx last_line_num_read
+	inx ; make sure next line reads from user
+	stx curr_line_num
+	bra :++
+	:
 	ldx last_line_num_read
 	dex
 	stx last_line_num_read
+	:
 	jmp parse_file_loop ; if in interactive_mode, errors shouldnt cause the prog to exit
-	:	
-	ldx #$01FD
-	txs
-	rts
 	
 fd:
 	.byte 0
@@ -2903,6 +2968,8 @@ total_num_lines:
 echo_commands:
 	.byte 0
 interactive_mode:
+	.byte 0
+interactive_mode_escaped_line:
 	.byte 0
 input_file_ptr:
 	.word 0
