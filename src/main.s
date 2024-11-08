@@ -697,10 +697,10 @@ save_current_process:
 	.a16
 	.i16
 	
-	; copies $02 - $1F in zp to STORE_RAM_ZP_SET1
-	lda #(ZP_SET1_SIZE - 2) - 1
-	ldx #ZP_SET1_START + 2
-	ldy #STORE_RAM_ZP_SET1 + 2
+	; copies $02 - $21 in zp to STORE_RAM_ZP_SET1
+	lda #ZP_SET1_SIZE - 1
+	ldx #ZP_SET1_START
+	ldy #STORE_RAM_ZP_SET1
 	mvn #$00, #$00
 
 	; copies $30 - $4f to STORE_RAM_ZP_SET2
@@ -767,10 +767,10 @@ restore_new_process:
 	.a16
 	.i16
 	
-	; copies STORE_RAM_ZP_SET1 to $02 - $1F in zp
-	lda #(ZP_SET1_SIZE - 2) - 1
-	ldy #ZP_SET1_START + 2
-	ldx #STORE_RAM_ZP_SET1 + 2
+	; copies STORE_RAM_ZP_SET1 to $02 - $21 in zp
+	lda #ZP_SET1_SIZE - 1
+	ldy #ZP_SET1_START
+	ldx #STORE_RAM_ZP_SET1
 	mvn #$00, #$00
 
 	; copies STORE_RAM_ZP_SET2 to $30 - $4f
