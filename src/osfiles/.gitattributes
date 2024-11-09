@@ -1,3 +1,4 @@
 *.txt text eol=crlf
 *.asm text eol=crlf
 *.sh text eol=crlf
+*.sr text eol=crlf
