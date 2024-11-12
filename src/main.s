@@ -728,7 +728,6 @@ save_current_process:
 	accum_index_8_bit
 	.a8
 	.i8
-
 	rts
 
 ;
