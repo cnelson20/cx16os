@@ -531,6 +531,9 @@ write_line_screen:
 
     ldx prog_printing
     lda prog_buff_lengths, X
+    bne :+
+    jmp @end_display_chars_loop
+    :
     sta ptr0
     stz ptr0 + 1
 
@@ -732,6 +735,7 @@ write_line_screen:
 
     stx temp_term_x_offset
 
+@end_display_chars_loop:
     ; copy back from temp vars ;
     ldx prog_printing
     lda prog_term_use, X
