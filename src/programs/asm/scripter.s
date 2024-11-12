@@ -909,8 +909,8 @@ exec_program:
 	
 @end_find_whitespace_loop:
 	; call exec
-	lda #1
-	sta r0
+	;lda #1
+	stz r0
 	stz r2
 	stz r2 + 1
 	
