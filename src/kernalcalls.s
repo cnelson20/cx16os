@@ -32,7 +32,7 @@
 
 .import surrender_process_time, schedule_timer
 .import irq_already_triggered
-.import atomic_action_st
+.import atomic_action_st, process_using_kernal
 .import process_table, return_table, process_parents_table, process_priority_table
 .import active_process
 .import current_program_id
@@ -106,6 +106,25 @@ call_table:
 	.res 3, $FF
 .export call_table_end
 call_table_end:
+
+;
+; setup_call_table
+;
+.export setup_call_table
+setup_call_table:
+	accum_index_16_bit
+	.a16
+	.i16
+	
+	ldx #call_table
+	ldy #call_table_mem_start
+	lda #call_table_end - call_table - 1
+	mvn #$00, #$00
+	
+	accum_index_8_bit
+	.a8
+	.i8
+	rts
 
 ;
 ; exec - calls load_new_process
