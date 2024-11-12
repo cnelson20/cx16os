@@ -58,13 +58,17 @@ main_loop:
 	; print instance id ;
 	lda #$20 ; space
 	jsr CHROUT
-	lda #$24 ; $
+	lda #'0'
+	jsr CHROUT
+	lda #'x'
 	jsr CHROUT
 	
 	pla
 	jsr GET_HEX_NUM
+	jsr tolower
 	jsr CHROUT
 	txa
+	jsr tolower
 	jsr CHROUT
 	
 	; print ppid
@@ -136,10 +140,19 @@ no_such_process:
 loop_pid:
 	.byte 0
 first_line:
-	.byte " PID IID PPID CMD"
+	.byte " PID  IID PPID CMD"
 	.byte $0d, $00
 buffer:
 	.res 128
+
+tolower:
+	cmp #'A'
+	bcc :+
+	cmp #'Z' + 1
+	bcs :+
+	ora #$20
+	:
+	rts
 	
 get_hex_char:
 	cmp #10

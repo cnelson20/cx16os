@@ -376,7 +376,7 @@ custom_nmi_handler:
 	lda current_program_id
 	cmp active_process
 	bne :+
-	cmp #FIRST_PROGRAM_BANK ; first process is nmi-able
+	cmp #FIRST_PROGRAM_BANK ; first process is not nmi-able
 	bne @stop_active_process
 
 	:	
@@ -407,6 +407,7 @@ custom_nmi_handler:
 
 nmi_re_caller:
 	accum_index_8_bit
+	stz atomic_action_st
 	stz nmi_queued
 	ldx active_process
 	lda process_parents_table, X
@@ -448,7 +449,6 @@ custom_keyinput_handler:
 
 @esc_pressed_released:
 	pla
-	ora #$00
 	bpl :+ ; pressed
 
 	stz keyhandler_esc_pressed ; released
