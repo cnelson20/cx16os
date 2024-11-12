@@ -477,17 +477,11 @@ keyhandler_queue_pass_active_process:
 
 program_return_handler:
 	sep #$30
+	and #$7F ; zero high bit of return value
 	tax ; process return value in .A
 	lda #1
 	sta irq_already_triggered ; no sheningans during this
 	
-	lda current_program_id
-	cmp #FIRST_PROGRAM_BANK ; starting prog
-	bne :+
-	jmp return_to_basic
-
-	:
-	and #$7F ; zero high bit of return value
 	jmp program_exit
 	
 .export kill_process_kernal
@@ -518,8 +512,13 @@ program_exit:
 	ldx #0
 	rts
 	:
-	; check that process being killed is in active list
+	; if process is FIRST_PROGRAM_BANK, exit
 	ldx KZP0
+	cpx #FIRST_PROGRAM_BANK
+	bne :+
+	jmp return_to_basic
+	:
+	; check that process being killed is in active list
 	lda process_parents_table, X
 	tay
 	txa
