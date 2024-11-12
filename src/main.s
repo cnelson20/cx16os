@@ -295,7 +295,7 @@ irq_re_caller:
 	
 	lda nmi_queued
 	beq :+
-	jsr nmi_re_caller
+	jsr nmi_kill_proc
 	:
 
 	lda STORE_PROG_RAMBANK
@@ -376,7 +376,7 @@ custom_nmi_handler:
 	lda current_program_id
 	cmp active_process
 	bne :+
-	cmp #FIRST_PROGRAM_BANK ; first process is not nmi-able
+	cmp #FIRST_PROGRAM_BANK ; first process is nmi-able
 	bne @stop_active_process
 
 	:	
@@ -398,6 +398,7 @@ custom_nmi_handler:
 
 	lda #1
 	sta irq_already_triggered
+	stz atomic_action_st
 
 @end_nmi:
 	plp
@@ -407,7 +408,8 @@ custom_nmi_handler:
 
 nmi_re_caller:
 	accum_index_8_bit
-	stz atomic_action_st
+	cli
+nmi_kill_proc:
 	stz nmi_queued
 	ldx active_process
 	lda process_parents_table, X
@@ -449,6 +451,7 @@ custom_keyinput_handler:
 
 @esc_pressed_released:
 	pla
+	ora #$00
 	bpl :+ ; pressed
 
 	stz keyhandler_esc_pressed ; released
@@ -476,7 +479,8 @@ keyhandler_queue_pass_active_process:
 
 
 program_return_handler:
-	sep #$30
+	accum_index_8_bit
+	cli
 	and #$7F ; zero high bit of return value
 	tax ; process return value in .A
 	lda #1
@@ -512,13 +516,12 @@ program_exit:
 	ldx #0
 	rts
 	:
-	; if process is FIRST_PROGRAM_BANK, exit
+	; check that process being killed is in active list
 	ldx KZP0
 	cpx #FIRST_PROGRAM_BANK
 	bne :+
 	jmp return_to_basic
 	:
-	; check that process being killed is in active list
 	lda process_parents_table, X
 	tay
 	txa
