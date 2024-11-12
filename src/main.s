@@ -3,7 +3,7 @@
 .include "macs.inc"
 .include "ascii_charmap.inc"
 
-.import print_str_ext
+.import print_str_ext, setup_call_table
 .import strlen, strncpy_int
 .import setup_kernal_file_table, setup_process_file_table_int, close_process_files_int
 .import get_dir_filename_int
@@ -479,13 +479,15 @@ keyhandler_queue_pass_active_process:
 
 
 program_return_handler:
+	clc
+	xce
 	accum_index_8_bit
-	cli
 	and #$7F ; zero high bit of return value
 	tax ; process return value in .A
 	lda #1
 	sta irq_already_triggered ; no sheningans during this
 	
+	lda current_program_id
 	jmp program_exit
 	
 .export kill_process_kernal
@@ -1068,11 +1070,6 @@ setup_process_info:
 	dey
 	bpl :-
 	
-	lda #<PROG_LOAD_ADDRESS
-	sta STORE_PROG_ADDR
-	lda #>PROG_LOAD_ADDRESS
-	sta STORE_PROG_ADDR + 1
-	
 	lda RAM_BANK
 	sta STORE_PROG_EXTMEM_RBANK
 	sta STORE_PROG_EXTMEM_WBANK
@@ -1085,15 +1082,20 @@ setup_process_info:
 	lda #%00110000 ; all flags zero except M and X (8-bit registers)
 	sta STORE_REG_STATUS
 	
-	lda #$FD
-	sta STORE_PROG_SP
-	lda #1
-	sta STORE_PROG_SP + 1
+	accum_16_bit
+	.a16
 	
-	lda #< ( program_return_handler - 1)
-	sta STORE_PROG_STACK + $FE 
-	lda #> ( program_return_handler - 1)
-	sta STORE_PROG_STACK + $FF
+	lda #PROG_LOAD_ADDRESS
+	sta STORE_PROG_ADDR
+	
+	lda #$01FD
+	sta STORE_PROG_SP
+	
+	lda #program_return_handler - 1
+	sta STORE_PROG_STACK + $FE
+
+	accum_8_bit
+	.a8
 
 	ldx RAM_BANK
 	lda current_program_id
@@ -1486,25 +1488,6 @@ setup_kernal_processes:
 	cpx r0
 	bne :-
 	
-	rts
-
-setup_call_table:
-	lda #<call_table
-	sta r0
-	lda #>call_table
-	sta r0 + 1
-	
-	lda #<call_table_mem_start
-	sta r1
-	lda #>call_table_mem_start
-	sta r1 + 1
-	
-	lda #<(call_table_end - call_table)
-	sta r2
-	lda #>(call_table_end - call_table)
-	sta r2 + 1
-	
-	jsr memory_copy
 	rts
 
 ;
