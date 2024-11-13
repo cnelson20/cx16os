@@ -86,6 +86,15 @@ parse_flag:
 	bra args_loop
 
 	:
+	
+	cmp #'l'
+	bne :+
+	
+	lda #1
+	sta list_details_flag
+	bra args_loop
+	:
+	
 	jmp flag_error
 
 add_dir_list:
@@ -292,6 +301,33 @@ print_dir_loop:
 	lda #1
 	sta file_is_dir
 	:
+
+	lda list_details_flag
+	beq @done_print_file_details
+	jsr find_space_char
+	jsr find_non_space_char
+	phx ; date/time of file edit/creation
+	
+	jsr find_space_char
+	inx
+	jsr find_space_char
+	stz $00, X
+	inx
+	jsr find_space_char
+	inx
+	phx
+	jsr find_space_char
+	stz $00, X
+	plx
+	jsr print_str_x
+	
+	lda #' '
+	jsr CHROUT
+	plx
+	jsr print_str_x
+	lda #' '
+	jsr CHROUT
+@done_print_file_details:	
 	
 	lda disable_color_flag
 	bne :+++
@@ -359,6 +395,22 @@ get_strlen_buff:
 	rts
 
 ;
+; print_str_x
+;
+print_str_x:
+	.i16
+	rep #$20
+	.a16
+	txa
+	xba
+	tax
+	xba
+	sep #$20
+	.a8
+	jmp print_str
+	.i8
+
+;
 ; assumes 16-bit index mode
 ;
 strchr:
@@ -386,6 +438,20 @@ find_non_space_char:
 	bne :+
 	inx
 	bne find_non_space_char
+	:
+	rts
+	.i8
+	
+;
+; assumes 16-bit index mode
+;
+find_space_char:
+	.i16
+	lda $00, X
+	cmp #' '
+	beq :+
+	inx
+	bne find_space_char
 	:
 	rts
 	.i8
@@ -455,12 +521,18 @@ flag_error:
 @flag_error_str:
 	.asciiz "ls: unknown option -- "
 
-end_listing_addr:
-	.word 0
+;
+; ls option flags
+;
 print_dotfiles_flag:
 	.byte 0
 disable_color_flag:
 	.byte 0
+list_details_flag:
+	.byte 0
+	
+end_listing_addr:
+	.word 0
 foreground_color:
 	.byte 0
 
