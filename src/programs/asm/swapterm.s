@@ -28,6 +28,12 @@ COLOR_LGREEN = 13
 COLOR_LBLUE = 14
 COLOR_LGRAY = 15
 
+CURSOR_LEFT = $9D
+CURSOR_RIGHT = $1D
+CURSOR_UP = $91
+CURSOR_DOWN = $11
+HOME = $13
+
 TERM_WIDTH = 80
 TERM_HEIGHT = 60
 
@@ -107,12 +113,6 @@ init:
 	lda #1
 	sta terms_active + 0
 	sta terms_active + 1
-
-	stz terms_base_x + 0
-	stz terms_base_x + 1
-	stz terms_base_y + 0
-	lda #60 / 2
-	sta terms_base_y + 1
 
 	stz terms_x_offset + 0
 	stz terms_x_offset + 1
@@ -449,10 +449,24 @@ process_char:
 	
 	; if char == 0, flush the buffer ;
 	lda char_printed
-	bne :+
-	jmp @flush_buff_end_of_line
+	and #$7F
+	cmp #$20
+	bcs @normal_char
+	tax
+	lda char_printed
+	bmi :+
+	lda char_flush_buff_table0, X
+	bra :++
 	:
-
+	lda char_flush_buff_table1, X
+	:
+	beq :+
+	jsr @flush_buff_end_of_line
+	lda char_printed
+	jmp flush_char_actions
+	:
+@normal_char:
+	
 	ldx prog_printing
 	lda prog_buff_lengths, X
 	cmp #PROG_BUFF_MAXSIZE
@@ -489,6 +503,92 @@ process_char:
 
 	rep #$10
 	rts
+
+flush_char_actions:
+	sep #$10
+	cmp #0 ; assume most of these will just be flushing the buffer
+	bne :+
+	jmp @return
+	:
+	
+	cmp #CURSOR_DOWN
+	bne @not_cursor_down
+@cursor_down:
+	ldx prog_printing
+	lda prog_term_use, X
+	tax
+	lda terms_y_offset, X
+	inc A
+	cmp #TERM_HEIGHT
+	bcc :+
+	lda terms_vram_offset, X
+	sta temp_term_vram_offset
+	lda terms_colors, X
+	sta temp_term_color
+	jsr scroll_term_window
+	bra @return
+	:
+	sta terms_y_offset, X
+	bra @return
+@not_cursor_down:
+	
+	cmp #CURSOR_UP
+	bne @not_cursor_up
+@cursor_up:	
+	ldx prog_printing
+	lda prog_term_use, X
+	tax
+	lda terms_y_offset, X
+	beq :+
+	dec A
+	sta terms_y_offset, X
+	:
+	bra @return
+	
+@not_cursor_up:
+	
+	cmp #CURSOR_RIGHT
+	bne @not_cursor_right
+@cursor_right:
+	ldx prog_printing
+	lda prog_term_use, X
+	tax
+	lda terms_x_offset, X
+	inc A
+	cmp #TERM_WIDTH
+	bcs :+
+	sta terms_x_offset, X
+	bra @return
+	:
+	stz terms_x_offset, X
+	jmp @cursor_down
+
+@not_cursor_right:
+	
+	cmp #HOME
+	bne :+
+	ldx prog_printing
+	lda prog_term_use, X
+	tax
+	stz terms_x_offset, X
+	bra @return
+	:
+	
+	; shouldn't get to this point, but we can just fall back & return with no harm done
+@return:	
+	rep #$10
+	rts
+
+char_flush_buff_table0:
+	.byte 1, 0, 0, 0, 0, 0, 0, 0 ; 0 = flush buffer only
+	.byte 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 1, 0, 1, 0, 0, 0, 0 ; CURSOR_DOWN, HOME
+	.byte 0, 0, 0, 0, 0, 1, 0, 0 ; CURSOR_RIGHT
+char_flush_buff_table1:	
+	.byte 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 1, 0, 0, 0, 0, 0, 0 ; CURSOR_UP
+	.byte 0, 0, 0, 0, 0, 0, 0, 0
 
 ;
 ; call set_extmem_rbank and set_extmem_rptr after write_line_screen so that print_loop doesn't have to do it repeatedly
@@ -953,10 +1053,6 @@ prog_inst_ids:
 terms_active_process:   
 	.res 4, 0
 terms_active:
-	.res 4, 0
-terms_base_x:
-	.res 4, 0
-terms_base_y:
 	.res 4, 0
 terms_colors:
 	.res 4, 0
