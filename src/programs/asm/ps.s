@@ -8,9 +8,7 @@ main:
 	ldx #>first_line
 	jsr PRINT_STR
 	
-	lda $00 ; get own pid
-	jsr get_process_info
-	lda r0 + 1
+	jsr get_true_parent
 	sta ppid
 	
 	lda #$10
@@ -166,6 +164,19 @@ get_hex_char:
 	sbc #10
 	clc
 	adc #$41
+	rts
+
+get_true_parent:
+	lda $00
+	:
+	pha
+	jsr get_process_info
+	pla
+	ldx r0 + 1
+	beq :+
+	txa
+	bra :-
+	:
 	rts
 
 check_process_ppid:
