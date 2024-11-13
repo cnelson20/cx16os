@@ -9,6 +9,7 @@
 
 PLOT_X = $0B
 PLOT_Y = $0C
+HOME = $13
 
 default_screen_mode:
 	.byte 0
@@ -85,7 +86,7 @@ putc_v:
 	phx
 	sec
 	jsr PLOT
-	ply ; change Y position of cursor
+	ply ; .Y register holds new X position of cursor
 	clc
 	jmp PLOT
 	:
@@ -96,7 +97,7 @@ putc_v:
 	phx
 	sec
 	jsr PLOT
-	plx ; change X position of cursor
+	plx ; .X register holds new Y position of cursor
 	clc
 	jmp PLOT
 	:
@@ -136,7 +137,7 @@ putc_v:
 	jsr CHROUT
 	pla
 	lda #$a ; '\n'
-	jmp CHROUT
+	jmp CHROUT ; just so -echo flag on emu looks nicer
 	:
 	
 	cmp #PLOT_X
@@ -146,6 +147,17 @@ putc_v:
 	:
 	pla
 	rts ; just return, don't print these escaped
+	:
+	
+	cmp #HOME
+	bne :+
+	pla
+	sec
+	jsr PLOT
+	clc
+	ldy #0 ; .Y reg holds X position
+	clc
+	jmp PLOT
 	:
 	
 	cmp #SWAP_COLORS
@@ -169,6 +181,7 @@ putc_v:
 	jmp CHROUT
 	:
 	
+	; if none of the above, check whether it is printable ;
 	cmp #$80
 	bcs :+
 	lda valid_c_table_0, X ; X = A & $7F
@@ -193,12 +206,12 @@ putc_v:
 valid_c_table_0:
 	.byte 0, 1, 0, 0, 1, 1, 0, 1 ; $00 - $07
 	.byte 1, 0, 1, 1, 1, 1, 0, 0 ; $08 - $0F
-	.byte 0, 0, 1, 1, 0, 0, 0, 0 ; $10 - $17
+	.byte 0, 1, 1, 1, 0, 0, 0, 0 ; $10 - $17
 	.byte 1, 0, 1, 0, 1, 1, 1, 1 ; $18 - $1F
 valid_c_table_1:
 	.byte 0, 1, 0, 0, 0, 0, 0, 0 ; $80 - $87
 	.byte 0, 0, 0, 0, 0, 0, 0, 0 ; $88 - $8F
-	.byte 1, 0, 0, 1, 0, 1, 1, 1 ; $90 - $97
+	.byte 1, 1, 0, 1, 0, 1, 1, 1 ; $90 - $97
 	.byte 1, 1, 1, 1, 1, 1, 1, 1 ; $98 - $9F
 
 is_color_char:
