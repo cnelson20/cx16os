@@ -1,13 +1,17 @@
 .include "routines.inc"
 .segment "CODE"
 
-r0L = $02
-r0H = $03
+r0 = $02
 
 main:
 	lda #<first_line
 	ldx #>first_line
 	jsr PRINT_STR
+	
+	lda $00 ; get own pid
+	jsr get_process_info
+	lda r0 + 1
+	sta ppid
 	
 	lda #$10
 	sta loop_pid
@@ -15,11 +19,16 @@ main_loop:
 	lda loop_pid
 	jsr get_process_info
 	cmp #0
-	bne :+
+	beq :+
+	pha ; iid
+	lda loop_pid
+	jsr check_process_ppid
+	cmp #0
+	bne :++
+	pla
+	:
 	jmp no_such_process
 	:
-	
-	pha
 
 	; print pid
 	lda #$20 ; space
@@ -76,19 +85,19 @@ main_loop:
 	jsr CHROUT
 	jsr CHROUT
 
-	lda r0H
+	lda r0 + 1
 	ldx #0
 	jsr bin_to_bcd16
 	pha
 
 	cpx #0
 	bne :+
-	lda #$20
+	lda #' '
 	jsr CHROUT
 	bra :++
 	:
 	txa
-	ora #$30
+	ora #'0'
 	jsr CHROUT
 
 	:
@@ -100,11 +109,11 @@ main_loop:
 	lsr
 	lsr
 	beq :+
-	ora #$30
+	ora #'0'
 	jsr CHROUT
 	bra :++
 	:
-	lda #$20
+	lda #' '
 	jsr CHROUT
 	:
 
@@ -118,7 +127,8 @@ main_loop:
 	jsr CHROUT
 
 	lda #128
-	sta r0L 
+	sta r0
+	stz r0 + 1
 	ldy loop_pid
 	lda #<buffer
 	ldx #>buffer
@@ -136,14 +146,6 @@ no_such_process:
 	jmp main_loop
 	:
 	rts
-
-loop_pid:
-	.byte 0
-first_line:
-	.byte " PID  IID PPID CMD"
-	.byte $0d, $00
-buffer:
-	.res 128
 
 tolower:
 	cmp #'A'
@@ -165,4 +167,25 @@ get_hex_char:
 	clc
 	adc #$41
 	rts
-	
+
+check_process_ppid:
+	cmp ppid
+	beq @return ; return with non-zero value
+	jsr get_process_info
+	lda r0 + 1 ; ppid of process passed to get_process_info
+	bne check_process_ppid
+@return:
+	rts
+
+loop_pid:
+	.byte 0
+ppid:
+	.byte 0
+first_line:
+	.byte " PID  IID PPID CMD"
+	.byte $0d, $00
+
+.SEGMENT "BSS"
+
+buffer:
+	.res 128
