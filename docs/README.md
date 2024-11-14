@@ -22,7 +22,7 @@
 
 ### [Internals Writeup](internals.md)
 
-## API guides:
+## Guides:
 
 [I/O, Processes, Other Routines Table](routines.md)
 
@@ -30,3 +30,4 @@
 
 [system hooks](system_hooks.md)
 
+[display](display.md)
