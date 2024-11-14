@@ -294,7 +294,7 @@ fgetc:
 	
 	lda #1
 	sta RAM_BANK
-	lda #$42
+	lda #FILE_EOF
 	ldx KZE0
 	sta file_table_count, X
 	lda current_program_id

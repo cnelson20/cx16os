@@ -946,20 +946,39 @@ read_file_ext:
 	dec RAM_BANK
 	
 	cmp #$FF
-	bne :+
+	bne @file_is_open
 	; file isn't open, return
 @exit_failure:
-	lda #0
-	ldx #0
-	rts 
+	ldy #$FF
+	bra :+
+@exit_eof:
+	ldy #0
 	:
-
-	sta KZE2
+	lda #0
+	tax
+	rts
+	
+@file_is_open:	
+	tax
+	lda RAM_BANK
+	pha
+	lda #1
+	sta RAM_BANK
+	lda file_table_count, X
+	ply
+	sty RAM_BANK
+	
+	cmp #0
+	beq @exit_eof ; don't think this can happen, but account for it anyway
+	cmp #1
+	bne @exit_eof ; already reached eof
+	stx KZE2
 
 	lda r2
 	bne :+
 	lda current_program_id
 	sta r2 ; if r2 = 0, set it to current_program_id
+	bra :++
 	:
 	lda r2
 	cmp current_program_id
@@ -1008,12 +1027,17 @@ load_process_entry_pt:
 	sta RAM_BANK
 	
 	; bytes read in .XY, carry = !success
-	bcs read_slow ; if MACPTR returns with carry set, try read_slow
+	bcs try_read_slow ; if MACPTR returns with carry set, try read_slow
 	
 	txa
 	sty KZE2
-	ora KZE2
-	beq @end_read_loop
+	ora KZE2 ; if no bytes were read, we are at eof
+	bne :+
+	lda KZE0
+	ora KZE1
+	beq :+ ; if no bytes were requested anyways, not actually out
+	jmp @out_bytes
+	:
 	
 	clc ; add bytes_read to ptr
 	txa
@@ -1033,9 +1057,23 @@ load_process_entry_pt:
 	sbc KZE1 + 1 ; .A = (KZE1 + 1) - .X
 	sta KZE1 + 1
 	
+	jsr READST
+	and #$40
+	bne @out_bytes
+	
 	lda KZE1
 	ora KZE1 + 1
-	bne @read_loop
+	beq @end_read_loop
+	jmp @read_loop
+	
+@out_bytes:
+	lda #1
+	sta RAM_BANK
+	lda #FILE_EOF
+	ldx KZE3
+	sta file_table_count, X	
+	lda current_program_id
+	sta RAM_BANK
 	
 @end_read_loop:	
 	jsr CLRCHN
@@ -1059,10 +1097,15 @@ read_error_chkin:
 	tax
 	rts
 	
-read_slow:
+try_read_slow:
+	jsr READST
+	
 	ldx KZE3
 	jsr CHKIN
 	bcs read_error_chkin
+	
+	lda r2
+	sta RAM_BANK
 	
 @read_slow_loop:
 	jsr GETIN
@@ -1082,9 +1125,19 @@ read_slow:
 	cmp #0
 	beq @read_slow_loop
 	
+	; reached eof
+	lda #1
+	sta RAM_BANK
+	ldx KZE3
+	lda #FILE_EOF
+	sta file_table_count, X
+	
 @no_more_bytes:
 	jsr CLRCHN
 	clear_atomic_st
+	
+	lda current_program_id
+	sta RAM_BANK
 	
 	sec
 	lda KZE0
