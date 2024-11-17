@@ -49,8 +49,10 @@
 | $9DA5 | [`active_table_lookup`](#9da5-active_table_lookup) | .A | .A, .X, .Y | | &cross; |
 | $9DA8 | [`copy_fd`](#9da8-copy_fd) | .A | .X | .Y | &cross; |
 | $9DAB | [`get_sys_info`](#9dab-get_sys_info) | | .X, .Y, r0, r1, r2 | | &cross; |
-| $9DAB | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | | &mdash; |
+| $9DAE | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | | &mdash; |
 | $9DB1 | [`pwrite_extmem_xy`](extmem.md#pwrite_extmem_xy) | .A, .X, .Y | | | &mdash; |
+| $9DB4 | [`get_console_info`](#9db4-get_console_info) | | .A, .X, r0 | .Y | &cross; |
+| $9DB7 | [`set_console_mode`](#9db7-set_console_mode) | .A | .A | .X, .Y | &cross; |
 
 ### Note:
 Functions with an '&mdash;' under the `C Wrapper Implemented?` column mean that existing C builtins or functions provide the same functionality and are not necessary. 
@@ -396,5 +398,24 @@ Return values:
 - r0.L - r1.L -> VERA version number
 - r1.H - r2.H -> SMC version number
 
+---
+
+### $9DB4: get_console_info
+- Returns values about the current console
+
+Return values:
+- A -> current output foreground color
+- X -> current output background color
+- r0.L -> current terminal width (in characters)
+- r0.H -> current terminal height
+
+---
+
+### $9DB7: set_console_mode
+- If there is no process with a hook on VERA register or the calling process has the hook, change the CBM terminal screen mode
+- See [here](https://github.com/X16Community/x16-docs/blob/master/X16%20Reference%20-%2003%20-%20Editor.md#modes) for the possible screen modes
+
+Return values:
+- A -> 0 on success, non-zero on failure to change the screen mode
 
 
