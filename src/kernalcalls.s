@@ -616,6 +616,10 @@ set_own_priority:
 	bne :+
 	lda #DEFAULT_PRIORITY
 	:
+	cmp #MAX_PRIORITY
+	bcc :+
+	lda #MAX_PRIORITY
+	:
 	ldx current_program_id
 	sta process_priority_table, X
 
