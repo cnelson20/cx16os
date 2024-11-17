@@ -306,6 +306,12 @@ print_dir_loop:
 	beq @done_print_file_details
 	jsr find_space_char
 	jsr find_non_space_char
+	lda $00, X
+	bne :+
+	ldx #no_details_str
+	jsr print_str_x
+	bra @done_print_file_details
+	:
 	phx ; date/time of file edit/creation
 	
 	jsr find_space_char
@@ -434,6 +440,7 @@ strchr:
 find_non_space_char:
 	.i16
 	lda $00, X
+	beq :+
 	cmp #' '
 	bne :+
 	inx
@@ -448,6 +455,7 @@ find_non_space_char:
 find_space_char:
 	.i16
 	lda $00, X
+	beq :+
 	cmp #' '
 	beq :+
 	inx
@@ -547,6 +555,9 @@ extmem_bank:
 	.byte 0	
 error_msg:
 	.asciiz "Error opening directory listing, code #:"
+
+no_details_str:
+	.asciiz "                       00000000"
 
 no_such_dir_str_p1:
 	.asciiz "ls: cannot access '"
