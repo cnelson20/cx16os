@@ -557,7 +557,7 @@ error_msg:
 	.asciiz "Error opening directory listing, code #:"
 
 no_details_str:
-	.asciiz "                       00000000"
+	.asciiz "00000000                     "
 
 no_such_dir_str_p1:
 	.asciiz "ls: cannot access '"
