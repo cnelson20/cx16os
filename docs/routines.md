@@ -49,8 +49,9 @@
 | $9DA5 | [`active_table_lookup`](#9da5-active_table_lookup) | .A | .A, .X, .Y | | &cross; |
 | $9DA8 | [`copy_fd`](#9da8-copy_fd) | .A | .X | .Y | &cross; |
 | $9DAB | [`get_sys_info`](#9dab-get_sys_info) | | .X, .Y, r0, r1, r2 | | &cross; |
-| $9DAB | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | | &mdash; |
+| $9DAE | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | | &mdash; |
 | $9DB1 | [`pwrite_extmem_xy`](extmem.md#pwrite_extmem_xy) | .A, .X, .Y | | | &mdash; |
+| $9DB4 | [`get_console_info`]($9db4-get_console_info) | | .A, .X, r0 | .Y | &cross; |
 
 ### Note:
 Functions with an '&mdash;' under the `C Wrapper Implemented?` column mean that existing C builtins or functions provide the same functionality and are not necessary. 
