@@ -1,4 +1,4 @@
-$screen_mode 0xFF5F
+$screen_mode 0x9DB7
 $set_charset 0xFF62
 @$set_charset .A=6
 @$screen_mode .A=1
