@@ -413,7 +413,7 @@ Return values:
 
 ### $9DB7: set_console_mode
 - If there is no process with a hook on VERA register or the calling process has the hook, change the CBM terminal screen mode
-- See [here](https://github.com/X16Community/x16-docs/blob/master/X16%20Reference%20-%2003%20-%20Editor.md) for the possible screen modes
+- See [here](https://github.com/X16Community/x16-docs/blob/master/X16%20Reference%20-%2003%20-%20Editor.md#modes) for the possible screen modes
 
 Return values:
 - A -> 0 on success, non-zero on failure to change the screen mode
