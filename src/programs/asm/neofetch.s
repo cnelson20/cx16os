@@ -36,7 +36,7 @@ ptr2 := $34
 	rep #$10
 	.i16
 	
-	jsr get_console_colors
+	jsr get_console_info
 	sta fore_color
 	
 	ldx #0

@@ -26,7 +26,7 @@
 
 .import setup_chrout_hook, release_chrout_hook, CHROUT_screen, send_byte_chrout_hook
 .import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook, mark_last_hook_message_received
-.import lock_vera_regs, unlock_vera_regs
+.import lock_vera_regs, unlock_vera_regs, prog_using_vera_regs, default_screen_mode
 .import in_active_processes_table, add_active_processes_table, active_processes_table_index, active_processes_table
 .import vera_version_number, rom_vers, max_ram_bank, smc_version_number
 
@@ -102,7 +102,8 @@ call_table:
 	jmp get_sys_info ; $9DAB
 	jmp pread_extmem_xy ; $9DAE
 	jmp pwrite_extmem_xy ; $9DB1
-	jmp get_console_colors ; $9DB4
+	jmp get_console_info ; $9DB4
+	jmp set_console_mode ; $9DB7
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -708,11 +709,16 @@ get_sys_info:
 	rts
 
 ;
-; get_console_colors
+; get_console_info
 ;
-.export get_console_colors
-get_console_colors:
+.export get_console_info
+get_console_info:
 	save_p_816_8bitmode
+	sec
+	jsr screen_mode
+	stx r0
+	sty r0 + 1
+	
 	lda current_program_id
 	lsr A
 	tay
@@ -722,3 +728,25 @@ get_console_colors:
 	restore_p_816
 	rts
 
+.export set_console_mode
+set_console_mode:
+	save_p_816_8bitmode
+	ldy prog_using_vera_regs
+	beq :+
+	cpy current_program_id
+	beq :+
+	lda #1
+	bra @end ; can't modify screen mode when other process has hook on VERA regs
+	:
+	clc
+	jsr screen_mode
+	sec
+	jsr screen_mode
+	sta default_screen_mode
+	lda #0
+@end:
+	xba
+	lda #0
+	xba
+	restore_p_816
+	rts

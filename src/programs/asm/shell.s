@@ -130,7 +130,7 @@ welcome:
 	stz new_stdin_fileno
 	stz new_stdout_fileno
 	
-	jsr get_console_colors
+	jsr get_console_info
 	sta fore_color
 	txa
 	sta back_color
