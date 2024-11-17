@@ -397,5 +397,14 @@ Return values:
 - r0.L - r1.L -> VERA version number
 - r1.H - r2.H -> SMC version number
 
+---
 
+### $9DB4: get_console_info
+- Returns values about the current console
+
+Return values:
+- A -> current output foreground color
+- X -> current output background color
+- r0.L -> current terminal width
+- r0.H -> current terminal height
 
