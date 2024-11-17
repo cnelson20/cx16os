@@ -187,7 +187,11 @@ void print_usage() {
 	printf("Print newline, word, and byte counts for each FILE, and a total line if "
 		"more than one FILE is specified.  A word is a non-zero-length sequence of "
 		"printable characters delimited by white space.\r");
-	printf("%hd %hd\r", '\r', '\n');
+	printf("  -c    print the character counts\r");
+	printf("  -l    print the newline counts\r");
+	printf("  -L    print the maximum line length\r");
+	printf("  -w    print the word counts\r");
+	printf("  -h    display this message and exit\r");
 }
 
 #define BUFF_SIZE 128
