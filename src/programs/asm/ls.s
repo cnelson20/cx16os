@@ -41,7 +41,7 @@ init:
 	stx ptr1 + 1
 	sty ptr2
 	
-	jsr get_console_colors
+	jsr get_console_info
 	sta foreground_color
 	cmp #COLOR_WHITE
 	beq :+

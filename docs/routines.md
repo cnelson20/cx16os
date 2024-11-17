@@ -12,7 +12,7 @@
 | $9D0F | [`get_args`](#9d0f-get_args) | | .AX, .Y | | &mdash; |
 | $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | | | &cross; |
 | $9D15 | [`parse_num`](#9d15-parse_num) | .AX | .AX | .Y | &check; |
-| $9D18 | [`hex_num_to_string`](#9d18-hex_num_to_string) | .A | .A, .X | | &check; |
+| $9D18 | [`hex_num_to_string / GET_HEX_NUM`](#9d18-hex_num_to_string) | .A | .A, .X | | &check; |
 | $9D1B | [`kill_process`](#9d1b-kill_process) | .A | .A, .X | | &check; |
 | $9D1E | [`open_file`](#9d1e-open_file) | .AX, .Y | .A, .X | | &mdash; |
 | $9D21 | [`close_file`](#9d21-close_file) | .A | | .X, .Y | &mdash; |
@@ -49,8 +49,10 @@
 | $9DA5 | [`active_table_lookup`](#9da5-active_table_lookup) | .A | .A, .X, .Y | | &cross; |
 | $9DA8 | [`copy_fd`](#9da8-copy_fd) | .A | .X | .Y | &cross; |
 | $9DAB | [`get_sys_info`](#9dab-get_sys_info) | | .X, .Y, r0, r1, r2 | | &cross; |
-| $9DAB | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | | &mdash; |
+| $9DAE | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | | &mdash; |
 | $9DB1 | [`pwrite_extmem_xy`](extmem.md#pwrite_extmem_xy) | .A, .X, .Y | | | &mdash; |
+| $9DB4 | [`get_console_info`](#9db4-get_console_info) | | .A, .X, r0 | .Y | &cross; |
+| $9DB7 | [`set_console_mode`](#9db7-set_console_mode) | .A | .A | .X, .Y | &cross; |
 
 ### Note:
 Functions with an '&mdash;' under the `C Wrapper Implemented?` column mean that existing C builtins or functions provide the same functionality and are not necessary. 
@@ -396,5 +398,27 @@ Return values:
 - r0.L - r1.L -> VERA version number
 - r1.H - r2.H -> SMC version number
 
+---
+
+### $9DB4: get_console_info
+- Returns values about the current console
+
+Return values:
+- A -> current output foreground color
+- X -> current output background color
+- r0.L -> current terminal width (in characters)
+- r0.H -> current terminal height
+
+---
+
+### $9DB7: set_console_mode
+- If there is no process with a hook on VERA register or the calling process has the hook, change the X16 terminal screen mode
+- See [here](https://github.com/X16Community/x16-docs/blob/master/X16%20Reference%20-%2003%20-%20Editor.md#modes) for the possible screen modes
+
+Arguments:
+- A -> the X16 terminal screen mode to use
+
+Return values:
+- A -> 0 on success, non-zero on failure to change the screen mode
 
 

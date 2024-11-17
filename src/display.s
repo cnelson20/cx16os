@@ -11,6 +11,7 @@ PLOT_X = $0B
 PLOT_Y = $0C
 HOME = $13
 
+.export default_screen_mode
 default_screen_mode:
 	.byte 0
 

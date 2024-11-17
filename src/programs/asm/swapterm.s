@@ -34,9 +34,6 @@ CURSOR_UP = $91
 CURSOR_DOWN = $11
 HOME = $13
 
-TERM_WIDTH = 80
-TERM_HEIGHT = 60
-
 r0 = $02
 r1 = $04
 r2 = $06
@@ -62,6 +59,12 @@ init:
 	beq :+
 	jmp exit_failure
 	:
+	
+	jsr get_console_info
+	lda r0
+	sta TERM_WIDTH
+	lda r0 + 1
+	sta TERM_HEIGHT
 
 	jsr reset_process_term_table
 	
@@ -519,7 +522,7 @@ flush_char_actions:
 	tax
 	lda terms_y_offset, X
 	inc A
-	cmp #TERM_HEIGHT
+	cmp TERM_HEIGHT
 	bcc :+
 	lda terms_vram_offset, X
 	sta temp_term_vram_offset
@@ -555,7 +558,7 @@ flush_char_actions:
 	tax
 	lda terms_x_offset, X
 	inc A
-	cmp #TERM_WIDTH
+	cmp TERM_WIDTH
 	bcs :+
 	sta terms_x_offset, X
 	bra @return
@@ -686,7 +689,7 @@ write_line_screen:
 
 	inc temp_term_y_offset
 	lda temp_term_y_offset
-	cmp #TERM_HEIGHT
+	cmp TERM_HEIGHT
 	bcc :+
 	phy
 	phx
@@ -823,7 +826,7 @@ write_line_screen:
 	sta vera_data0
 	
 	inx
-	cpx #TERM_WIDTH
+	cpx TERM_WIDTH
 	bcc @dont_draw_char
 	lda #$d ; insert newline to wrap text around
 	jmp @skip_read_byte
@@ -882,9 +885,9 @@ clear_whole_term:
 	lda temp_term_vram_offset
 	sta ptr0 + 1
 
-	lda #TERM_WIDTH
+	lda TERM_WIDTH
 	sta ptr1
-	lda #TERM_HEIGHT
+	lda TERM_HEIGHT
 	sta ptr1 + 1
 	jsr clear_rows
 
@@ -958,11 +961,12 @@ scroll_term_window:
 	
 	stz vera_ctrl	
 	
-	lda #TERM_WIDTH
+	lda TERM_WIDTH
 	asl A ; char & color bytes
 	tax
 @outer_loop:
-	ldy #TERM_HEIGHT - 1
+	ldy TERM_HEIGHT
+	dey
 	:
 	lda vera_data0
 	sta vera_data1
@@ -1010,6 +1014,10 @@ scroll_term_window:
 	rts
 	rts
 
+TERM_WIDTH:
+	.word 0
+TERM_HEIGHT:
+	.word 0
 
 terms_vram_offset:
 	.byte $B4, $78, $38, $00
