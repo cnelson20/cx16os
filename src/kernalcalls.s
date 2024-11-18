@@ -744,8 +744,10 @@ set_console_mode:
 	:
 	clc
 	jsr screen_mode
+	set_atomic_st
 	sec
 	jsr screen_mode
+	clear_atomic_st
 	sta default_screen_mode
 	lda #0
 @end:
