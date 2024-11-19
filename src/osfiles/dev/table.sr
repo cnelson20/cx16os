@@ -1,0 +1,10 @@
+$start 1
+$end 13
+$factor 12
+
+$i $start
+#loop
+$m $i * $factor
+!echo $i * $factor = $m
+$i $i + 1
+? $i - $end, % #loop
