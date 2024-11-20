@@ -1039,9 +1039,8 @@ new_prog_args:
 ;
 setup_process_info:
 	sty RAM_BANK ; .Y holds new bank
-	sty STORE_PROG_RAMBANK
-	stz STORE_PROG_ROMBANK
 	
+	phy
 	push_ax ; KZP0
 	push_zp_word r0
 	push_zp_word r1
@@ -1062,6 +1061,11 @@ setup_process_info:
 	sta r0
 	stx r0 + 1
 	pull_ax
+	ply
+	sty RAM_BANK
+	sty STORE_PROG_RAMBANK
+	stz STORE_PROG_ROMBANK
+	
 	push_ax
 	jsr strlen
 	pha
@@ -1341,10 +1345,12 @@ return_control_program:
 switch_control_bank:
 	sta RAM_BANK
 	
-	rep #$10 ; make X 16 bits
+	index_16_bit ; make X 16 bits
+	.i16
 	ldx STORE_PROG_SP
 	txs
-	sep #$10 ; make X 8 bits
+	index_8_bit ; make X 8 bits
+	.i8
 	
 	lda #$00
 	pha
@@ -1358,14 +1364,14 @@ switch_control_bank:
 	lda STORE_REG_STATUS
 	pha
 	
-	rep #$30
+	accum_index_16_bit
 	.a16
 	.i16
 	lda STORE_REG_A
 	ldx STORE_REG_X
 	ldy STORE_REG_Y
 	
-	sep #$20
+	accum_8_bit
 	.a8
 	pha
 	
