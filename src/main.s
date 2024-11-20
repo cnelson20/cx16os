@@ -1349,17 +1349,15 @@ switch_control_bank:
 	.i16
 	ldx STORE_PROG_SP
 	txs
-	index_8_bit ; make X 8 bits
-	.i8
 	
 	lda #$00
 	pha
 	
-	lda STORE_PROG_ADDR + 1
-	pha 
+	ldx STORE_PROG_ADDR
+	phx
 	
-	lda STORE_PROG_ADDR
-	pha
+	index_8_bit ; make X 8 bits
+	.i8
 	
 	lda STORE_REG_STATUS
 	pha
