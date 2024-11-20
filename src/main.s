@@ -41,9 +41,21 @@ init:
 	:
 	rts
 @correct_cpu:
-	
 	stz ROM_BANK
 	stz current_program_id
+	
+	index_16_bit
+	.i16
+	ldx #$01FF
+	txs
+	ldx #$0100
+	stx r0
+	ldx #$00FE
+	stx r1
+	index_8_bit
+	.i8
+	lda #0
+	jsr memory_fill
 	
 	lda #SWAP_COLORS
 	jsr CHROUT
@@ -297,10 +309,16 @@ irq_re_caller:
 	beq :+
 	jsr nmi_kill_proc
 	:
-
+	
+	lda RAM_BANK
+	pha
+	lda current_program_id
+	sta RAM_BANK
 	lda STORE_PROG_RAMBANK
-	beq :+
+	plx
+	stx RAM_BANK
 	cmp #1
+	bcc :+
 	beq :+
 	and #%11111110
 	cmp current_program_id
@@ -1025,7 +1043,26 @@ setup_process_info:
 	stz STORE_PROG_ROMBANK
 	
 	push_ax ; KZP0
+	push_zp_word r0
+	push_zp_word r1
 	
+	stz r0
+	stz r1
+	lda #$A0
+	sta r0 + 1
+	lda #$03
+	sta r1 + 1
+	lda #0
+	jsr memory_fill
+	
+	pull_ax
+	sta r1
+	stx r1 + 1
+	pull_ax
+	sta r0
+	stx r0 + 1
+	pull_ax
+	push_ax
 	jsr strlen
 	pha
 	
