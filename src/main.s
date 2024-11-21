@@ -1000,7 +1000,22 @@ load_new_process:
 	lda user_prog_args_addr + 1
 	sta KZP0 + 1
 	
-	ldy #127
+	ldy #0
+	ldx @arg_count
+	:
+	lda (KZP0), Y
+	iny
+	cpy #127
+	bcs :+
+	cmp #0
+	bne :-
+	dex
+	bne :-
+	:
+	lda #0
+	sta (KZP0), Y
+	
+	sty @total_args_length
 	:
 	lda (KZP0), Y
 	sta new_prog_args, Y
@@ -1010,6 +1025,8 @@ load_new_process:
 	
 	lda @arg_count
 	sta r1
+	lda @total_args_length
+	sta r1 + 1
 	ldy @new_bank
 	lda #<new_prog_args
 	ldx #>new_prog_args
@@ -1021,6 +1038,8 @@ load_new_process:
 	tya ; pid in .A
 	rts
 @arg_count:
+	.byte 0
+@total_args_length:
 	.byte 0
 @old_bank:
 	.byte 0
@@ -1034,7 +1053,7 @@ new_prog_args:
 ;
 ; setup process info in its bank
 ;
-; .AX = args, .Y = program bank, r0.L = active?, r1.L = argc
+; .AX = args, .Y = program bank, r0.L = active?, r1.L = argc, r1.H = sizeof(args)
 ; r2.L = stdin_fileno (if != 0), r2.H = stdout_fileno
 ;
 setup_process_info:
@@ -1103,7 +1122,7 @@ setup_process_info:
 	lda r1 ; r1 holds argc
 	sta STORE_PROG_ARGC
 	
-	ldy #127
+	ldy r1 + 1
 	:
 	lda (KZP1), Y
 	sta STORE_PROG_ARGS, Y
