@@ -1,11 +1,17 @@
 .macro cnsta from, addr
+	.assert .asize = 8, error, "Accumulator not 8 bits"
 	lda #from
 	sta addr
 .endmacro
 
 .macro cnsta_word from_word, addr
+	.if .asize = 8
 	cnsta <from_word, addr
 	cnsta >from_word, addr + 1
+	.else
+	lda #from_word
+	sta addr
+	.endif
 .endmacro
 
 .macro ldax_addr addr
@@ -43,11 +49,13 @@
 .endmacro
 
 .macro pha_byte addr
+	.assert .asize = 8, error, "Accumulator not 8 bits"
 	lda addr
 	pha
 .endmacro
 
 .macro pla_byte addr
+	.assert .asize = 8, error, "Accumulator not 8 bits"
 	pla
 	sta addr
 .endmacro
@@ -77,11 +85,13 @@
 .endmacro
 
 .macro phy_byte addr
+	.assert .asize = 8, error, "Accumulator not 8 bits"
 	ldy addr
 	phy
 .endmacro
 
 .macro ply_byte addr
+	.assert .asize = 8, error, "Accumulator not 8 bits"
 	ply
 	sty addr
 .endmacro
