@@ -129,7 +129,7 @@ main:
 	jmp terminate
 	:
 	jsr read_lines_from_file
-setup_vars:	
+setup_vars:
 	jsr set_special_var_labels
 	jsr set_kernal_routine_labels
 	
@@ -2451,6 +2451,8 @@ find_non_whitespace_char_rev:
 	stx ptr0
 	
 	jsr strlen
+	cmp #0
+	beq :++
 	tyx
 	dex
 	:
@@ -2460,6 +2462,7 @@ find_non_whitespace_char_rev:
 	bcc :+
 	dex
 	cpx ptr0
+	beq :+
 	bcs :-
 	:
 	
