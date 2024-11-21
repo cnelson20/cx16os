@@ -8,7 +8,7 @@
 .import atomic_action_st
 .import file_table
 .import strlen, memcpy_ext, memcpy_banks_ext, strcmp_banks_ext
-.import strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str
+.import strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str, toupper, tolower
 .import check_process_owns_bank
 .import current_program_id
 
@@ -656,14 +656,22 @@ open_file_kernal_ext:
 	phy
 	stax_word KZE1
 	
+	jsr strlen
+	accum_16_bit
+	.a16
+	inc A
+	pha
+	
 	cnsta_word PV_TMP_FILENAME, KZE0
+	accum_8_bit
+	.a8
 	
 	lda current_program_id
 	sta KZE3
 	inc A
 	sta KZE2
-	lda #<MAX_FILELEN
-	ldx #0
+	pla
+	plx
 	jsr memcpy_banks_ext
 	
 	lda current_program_id
@@ -685,20 +693,19 @@ open_file_kernal_ext:
 	lda #','
 	sta PV_TMP_FILENAME, X
 	inx
-	lda #'s'
+	lda #'S'
 	sta PV_TMP_FILENAME, X
 	inx
 	lda #','
 	sta PV_TMP_FILENAME, X
 	inx
 	
-	ply ; open_mode
-	cpy #0
+	pla ; open_mode
 	bne :+
-	ldy #'r'
-	:	
-	sty KZE3
-	tya
+	lda #'R'
+	:
+	jsr toupper
+	sta KZE3
 	sta PV_TMP_FILENAME, X
 	inx 
 	stz PV_TMP_FILENAME, X
