@@ -35,7 +35,82 @@ ptr2 := $34
 .segment "CODE"
 	rep #$10
 	.i16
+	jsr get_args
+	sta ptr0
+	stx ptr0 + 1
+	dey
+	sty ptr1
+parse_options:
+	ldy ptr1
+	beq end_parse_options
+	jsr get_next_arg
 	
+	ldx ptr0
+	lda $00, X
+	cmp #'-'
+	bne @invalid_option
+	inx
+	lda $00, X
+	
+	cmp #'g'
+	bne @not_g_flag
+	
+	ldy ptr1
+	bne :+
+	ldx #config_file_location
+	bra :++
+	:
+	jsr get_next_arg
+	ldx ptr0
+	:
+	stx to_create_config_filename
+	bra parse_options
+@not_g_flag:
+	
+	cmp #'f'
+	bne :+
+	lda ptr1
+	beq @option_requires_argument
+	jsr get_next_arg
+	ldx ptr0
+	stx config_filename
+	bra parse_options
+	:
+
+@invalid_option:	
+	; invalid option
+	lda #<invalid_option_err_str
+	ldx #>invalid_option_err_str
+	bra @print_ax_ptr0_newline_exit
+@option_requires_argument:
+	lda #<opt_requires_arg_err_str
+	ldx #>opt_requires_arg_err_str
+@print_ax_ptr0_newline_exit:
+	jsr print_str
+	lda ptr0
+	ldx ptr0 + 1
+	jsr print_str
+	lda #$27
+	jsr CHROUT
+	jsr print_cr
+	lda #1
+	rts ; return with error code
+	
+get_next_arg:
+	dec ptr1
+	
+	ldx ptr0
+	:
+	lda $00, X
+	beq :+
+	inx
+	bra :-
+	:
+	inx
+	stx ptr0
+	rts
+	
+end_parse_options:
 	jsr get_console_info
 	sta fore_color
 	
@@ -43,18 +118,37 @@ ptr2 := $34
 	stx info_functions_size
 	stx info_functions_index
 	
+	ldx to_create_config_filename
+	beq :+
+	jsr create_default_config_file
+	:
+	
+	ldx config_filename
+	beq :+
+	lda config_filename
+	ldx config_filename + 1
+	bra :++
+	:
 	lda #<config_file_location
 	ldx #>config_file_location
+	:
 	ldy #0
 	jsr open_file
 	cmp #$FF
-	beq :+
+	beq @config_file_doesnt_exist
 	sta config_file_fd
+	
 	jsr use_file_config
-	bra :++
+	bra @run_config
+@config_file_doesnt_exist:
+	ldx config_filename
+	beq :+
+	lda #<config_file_doesnt_exist_err_str
+	ldx #>config_file_doesnt_exist_err_str
+	jsr print_str
 	:
 	jsr use_default_config
-	:
+@run_config:
 	
 	lda #1
 	sta still_print_ascii
@@ -76,6 +170,37 @@ print_loop:
 	jsr print_next_info_line
 	
 	jmp print_loop
+
+create_default_config_file:
+	lda to_create_config_filename
+	ldx to_create_config_filename + 1
+	ldy #0
+	jsr open_file
+	cmp #$FF
+	beq :+
+	; file already exists
+	jsr close_file
+	lda #<new_config_file_exists_err_str
+	ldx #>new_config_file_exists_err_str
+	jsr print_str
+	rts
+	:
+	lda to_create_config_filename
+	ldx to_create_config_filename + 1
+	ldy #'W'
+	jsr open_file
+	
+	ldx #default_config_file_text_end - default_config_file_text
+	stx r1
+	ldx #default_config_file_text
+	stx r0
+	
+	pha
+	jsr write_file
+	pla
+	jsr close_file
+	
+	rts
 
 use_file_config:
 	; go through each line of file ;
@@ -1036,11 +1161,25 @@ info_functions_index:
 	.word 0
 info_functions_size:
 	.word 0
-	
+
+config_filename:
+	.word 0
+to_create_config_filename:
+	.word 0
+
 config_file_location:
 	.asciiz "~/etc/neofetch.conf"
 config_file_fd:
 	.word 0
+
+invalid_option_err_str:
+	.asciiz "neofetch: invalid option '"
+opt_requires_arg_err_str:
+	.asciiz "neofetch: argument required following option '"
+config_file_doesnt_exist_err_str:
+	.byte "neofetch: could not open provided config file", $d, 0
+new_config_file_exists_err_str:
+	.byte "neofetch: config filename to create already exists", $d, 0
 	
 print_cr:
 	lda #$d
@@ -1052,6 +1191,21 @@ still_print_info:
 	.byte 1
 fore_color:
 	.byte 0
+
+default_config_file_text:
+	.byte "ascii default", $d
+	.byte "info os", $d
+	.byte "info kernal", $d
+	.byte "info programs", $d
+	.byte "info shell", $d
+	.byte "info terminal", $d
+	.byte "info cpu", $d
+	.byte "info gpu", $d
+	.byte "info memory", $d
+	.byte "blank", $d
+	.byte "info colors", $d
+default_config_file_text_end:
+	
 
 x16_ascii_art:
 	.byte COLOR_WHITE,  "                            ", $d
