@@ -309,21 +309,22 @@ parse_user_cmd:
 	:
 	
 	cmp #'A'
-	bcc @pl_not_upper_cmd
+	bcc :+
 	cmp #'Z'
-	bcs @pl_not_upper_cmd
+	bcs :+
 	; store command ;
 	sta input_cmd
 	jmp parse_cmd_args
-@pl_not_upper_cmd:
+	:
 
 	cmp #'a'
-	bcc @pl_not_cmd
+	bcc :+
 	cmp #'z'
-	bcs @pl_not_cmd
+	bcs :+
+	; store command ;
 	sta input_cmd
 	jmp parse_cmd_args
-@pl_not_cmd:
+	:
 	
 	cmp #','
 	beq :+
@@ -345,7 +346,7 @@ parse_user_cmd:
 	lda #1
 	sta input_begin_set
 	lda input_line_sep_char
-	cmp ';'
+	cmp #';'
 	bne :+
 	lda curr_lineno
 	sta input_begin_lineno
