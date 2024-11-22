@@ -131,10 +131,12 @@ Return values:
 ---
 
 ### $9D12: get_process_name
-- Reads first r0.L bytes of the process with pid .Y's name into memory pointed to by .AX
+- Reads first r0 bytes of the process with pid .Y's name into memory pointed to by .AX
+- May not null-terminate the resulting string if .AX < the length of the process name
 
 Return values:
-- None
+- .AX = number of bytes written
+- .Y = 0 on success, non-zero on failure
 
 ---
 
