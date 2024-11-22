@@ -411,52 +411,51 @@ tolower:
 ;
 .export get_process_name_kernal_ext
 get_process_name_kernal_ext:
-@proc_bank := KZE1
-@store_bank := KZE1 + 1
-	sta KZE2 
-	stx KZE2 + 1
+	sta KZE1
+	stx KZE1 + 1
+	
+	sty KZE3
 	
 	tya
 	jsr is_valid_process
 	cmp #0
 	bne :+
 	lda #0 ; no such process
+	tax
+	ldy #1
 	rts
 	:
 	
-	sty @proc_bank
-	ldy RAM_BANK
-	sty @store_bank
+	lda RAM_BANK
+	sta KZE2 ; bank to copy to
 	
-	ldy #0 ; index
-	inc KZE0
-@loop:
-	dec KZE0
-	beq @loop_end
-	
-	ldx @proc_bank
-	stx RAM_BANK
-	lda STORE_PROG_ARGS, Y
-	ldx @store_bank
-	stx RAM_BANK
-	
-	cmp #0
-	beq @loop_end
-	sta (KZE2), Y
-	
-	iny
-	bra @loop
-@loop_end:
-	lda #0
-	sta (KZE2), Y
-
-	lda @store_bank
+	lda KZE3 ; process to get name of
 	sta RAM_BANK
+	lda #<STORE_PROG_ARGS
+	ldx #>STORE_PROG_ARGS
+	jsr strlen
+	accum_16_bit
+	inc A
+	.a16
+	cmp r0
+	bcc :+
+	lda r0
+	:
+	pha
+	pha ; push twice
+	lda KZE1
+	sta KZE0
+	lda #STORE_PROG_ARGS
+	sta KZE1
+	accum_8_bit
+	.a8
+	pla
+	plx
+	jsr memcpy_banks_ext
 	
-	lda KZE2
-	ldx KZE2 + 1
-	jsr strlen ; return length of name
-	
+	pla
+	plx ; pull again to return number of bytes copied	
+	ldy #0
 	rts
 
 ;
