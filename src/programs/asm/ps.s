@@ -67,6 +67,10 @@ parse_options:
 	jsr print_str
 	lda ptr0
 	ldx ptr0 + 1
+	inc A
+	bne :+
+	inx
+	:
 	jsr print_str
 	lda #NEWLINE
 	jsr CHROUT
@@ -245,6 +249,7 @@ do_print_process:
 	lda #<buffer
 	ldx #>buffer
 	jsr get_process_name
+	stz buffer + 127
 	
 	lda #<buffer
 	ldx #>buffer
