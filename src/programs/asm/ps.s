@@ -27,7 +27,12 @@ parse_options:
 	ldy #1
 	lda (ptr0), Y
 	; compare to different flag letters
-	cmp #'A'
+	cmp #'h'
+	bne :+
+	jmp print_usage
+	:
+	
+	cmp #'a'
 	beq :+
 	cmp #'e'
 	bne :++
@@ -36,6 +41,7 @@ parse_options:
 	sta disp_all_processes
 	bra parse_options
 	:
+	
 	cmp #'p'
 	bne :+
 	ldy ptr1 ; are there args left?
@@ -359,6 +365,22 @@ check_process_ppid:
 @return:
 	rts
 
+print_usage:
+	lda #<@print_usage_txt
+	ldx #>@print_usage_txt
+	jsr print_str
+	lda #0
+	rts
+@print_usage_txt:
+	.byte "Usage: ps [-aeh] [-p PID[,PID2...]]", $d
+	.byte "", $d
+	.byte " -a,-e  show all processes", $d
+	.byte " -h     show this message and exit", $d
+	.byte " -p     show info for specified PIDs", $d
+	.byte "", $d
+	.byte "By default, ps shows info for processes with a shared ancestor", $d
+	.byte "", $d
+	.byte 0
 ; strings
 
 first_line:
