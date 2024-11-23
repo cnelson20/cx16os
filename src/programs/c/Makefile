@@ -6,7 +6,7 @@ LIB_FILE = $(INCL_DIR)/cx16os.lib
 C_FLAGS = --include-dir $(INCL_DIR)/ -t none --cpu 65sc02
 L_FLAGS = -C $(INCL_DIR)/cx16os_c.cfg
 
-all: bindir ctest date wc
+all: bindir ctest date wc cmp
 
 clean:
 	rm *.s
@@ -30,6 +30,13 @@ ctest: ctest.c $(LIB_FILE)
 	cp $@ $(MNT_DIR)/bin
 
 date: date.c $(LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
+
+	cp $@ $(MNT_DIR)/bin
+
+cmp: cmp.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
