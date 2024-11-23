@@ -35,7 +35,6 @@ clear:
 
 build: os.prg programs
 	cp os.prg mnt/OS.PRG
-	cp AUTOBOOT.X16 mnt/
 	
 	cp -r osfiles/* mnt/
 	-mkdir mnt/tmp/ mnt/etc/
