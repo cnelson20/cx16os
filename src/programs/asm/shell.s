@@ -29,6 +29,15 @@ MODE_R = 'R'
 MODE_W = 'W'
 
 init:
+	lda $00
+	jsr get_process_info
+	lda r0 + 1
+	bne :+
+	lda #<home_dir_path
+	ldx #>home_dir_path
+	jsr chdir
+	:
+	
 	jsr get_args
 	sta ptr0
 	stx ptr0 + 1
@@ -121,10 +130,12 @@ no_prog_args_error_str:
 prog_args_error_str:
 	.asciiz "invalid argument"
 
+home_dir_path:
+	.asciiz "~/home"
 shrc_filename:
-	.asciiz "~/.shrc"
+	.asciiz "~/home/.shrc"
 bootrc_filename:
-	.asciiz "~/.bootrc"
+	.asciiz "~/home/.bootrc"
 
 welcome:
 	stz new_stdin_fileno
