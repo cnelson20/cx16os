@@ -85,6 +85,8 @@ sptr15 := $4E
 
 MAX_LINE_LENGTH := ( 256 - 4 )
 
+SPACES_PER_TAB = 2
+
 EXTMEM_CHUNK_LEN = $40
 
 LEFT_CURSOR = $9D
@@ -211,6 +213,9 @@ get_user_cmd:
 	cmp #0
 	beq @input_loop
 	
+	cmp #9
+	beq @tab
+	
 	cmp #$d
 	beq @newline
 	
@@ -245,14 +250,25 @@ get_user_cmd:
 	lda #LEFT_CURSOR
 	jsr CHROUT
 
-	phx
-	lda #0
-	jsr send_byte_chrout_hook
-	plx
-	
 	inx
-	jmp @input_loop
+	jmp @send_chrout_hk_jmp_input_loop
+
+@tab:
+	ldy #SPACES_PER_TAB
+	lda #' '
+	:
+	jsr CHROUT
+	sta input, X
+	inx
+	dey
+	bne :-
 	
+	lda #UNDERSCORE
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+	jmp @send_chrout_hk_jmp_input_loop
+
 @backspace:
 	cpx #0
 	beq @input_loop
@@ -272,6 +288,7 @@ get_user_cmd:
 	lda #LEFT_CURSOR
 	jsr CHROUT
 
+@send_chrout_hk_jmp_input_loop:
 	phx
 	lda #0
 	jsr send_byte_chrout_hook
@@ -2271,6 +2288,22 @@ read_buf_file:
 	lda (r0)
 	cmp #$d
 	beq @end_of_line
+	
+	cmp #9
+	bne @not_tab
+	lda #' '
+	sta (r0)
+	.repeat SPACES_PER_TAB - 1
+	inc_word r0
+	lda #' '
+	sta (r0)
+	lda ptr1
+	inc A
+	sta ptr1
+	cmp #MAX_LINE_LENGTH
+	bcs @end_of_line
+	.endrepeat
+@not_tab:
 	
 	inc_word r0
 	jmp @read_next_line_loop
