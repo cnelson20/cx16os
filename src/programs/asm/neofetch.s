@@ -1208,36 +1208,36 @@ default_config_file_text_end:
 	
 
 x16_ascii_art:
-	.byte COLOR_WHITE,  "                            ", $d
-	.byte COLOR_PURPLE, "   |-----\          /-----| ", $d
-	.byte COLOR_PURPLE, "   |\\\\\\\        ///////| ", $d
-	.byte COLOR_LBLUE,  "     \\\\\\\      ///////   ", $d
-	.byte COLOR_LBLUE,  "      \\\\\\\    ///////    ", $d
-	.byte COLOR_CYAN,   "       \\\\\\\  ///////     ", $d
-	.byte COLOR_CYAN,   "        \-\\\|  |///-/      ", $d
-	.byte COLOR_LGREEN, "          \\\|  |///        ", $d
-	.byte COLOR_LGREEN, "          ///|  |\\\        ", $d
-	.byte COLOR_YELLOW, "        /-///|  |\\\-\      ", $d
-	.byte COLOR_YELLOW, "       ///////  \\\\\\\     ", $d
-	.byte COLOR_ORANGE, "      ///////    \\\\\\\    ", $d
-	.byte COLOR_ORANGE, "     ///////      \\\\\\\   ", $d
-	.byte COLOR_RED,    "   |///////        \\\\\\\| ", $d
-	.byte COLOR_RED,    "   |-----/          \-----| ", $d
-	.byte COLOR_WHITE,  "                            ", $d
+	.byte COLOR_WHITE,	"                            ", $d
+	.byte COLOR_PURPLE,	"   |-----\          /-----| ", $d
+	.byte COLOR_PURPLE,	"   |\\\\\\\        ///////| ", $d
+	.byte COLOR_LBLUE,	"     \\\\\\\      ///////   ", $d
+	.byte COLOR_LBLUE,	"      \\\\\\\    ///////    ", $d
+	.byte COLOR_CYAN,	"       \\\\\\\  ///////     ", $d
+	.byte COLOR_CYAN,	"        \-\\\|  |///-/      ", $d
+	.byte COLOR_LGREEN,	"          \\\|  |///        ", $d
+	.byte COLOR_LGREEN,	"          ///|  |\\\        ", $d
+	.byte COLOR_YELLOW,	"        /-///|  |\\\-\      ", $d
+	.byte COLOR_YELLOW,	"       ///////  \\\\\\\     ", $d
+	.byte COLOR_ORANGE,	"      ///////    \\\\\\\    ", $d
+	.byte COLOR_ORANGE,	"     ///////      \\\\\\\   ", $d
+	.byte COLOR_RED,	"   |///////        \\\\\\\| ", $d
+	.byte COLOR_RED,	"   |-----/          \-----| ", $d
+	.byte COLOR_WHITE,	"                            ", $d
 	.byte 0
 
 alt_x16_art:
-	.byte COLOR_PURPLE, "o                   o", $d
-	.byte COLOR_PURPLE, "M@\               /@M", $d
-	.byte COLOR_LBLUE,  "M@@@\           /@@@M", $d
-	.byte COLOR_LBLUE,  ":@@@@@\       /@@@@@:", $d
-	.byte COLOR_CYAN,   " \@@@@@@\   /@@@@@@/ ", $d
-	.byte COLOR_CYAN,   "   ''''**N N**''''   ", $d
-	.byte COLOR_LGREEN, "         N N         ", $d
-	.byte COLOR_YELLOW, "     ..-*N N*-..     ", $d
-	.byte COLOR_YELLOW, "  :@@@@@/   \@@@@@:  ", $d
-	.byte COLOR_ORANGE, "  M@@@/       \@@@M  ", $d
-	.byte COLOR_RED,    "  M@/           \@M  ", $d
+	.byte COLOR_PURPLE,	"o                   o", $d
+	.byte COLOR_PURPLE,	"M@\               /@M", $d
+	.byte COLOR_LBLUE,	"M@@@\           /@@@M", $d
+	.byte COLOR_LBLUE,	":@@@@@\       /@@@@@:", $d
+	.byte COLOR_CYAN,	" \@@@@@@\   /@@@@@@/ ", $d
+	.byte COLOR_CYAN,	"   ''''**N N**''''   ", $d
+	.byte COLOR_LGREEN,	"         N N         ", $d
+	.byte COLOR_YELLOW,	"     ..-*N N*-..     ", $d
+	.byte COLOR_YELLOW,	"  :@@@@@/   \@@@@@:  ", $d
+	.byte COLOR_ORANGE,	"  M@@@/       \@@@M  ", $d
+	.byte COLOR_RED,	"  M@/           \@M  ", $d
 	.byte 0
 
 filename_buffer:
