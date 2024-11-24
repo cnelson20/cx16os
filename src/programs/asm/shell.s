@@ -428,13 +428,10 @@ right_cursor:
 
 delete:
 	lda input, X
-	beq :+ ; if input strlen is 0, dont delete
-	inx
-	lda input, X
-	bne :++ ; if character to delete is \0, dont
-	:
+	bne :+ ; if input strlen is 0, dont delete
 	jmp wait_for_input
 	:
+	inx
 	lda #1
 	sta backspace_not_empty_mode
 	jsr backspace_not_empty
@@ -1295,6 +1292,13 @@ check_special_cmds:
 	jsr cmd_cmp
 	bne @not_cd
 	
+	lda num_args
+	cmp #2
+	bcs :+
+	lda #<home_dir_path
+	ldx #>home_dir_path
+	bra :++
+	:
 	ldx #1
 	lda args_offset_arr, X
 	clc 
@@ -1305,8 +1309,8 @@ check_special_cmds:
 	tax
 	tya
 	
+	:
 	stz last_return_val
-	
 	jsr chdir
 	cmp #0
 	beq :+
