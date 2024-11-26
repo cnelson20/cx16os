@@ -92,6 +92,7 @@ EXTMEM_CHUNK_LEN = $40
 LEFT_CURSOR = $9D
 SPACE = $20
 UNDERSCORE = $5F
+NEWLINE = $d
 
 ERRNO_INVALID_FORMAT := $01
 ERRNO_UNK_CMD := $02
@@ -169,16 +170,16 @@ loop:
 	beq :+
 	jsr print_error
 	:
+	stz last_error
 	jsr get_user_cmd
+	lda last_error
+	bne loop
 	lda input_mode
 	bne @handle_input_mode
 @parse_commands:
-	stz last_error
 	jsr parse_user_cmd
 	lda last_error
-	beq :+
-	jmp loop
-	:
+	bne loop
 	lda input_cmd
 	bne :+
 	lda #ERRNO_UNK_CMD
@@ -209,14 +210,23 @@ get_user_cmd:
 	
 	ldx #0
 @input_loop:
-	jsr getc
+	phx
+	:
+	ldx #0
+	jsr fgetc
+	cpx #0
+	beq :+
+	plx
+	jmp input_eof
+	:
 	cmp #0
-	beq @input_loop
+	beq :--
+	plx
 	
 	cmp #9
 	beq @tab
 	
-	cmp #$d
+	cmp #NEWLINE
 	beq @newline
 	
 	cmp #$14 ; backspace
@@ -304,6 +314,25 @@ get_user_cmd:
 	lda #$d
 	jsr CHROUT ; print newline	
 	rts
+
+input_eof:
+	lda #' '
+	jsr CHROUT
+	lda #NEWLINE
+	jsr CHROUT
+	
+	lda #<@stdin_filename
+	ldx #>@stdin_filename
+	ldy #0
+	jsr open_file
+	ldx #0 ; stdin filenum
+	jsr move_fd
+	
+	lda #'q'
+	jmp exit_ed
+	
+@stdin_filename:
+	.asciiz "#stdin"
 
 parse_user_cmd:
 	stz input_begin_set
