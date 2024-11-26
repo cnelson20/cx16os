@@ -342,6 +342,19 @@ irq_re_caller:
 	jsr pass_active_process
 	stz keyhandler_queue_pass_active_process
 	:
+	
+	lda keyhandler_queue_close_active_stdin
+	beq :+
+	ldx RAM_BANK
+	lda active_process
+	inc A
+	sta RAM_BANK
+	lda #NO_FILE
+	sta PV_OPEN_TABLE + 0
+	stx RAM_BANK
+	
+	stz keyhandler_queue_close_active_stdin
+	:
 
 	; check if time up
 	jmp manage_process_time
@@ -458,9 +471,32 @@ custom_keyinput_handler:
 	eor #$80
 	and #$80
 	sta keyhandler_tab_pressed
-
 	bra @end_routine
 	:
+	
+	cmp #$3A ; ctrl
+	bne :+
+	pla
+	eor #$80
+	and #$80
+	sta keyhandler_ctrl_pressed
+	bra @end_routine
+	:
+	
+	cmp #$21 ; d
+	bne :+
+	pla
+	pha ; was it pressed or released
+	bmi :+
+	lda keyhandler_ctrl_pressed
+	beq :+
+	pla
+	lda #1
+	sta keyhandler_queue_close_active_stdin
+	bra @end_routine
+	:
+	
+	; not one of the above keys
 	pla
 @end_routine:
 	plp
@@ -469,7 +505,6 @@ custom_keyinput_handler:
 
 @esc_pressed_released:
 	pla
-	ora #$00
 	bpl :+ ; pressed
 
 	stz keyhandler_esc_pressed ; released
@@ -488,11 +523,16 @@ custom_keyinput_handler:
 
 	bra @end_routine
 
+keyhandler_ctrl_pressed:
+	.byte 0
 keyhandler_tab_pressed:
 	.byte 0
 keyhandler_esc_pressed:
 	.byte 0
+
 keyhandler_queue_pass_active_process:
+	.byte 0
+keyhandler_queue_close_active_stdin:
 	.byte 0
 
 

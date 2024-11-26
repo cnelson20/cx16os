@@ -653,9 +653,22 @@ free_dos_channel:
 ;
 .export open_file_kernal_ext
 open_file_kernal_ext:
-	phy
 	stax_word KZE1
+	tya
+	bne :+
+	lda #'R'
+	:
+	jsr toupper
+	tay
 	
+	lda (KZE1)
+	cmp #'#'
+	bne :+
+	jmp open_stream
+	:
+	
+	phy
+	ldax_word KZE1
 	jsr strlen
 	accum_16_bit
 	.a16
@@ -701,10 +714,6 @@ open_file_kernal_ext:
 	inx
 	
 	pla ; open_mode
-	bne :+
-	lda #'R'
-	:
-	jsr toupper
 	sta KZE3
 	sta PV_TMP_FILENAME, X
 	inx 
@@ -828,6 +837,65 @@ check_channel_status:
 	rts
 
 ;
+; open_special_stream
+; filename in KZE1
+; open_mode in .Y
+;
+; .export open_stream
+open_stream:
+	sty KZE3 + 1
+	stz KZE2
+	lda RAM_BANK
+	sta KZE3
+	
+	ldax_addr @stdin_name
+	stax_word KZE0
+	jsr strcmp_banks_ext
+	cmp #0
+	bne :+
+	lda KZE3 + 1 ; open_mode
+	cmp #'R'
+	bne @invalid_open_mode
+	lda #0
+	jsr find_proc_fd
+	cmp #NO_FILE
+	beq @return_err
+	bra @return_success
+	:
+	
+	ldax_addr @stdout_name
+	stax_word KZE0
+	jsr strcmp_banks_ext
+	cmp #0
+	bne :+
+	lda KZE3 + 1 ; open_mode
+	cmp #'R'
+	beq @invalid_open_mode
+	lda #1
+	jsr find_proc_fd
+	cmp #NO_FILE
+	beq @return_err
+	bra @return_success
+	:
+	
+	ldx #$FF ; no such stream
+@return_err:
+	lda #NO_FILE
+	rts
+@return_success:
+	ldx #0
+	rts
+
+@invalid_open_mode:
+	ldx #$FE
+	bra @return_err
+
+@stdin_name:
+	.asciiz "stdin"
+@stdout_name:
+	.asciiz "stdout"
+
+;
 ; finds and marks a file as in use
 ;
 ; returns sys filenum in .A and process filenum in .X
@@ -864,8 +932,7 @@ find_file_pres:
 	sta file_table_count, Y
 	stz atomic_action_st ; atomic write finished
 	
-	tya
-	tax ; system filenum in .X
+	tyx ; system filenum in .X
 	
 	lda current_program_id
 	ora #1
@@ -891,6 +958,40 @@ find_file_pres:
 	sta PV_OPEN_TABLE, Y
 	phy
 	plx
+	rts
+
+;
+; find_proc_fd
+;
+; find an available process fd, and set it to the value in .A
+; returns the proc fd in .A, or $FF if there are no slots left
+;
+find_proc_fd:
+	set_atomic_st
+	ldy RAM_BANK
+	pha
+	lda current_program_id
+	inc A
+	sta RAM_BANK
+	ldx #3
+@loop:
+	lda PV_OPEN_TABLE, X
+	cmp #NO_FILE
+	beq @found_fd
+	inx
+	cpx #PV_OPEN_TABLE_SIZE
+	bcc @loop
+@no_files_left:
+	pla
+	lda #NO_FILE
+	bra @return
+@found_fd:
+	pla
+	sta PV_OPEN_TABLE, X
+	txa
+@return:
+	sty RAM_BANK
+	clear_atomic_st
 	rts
 
 ;
