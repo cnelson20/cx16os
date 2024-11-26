@@ -61,6 +61,8 @@ For example, the `open`, `close`, `read`, `write` C functions offer the same fun
 
 There is no `get_args` wrapper because the cx16os cc65 library already populates `argc` and `argv` and passes them to main.
 
+<br />
+
 ## Function Reference
 
 ### $9D00: getc 
