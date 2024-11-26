@@ -1423,9 +1423,22 @@ get_line_from_user:
 	
 	ldx #0
 @input_loop:
-	jsr getc
+	phx
+	:
+	ldx #0
+	jsr fgetc
+	cpx #0
+	beq :+
+	lda #' '
+	jsr CHROUT
+	lda #NEWLINE
+	jsr CHROUT
+	stz interactive_mode
+	jmp terminate
+	:
 	cmp #0
-	beq @input_loop
+	beq :--
+	plx
 	
 	cmp #NEWLINE
 	beq @newline

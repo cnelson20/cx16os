@@ -325,10 +325,16 @@ input_eof:
 	ldx #>@stdin_filename
 	ldy #0
 	jsr open_file
+	cmp #$FF
+	bne :+
+	lda #'Q'
+	bra :++
+	:
 	ldx #0 ; stdin filenum
 	jsr move_fd
 	
 	lda #'q'
+	:
 	jmp exit_ed
 	
 @stdin_filename:
