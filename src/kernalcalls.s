@@ -196,8 +196,8 @@ fputc:
 	cpx #$FF
 	beq @exit_nsuch_file
 	
-	cpx #2 ; STDIN / STDOUT
-	bcs :+
+	cpx #1 ; STDIN
+	bne :+
 	jsr CHROUT_screen
 	restore_p_816
 	rts
@@ -266,8 +266,8 @@ fgetc:
 	
 	cpx #$FF
 	beq @exit_nsuch_file
-	cpx #2
-	bcs :+
+	cpx #0
+	bne :+
 	; reading from stdin
 	jmp getc_wait_active_process
 	:
