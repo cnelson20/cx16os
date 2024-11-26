@@ -496,6 +496,19 @@ custom_keyinput_handler:
 	bra @end_routine
 	:
 	
+	cmp #$30 ; c
+	bne :+
+	pla
+	pha ; was it pressed or released
+	bmi :+
+	lda keyhandler_ctrl_pressed
+	beq :+
+	pla
+	lda #1
+	sta nmi_queued
+	bra @end_routine
+	:
+	
 	; not one of the above keys
 	pla
 @end_routine:
