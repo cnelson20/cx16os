@@ -1413,13 +1413,6 @@ get_code_line_from_user:
 	jmp memmove_extmem
 
 get_line_from_user:
-	lda #'_'
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-
-	lda #0
-	jsr send_byte_chrout_hook
 	
 	ldx #0
 @input_loop:
@@ -1429,8 +1422,6 @@ get_line_from_user:
 	jsr fgetc
 	cpx #0
 	beq :+
-	lda #' '
-	jsr CHROUT
 	lda #NEWLINE
 	jsr CHROUT
 	stz interactive_mode
@@ -1443,79 +1434,15 @@ get_line_from_user:
 	cmp #NEWLINE
 	beq @newline
 	
-	cmp #$14 ; backspace
-	beq @backspace
-	cmp #$19 ; delete
-	beq @backspace
-	
 	cpx #MAX_LINE_SIZE - 1
 	bcs @input_loop
-	
-	; if a special char not one of the ones above, ignore ;
-	pha
-	cmp #$20
-	bcc @inv_chr
-	cmp #$7F
-	bcc @val_chr
-	cmp #$A1
-	bcs @val_chr
-	
-@inv_chr:	
-	pla
-	jmp @input_loop
-@val_chr:
-	pla
-	
-	jsr CHROUT
+
 	sta line_buff, X
-	
-	lda #'_'
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-
-	phx
-	lda #0
-	jsr send_byte_chrout_hook
-	plx
-	
 	inx
-	jmp @input_loop
-	
-@backspace:
-	cpx #0
-	beq @input_loop
-	dex
-	lda #' '
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-	jsr CHROUT
-	lda #' '
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-	
-	lda #'_'
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
+	bra @input_loop
 
-	phx
-	lda #0
-	jsr send_byte_chrout_hook
-	plx
-
-	jmp @input_loop
-	
 @newline:
 	stz line_buff, X
-	
-	lda #' '
-	jsr CHROUT
-	lda #NEWLINE
-	jsr CHROUT ; print newline
-	
 	rts
 
 ;
