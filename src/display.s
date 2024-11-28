@@ -432,7 +432,6 @@ return_chrin_buff:
 	lda #$FF
 	sta PV_OPEN_TABLE + 0
 	dec RAM_BANK
-	stp
 	lda #0
 	ldx #$FF
 	rts
