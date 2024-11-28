@@ -390,6 +390,7 @@ get_line_from_user:
 @newline:
 	jsr @lda_space_putc
 	lda #NEWLINE
+	jsr putc
 	sta STORE_PROG_CHRIN_BUFF, X
 	inx
 @end_loop:

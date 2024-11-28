@@ -228,9 +228,6 @@ get_user_cmd:
 
 @newline:
 	stz input, X
-	
-	lda #$d
-	jsr CHROUT ; print newline	
 	rts
 
 input_eof:
