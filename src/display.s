@@ -388,6 +388,7 @@ get_line_from_user:
 	jmp @input_loop
 	
 @newline:
+	jsr @lda_space_putc
 	lda #NEWLINE
 	sta STORE_PROG_CHRIN_BUFF, X
 	inx
