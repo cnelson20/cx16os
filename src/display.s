@@ -5,11 +5,18 @@
 
 .SEGMENT "CODE"
 
-.import current_program_id
+.import current_program_id, active_process
+.import surrender_process_time
+
+.import PV_OPEN_TABLE
+.import putc, send_byte_chrout_hook
 
 PLOT_X = $0B
 PLOT_Y = $0C
 HOME = $13
+
+LEFT_CURSOR = $9D
+NEWLINE = $d
 
 .export default_screen_mode
 default_screen_mode:
@@ -56,6 +63,10 @@ reset_display:
 .export setup_process_display_vars
 setup_process_display_vars:
 	; takes pid in .A, ppid in .X
+	; RAM_BANK = pid
+	stz STORE_PROG_CHRIN_BUFF_IND
+	stz STORE_PROG_CHRIN_BUFF_LEN
+	
 	lsr A
 	tay
 	lda #0
@@ -63,10 +74,14 @@ setup_process_display_vars:
 	txa
 	lsr A
 	tax
+	; ppid >> 1 in .X, pid >> 1 in .Y
 	lda programs_back_color_table, X
 	sta programs_back_color_table, Y
 	lda programs_fore_color_table, X
 	sta programs_fore_color_table, Y
+	
+	lda #1
+	sta programs_stdin_mode_table, Y
 	rts
 
 ;
@@ -255,4 +270,230 @@ programs_back_color_table:
 .export programs_fore_color_table
 programs_fore_color_table:
 	.res 128, 0
+
+.export programs_stdin_mode_table
+programs_stdin_mode_table:
+	.res 128,0 
+
+;
+; getchar_from_keyboard
+;
+.export getchar_from_keyboard
+getchar_from_keyboard:
+	lda current_program_id
+	tax
+	lsr A
+	:
+	cpx active_process
+	beq :+
+	jsr surrender_process_time
+	bra :-
+	:
+	
+	tax
+	lda programs_stdin_mode_table, X
+	bne @echo_input
+	
+	jsr GETIN
+	rts
+	
+@echo_input:
+	cmp #1
+	beq get_line_from_user
+	jmp return_chrin_buff
+	; mode = 1 means we need to fill a line with input
+get_line_from_user:
+	phx ; preserve pid >> 1
+	
+	jsr @lda_underscore_putc
+	jsr @lda_left_crsr_putc
+
+	jsr @send_zero_chrout_hook_preserve_x
+	
+	ldx #0
+	stx STORE_PROG_CHRIN_BUFF_LEN
+	stx STORE_PROG_CHRIN_BUFF_IND
+@input_loop:
+	phx
+	:
+	ply
+	plx
+	phx
+	phy
+	lda programs_stdin_mode_table, X
+	cmp #1
+	beq :+
+	jsr @lda_space_putc
+	jsr @lda_left_crsr_putc
+	plx
+	jmp @end_loop
+	:
+	jsr GETIN
+	cmp #0
+	beq :--
+	plx
+	
+	cmp #NEWLINE
+	beq @newline
+	
+	cmp #$14 ; backspace
+	beq @backspace
+	cmp #$19
+	beq @backspace
+	
+	cpx #(STORE_PROG_CHRIN_BUFF_END - STORE_PROG_CHRIN_BUFF) - 1
+	bcs @input_loop
+	
+	; if a special char not one of the ones above, ignore ;
+	pha
+	cmp #$20
+	bcc @inv_chr
+	cmp #$7F
+	bcc @val_chr
+	cmp #$A1
+	bcs @val_chr
+	
+@inv_chr:	
+	pla
+	jmp @input_loop
+@val_chr:
+	pla
+	
+	jsr putc
+	sta STORE_PROG_CHRIN_BUFF, X
+	
+	jsr @lda_underscore_putc
+	jsr @lda_left_crsr_putc
+
+	jsr @send_zero_chrout_hook_preserve_x
+	
+	inx
+	jmp @input_loop
+	
+@backspace:
+	cpx #0
+	beq @input_loop
+	dex
+	jsr @lda_space_putc
+	jsr @lda_left_crsr_putc
+	jsr putc
+	jsr @lda_space_putc
+	jsr @lda_left_crsr_putc
+	
+	jsr @lda_underscore_putc
+	jsr @lda_left_crsr_putc
+
+	jsr @send_zero_chrout_hook_preserve_x
+
+	jmp @input_loop
+	
+@newline:
+	lda #NEWLINE
+	sta STORE_PROG_CHRIN_BUFF, X
+	inx
+@end_loop:
+	stx STORE_PROG_CHRIN_BUFF_LEN
+	
+	plx ; pull pid >> 1
+	lda programs_stdin_mode_table, X
+	cmp #1
+	bne :+
+	lda #2
+	sta programs_stdin_mode_table, X
+	:
+	bra return_chrin_buff
+	
+@lda_space_putc:
+	lda #' '
+	jmp putc
+@lda_left_crsr_putc:
+	lda #LEFT_CURSOR
+	jmp putc
+@lda_underscore_putc:
+	lda #'_'
+	jmp putc
+@send_zero_chrout_hook_preserve_x:
+	phx
+	lda #0
+	jsr send_byte_chrout_hook
+	plx
+	rts
+	
+return_chrin_buff:
+	lda STORE_PROG_CHRIN_BUFF_IND
+	cmp STORE_PROG_CHRIN_BUFF_LEN
+	bcc @not_out_bytes
+	
+	lda programs_stdin_mode_table, X
+	cmp #3
+	bne :+
+	inc RAM_BANK
+	lda #$FF
+	sta PV_OPEN_TABLE + 0
+	dec RAM_BANK
+	stp
+	lda #0
+	ldx #$FF
+	rts
+	:
+	lda #1
+	sta programs_stdin_mode_table, X
+	jmp getchar_from_keyboard
+@not_out_bytes:
+	tax
+	lda STORE_PROG_CHRIN_BUFF, X
+	inx
+	stx STORE_PROG_CHRIN_BUFF_IND
+	ldx #0
+	rts
+
+;
+; close_active_proc_stdin
+;
+.export close_active_proc_stdin
+close_active_proc_stdin:
+	lda active_process
+	lsr A
+	tax
+	lda programs_stdin_mode_table, X
+	beq @no_bytes_in_chrin_buff
+	
+	lda #3
+	sta	programs_stdin_mode_table, X
+	rts
+	
+@no_bytes_in_chrin_buff:
+	ldx RAM_BANK
+	lda active_process
+	inc A
+	sta RAM_BANK
+	lda #NO_FILE
+	sta PV_OPEN_TABLE + 0
+	stx RAM_BANK
+	rts
+	
+;
+; set_stdin_echo_mode
+;
+.export set_stdin_echo_mode
+set_stdin_echo_mode:
+	save_p_816_8bitmode
+	pha
+	lda current_program_id
+	lsr A
+	tax
+	pla
+	bne :+
+	; if .A = 0
+	lda programs_stdin_mode_table, X
+	bne @return
+	lda #1
+	sta programs_stdin_mode_table, X
+	bra @return
+	:
+	; if .A <> 0
+	stz programs_stdin_mode_table, X
+@return:	
+	restore_p_816
+	rts
 	

@@ -9,7 +9,7 @@
 .import file_table
 .import strlen, memcpy_ext, memcpy_banks_ext, strcmp_banks_ext
 .import strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str, toupper, tolower
-.import check_process_owns_bank
+.import check_process_owns_bank, getchar_from_keyboard
 .import current_program_id
 
 .import CHROUT_screen
@@ -1054,7 +1054,10 @@ read_file_ext:
 	dec RAM_BANK
 	
 	cmp #$FF
+	beq @exit_failure
+	cpy #0
 	bne @file_is_open
+	jmp read_stdin
 	; file isn't open, return
 @exit_failure:
 	ldy #$FF
@@ -1098,19 +1101,13 @@ read_file_ext:
 
 	ldstx_word r0, KZE0
 	ldstx_word r1, KZE1
-	
 	lda KZE2
-	cmp #STDIN_FILENO
-	bne :+
-	jmp read_stdin
-	:
-
 .export load_process_entry_pt	
 load_process_entry_pt:
 	; this is a file we can read from disk ;
 	sta KZE3
 	
-	set_atomic_st
+	set_atomic_st_disc_a
 	
 	ldx KZE3
 	jsr CHKIN
@@ -1259,20 +1256,24 @@ try_read_slow:
 	rts
 	
 read_stdin:
+	ldsta_word r0, KZE0
+	ldsta_word r1, KZE1
+	
 	lda r2
-	sta RAM_BANK
-
-	inc KZE1
 	bne :+
-	inc KZE1 + 1
+	lda current_program_id ; if r2 = 0, set it to current_program_id
+	cmp current_program_id
+	beq :+
+	jsr check_process_owns_bank
+	cmp #0
+	bne @exit_failure
 	:
-	ldy #0
+	sta RAM_BANK
 @loop:
-	dec KZE1
-	bne :+
-	dec KZE1 + 1
-	bpl :+
-
+	lda KZE1
+	ora KZE1 + 1
+	bne @continue
+@exit_success:
 	;no more bytes to copy, return
 	lda current_program_id
 	sta RAM_BANK
@@ -1280,18 +1281,45 @@ read_stdin:
 	lda r1
 	ldx r1 + 1
 	ldy #0
-	rts
+	rts	
+@continue:
+	jsr getchar_from_keyboard
+	cpx #0
+	bne @out_bytes
+	sta (KZE0)
 	
+	lda KZE1
+	bne :+
+	dec KZE1 + 1
 	:
-	phy
-	jsr CHRIN
-	ply
-	sta (KZE0), Y
+	dec A
+	sta KZE1
 	
-	iny
+	inc KZE0
 	bne @loop
 	inc KZE0 + 1
 	bra @loop
+
+@out_bytes:
+	lda current_program_id
+	sta RAM_BANK
+	
+	sec
+	lda KZE0
+	sbc r0
+	pha
+	lda KZE0 + 1
+	sbc r0 + 1
+	tax
+	pla
+	ldy #0
+	rts
+	
+@exit_failure:
+	ldy #$FF
+	lda #0
+	tax
+	rts
 
 ;
 ; write_file_ext

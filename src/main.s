@@ -11,7 +11,7 @@
 .import hex_num_to_string_kernal
 .import setup_system_hooks, release_all_process_hooks
 
-.import programs_last_printed_special_char, setup_process_display_vars
+.import programs_last_printed_special_char, setup_process_display_vars, close_active_proc_stdin
 
 .import check_channel_status, load_process_entry_pt
 .import file_table_count
@@ -345,14 +345,7 @@ irq_re_caller:
 	
 	lda keyhandler_queue_close_active_stdin
 	beq :+
-	ldx RAM_BANK
-	lda active_process
-	inc A
-	sta RAM_BANK
-	lda #NO_FILE
-	sta PV_OPEN_TABLE + 0
-	stx RAM_BANK
-	
+	jsr close_active_proc_stdin
 	stz keyhandler_queue_close_active_stdin
 	:
 

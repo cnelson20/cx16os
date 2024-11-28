@@ -29,6 +29,9 @@ MODE_R = 'R'
 MODE_W = 'W'
 
 init:
+	lda #1
+	jsr set_stdin_echo_mode
+	
 	lda $00
 	jsr get_process_info
 	lda r0 + 1
