@@ -43,7 +43,7 @@ int compare_files(void) {
 	static unsigned char file2_byte;
 	
 	line_count = 1;
-	byte_count = 0;
+	byte_count = 1;
 	
 	while (1) {
 		static unsigned char read1, read2;
@@ -86,7 +86,7 @@ void parse_options(int argc, char *argv[]) {
 				printf("cmp: invalid argument '%s': Cannot compare more than 2 files\r", argv[0]);
 				exit(2);
 			}
-			new_fd = strcmp(argv[0], "-") ? open(argv[0], O_RDONLY) : 1;
+			new_fd = strcmp(argv[0], "-") ? open(argv[0], O_RDONLY) : STDIN_FILENO;
 			if (new_fd == 0xFF) {
 				printf("cmp: No such file '%s' exists\r", argv[0]);
 				exit(2);
