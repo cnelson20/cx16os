@@ -200,13 +200,6 @@ get_user_cmd:
 	lda #':'
 	jsr CHROUT
 	:
-	lda #UNDERSCORE
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-
-	lda #0
-	jsr send_byte_chrout_hook
 	
 	ldx #0
 @input_loop:
@@ -223,101 +216,24 @@ get_user_cmd:
 	beq :--
 	plx
 	
-	cmp #9
-	beq @tab
-	
 	cmp #NEWLINE
 	beq @newline
-	
-	cmp #$14 ; backspace
-	beq @backspace
-	cmp #$19 ; delete
-	beq @backspace
 	
 	cpx #MAX_LINE_LENGTH
 	bcs @input_loop
 	
-	; if a special char not one of the ones above, ignore ;
-	pha
-	cmp #$20
-	bcc @inv_chr
-	cmp #$7F
-	bcc @val_chr
-	cmp #$A1
-	bcs @val_chr
-	
-@inv_chr:	
-	pla
-	jmp @input_loop
-@val_chr:
-	pla
-	
-	jsr CHROUT
-	sta input, X
-	
-	lda #UNDERSCORE
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-
-	inx
-	jmp @send_chrout_hk_jmp_input_loop
-
-@tab:
-	ldy #SPACES_PER_TAB
-	lda #' '
-	:
-	jsr CHROUT
 	sta input, X
 	inx
-	dey
-	bne :-
-	
-	lda #UNDERSCORE
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-	jmp @send_chrout_hk_jmp_input_loop
-
-@backspace:
-	cpx #0
-	beq @input_loop
-	dex
-	lda #SPACE
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-	jsr CHROUT
-	lda #SPACE
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-	
-	lda #UNDERSCORE
-	jsr CHROUT
-	lda #LEFT_CURSOR
-	jsr CHROUT
-
-@send_chrout_hk_jmp_input_loop:
-	phx
-	lda #0
-	jsr send_byte_chrout_hook
-	plx
-
 	jmp @input_loop
-	
+
 @newline:
 	stz input, X
 	
-	lda #SPACE
-	jsr CHROUT
 	lda #$d
 	jsr CHROUT ; print newline	
 	rts
 
 input_eof:
-	lda #' '
-	jsr CHROUT
 	lda #NEWLINE
 	jsr CHROUT
 	
