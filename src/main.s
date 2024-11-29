@@ -707,10 +707,15 @@ update_parent_processes:
 .export surrender_process_time
 surrender_process_time:
 	pha
+	lda atomic_action_st
+	pha
+	stz atomic_action_st
 	lda #1
 	sta schedule_timer
 	wai
 	nop
+	pla
+	sta atomic_action_st
 	pla
 	rts
 

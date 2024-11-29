@@ -6,7 +6,7 @@
 .SEGMENT "CODE"
 
 .import current_program_id, active_process
-.import surrender_process_time
+.import surrender_process_time, atomic_action_st
 
 .import PV_OPEN_TABLE
 .import putc, send_byte_chrout_hook
@@ -281,20 +281,24 @@ programs_stdin_mode_table:
 .export getchar_from_keyboard
 getchar_from_keyboard:
 	lda current_program_id
-	tax
+	tay
 	lsr A
-	:
-	cpx active_process
-	beq :+
-	jsr surrender_process_time
-	bra :-
-	:
 	
 	tax
 	lda programs_stdin_mode_table, X
 	bne @echo_input
 	
+@raw_getin:
+	set_atomic_st_disc_a
+	:
+	cpy active_process ; .Y = current_program_id
+	beq :+
+	jsr surrender_process_time
+	bra :-
+	:
 	jsr GETIN
+	clear_atomic_st
+	ldx #0
 	rts
 	
 @echo_input:
@@ -305,32 +309,42 @@ getchar_from_keyboard:
 get_line_from_user:
 	phx ; preserve pid >> 1
 	
-	jsr @lda_underscore_putc
-	jsr @lda_left_crsr_putc
+	jsr lda_underscore_putc
+	jsr lda_left_crsr_putc
 
-	jsr @send_zero_chrout_hook_preserve_x
+	jsr send_zero_chrout_hook_preserve_x
 	
 	ldx #0
 	stx STORE_PROG_CHRIN_BUFF_LEN
 	stx STORE_PROG_CHRIN_BUFF_IND
 @input_loop:
 	phx
-	:
+@wait_kbd_buff_nempty:
 	ply
 	plx
 	phx
 	phy
 	lda programs_stdin_mode_table, X
 	cmp #1
-	beq :+
-	jsr @lda_space_putc
-	jsr @lda_left_crsr_putc
+	beq @still_read_chars
+	jsr lda_space_putc
+	jsr lda_left_crsr_putc
 	plx
 	jmp @end_loop
+@still_read_chars:
+	set_atomic_st_disc_a
+	:
+	lda current_program_id
+	cmp active_process
+	beq :+
+	jsr surrender_process_time
+	bra :-
 	:
 	jsr GETIN
+	clear_atomic_st
+	
 	cmp #0
-	beq :--
+	beq @wait_kbd_buff_nempty
 	plx
 	
 	cmp #NEWLINE
@@ -362,10 +376,10 @@ get_line_from_user:
 	jsr putc
 	sta STORE_PROG_CHRIN_BUFF, X
 	
-	jsr @lda_underscore_putc
-	jsr @lda_left_crsr_putc
+	jsr lda_underscore_putc
+	jsr lda_left_crsr_putc
 
-	jsr @send_zero_chrout_hook_preserve_x
+	jsr send_zero_chrout_hook_preserve_x
 	
 	inx
 	jmp @input_loop
@@ -374,21 +388,21 @@ get_line_from_user:
 	cpx #0
 	beq @input_loop
 	dex
-	jsr @lda_space_putc
-	jsr @lda_left_crsr_putc
+	jsr lda_space_putc
+	jsr lda_left_crsr_putc
 	jsr putc
-	jsr @lda_space_putc
-	jsr @lda_left_crsr_putc
+	jsr lda_space_putc
+	jsr lda_left_crsr_putc
 	
-	jsr @lda_underscore_putc
-	jsr @lda_left_crsr_putc
+	jsr lda_underscore_putc
+	jsr lda_left_crsr_putc
 
-	jsr @send_zero_chrout_hook_preserve_x
+	jsr send_zero_chrout_hook_preserve_x
 
 	jmp @input_loop
 	
 @newline:
-	jsr @lda_space_putc
+	jsr lda_space_putc
 	lda #NEWLINE
 	jsr putc
 	sta STORE_PROG_CHRIN_BUFF, X
@@ -405,16 +419,16 @@ get_line_from_user:
 	:
 	bra return_chrin_buff
 	
-@lda_space_putc:
+lda_space_putc:
 	lda #' '
 	jmp putc
-@lda_left_crsr_putc:
+lda_left_crsr_putc:
 	lda #LEFT_CURSOR
 	jmp putc
-@lda_underscore_putc:
+lda_underscore_putc:
 	lda #'_'
 	jmp putc
-@send_zero_chrout_hook_preserve_x:
+send_zero_chrout_hook_preserve_x:
 	phx
 	lda #0
 	jsr send_byte_chrout_hook
