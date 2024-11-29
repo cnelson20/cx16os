@@ -53,6 +53,7 @@
 | $9DB1 | [`pwrite_extmem_xy`](extmem.md#pwrite_extmem_xy) | .A, .X, .Y | | | &mdash; |
 | $9DB4 | [`get_console_info`](#9db4-get_console_info) | | .A, .X, r0 | .Y | &cross; |
 | $9DB7 | [`set_console_mode`](#9db7-set_console_mode) | .A | .A | .X, .Y | &cross; |
+| $9DBA | [`set_stdin_read_mode`](#9dba-set_stdin_read_mode) | .A | | .A, .X, .Y | &cross; |
 
 ### Note:
 Functions with an '&mdash;' under the `C Wrapper Implemented?` column mean that existing C builtins or functions provide the same functionality and are not necessary. 
@@ -66,8 +67,8 @@ There is no `get_args` wrapper because the cx16os cc65 library already populates
 ## Function Reference
 
 ### $9D00: getc 
-- Grabs a character from input
-- Mimics GETIN
+- Reads 1 character from stdin
+- Mimics the CHRIN / GETIN routines of the CBM kernal, depending on the last value passed to [`set_stdin_read_mode`](#9dba-set_stdin_read_mode)
 
 Return values:
 - Char from stdin returned in .A
@@ -425,4 +426,17 @@ Arguments:
 Return values:
 - A -> 0 on success, non-zero on failure to change the screen mode
 
+---
+
+### $9DBA: set_stdin_read_mode
+- Changes the behavior of [`getc`](#9d00-getc)/[`fgetc`](#9d60-fgetc) calls that read from the keyboard
+    - By default, input from the keyboard is buffered, waiting for a newline to be entered to return characters to a process.
+- If a non-zero value is passed to this routine, os calls that read from the keyboard will now no longer buffer keyboard input and will return `0` if no chars are in the CBM keyboard buffer.
+- If `0` is passed, the behavior will be restored to default.
+
+Arguments:
+- A -> byte whose zeroness signifies the keyboard input mode to use
+
+Return values:
+- None 
 
