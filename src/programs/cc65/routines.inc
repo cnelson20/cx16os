@@ -16,7 +16,7 @@ print_str := $9D09
 PRINT_STR := print_str
 get_console_info := $9DB4
 set_console_mode := $9DB7
-set_stdin_echo_mode := $9DBA
+set_stdin_read_mode := $9DBA
 
 get_process_info := $9D0C
 get_args := $9D0F

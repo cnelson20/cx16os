@@ -39,7 +39,7 @@
 .import file_table_count
 
 .import programs_fore_color_table, programs_back_color_table
-.import getchar_from_keyboard, set_stdin_echo_mode
+.import getchar_from_keyboard, set_stdin_read_mode
 
 .export call_table
 call_table:
@@ -105,7 +105,7 @@ call_table:
 	jmp pwrite_extmem_xy ; $9DB1
 	jmp get_console_info ; $9DB4
 	jmp set_console_mode ; $9DB7
-	jmp set_stdin_echo_mode ; $9DBA
+	jmp set_stdin_read_mode ; $9DBA
 	.res 3, $FF
 .export call_table_end
 call_table_end:

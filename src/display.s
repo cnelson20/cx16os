@@ -474,10 +474,10 @@ close_active_proc_stdin:
 	rts
 	
 ;
-; set_stdin_echo_mode
+; set_stdin_read_mode
 ;
-.export set_stdin_echo_mode
-set_stdin_echo_mode:
+.export set_stdin_read_mode
+set_stdin_read_mode:
 	save_p_816_8bitmode
 	pha
 	lda current_program_id
