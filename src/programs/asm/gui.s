@@ -31,6 +31,11 @@ GUI_HOOK = 0
 COMMAND_DISPLAY_CHARS = 0
 COMMAND_EXIT_GUI = 1
 
+; special cntrl chars ;
+NEWLINE = $d
+LEFT_CURSOR = $9d
+SWAP_COLORS = $01
+
 r0 := $02
 r1 := $04
 
@@ -279,7 +284,7 @@ display_chars:
 @display_loop:
     lda message_body, Y
 @compare_char:
-    cmp #$d
+    cmp #NEWLINE
     bne :+
 
     lda @this_line_length
@@ -307,7 +312,7 @@ display_chars:
     
     jmp @dont_store_char
     :
-    cmp #$9D ; left_arrow
+    cmp #LEFT_CURSOR ; left_arrow
     bne @not_backspace
     cpx #0
     beq :+
@@ -339,7 +344,11 @@ display_chars:
     cmp #$20
     bcc @dont_store_char
     cmp #$7F
-    bcs @dont_store_char
+	bcc :+
+    beq @dont_store_char
+	cmp #$A0
+	bcc @dont_store_char
+	:
     phy
     txy
     sta (ptr1), Y
@@ -348,7 +357,7 @@ display_chars:
     stx @this_line_length
     cpx @this_line_max_len
     bcc :+
-    lda #$d
+    lda #NEWLINE
     jmp @compare_char
     :
 @dont_store_char:
@@ -1479,7 +1488,7 @@ bit_offset_right_pixel:
 
 startup_str:
     .byte "gui running on hook x"
-    .byte $d, 0
+    .byte NEWLINE, 0
 startup_str_hooknum := * - 3
 
 hook0_extmem_bank:
