@@ -67,8 +67,8 @@ There is no `get_args` wrapper because the cx16os cc65 library already populates
 ## Function Reference
 
 ### $9D00: getc 
-- Grabs a character from input
-- Mimics GETIN
+- Reads 1 character from stdin
+- Mimics the CHRIN / GETIN routines of the CBM kernal, depending on the last value passed to [`set_stdin_read_mode`](#9dba-set_stdin_read_mode)
 
 Return values:
 - Char from stdin returned in .A
@@ -431,5 +431,12 @@ Return values:
 ### $9DBA: set_stdin_read_mode
 - Changes the behavior of [`getc`](#9d00-getc)/[`fgetc`](#9d60-fgetc) calls that read from the keyboard
     - By default, input from the keyboard is buffered, waiting for a newline to be entered to return characters to a process.
-- If a non-zero value is passed to this routine, calls to `getc` will now no longer buffer keyboard input and will return `0` if no chars are in the CBM keyboard buffer.
-- If `0` is passed, the behavior will be restored to default. 
+- If a non-zero value is passed to this routine, os calls that read from the keyboard will now no longer buffer keyboard input and will return `0` if no chars are in the CBM keyboard buffer.
+- If `0` is passed, the behavior will be restored to default.
+
+Arguments:
+- A -> byte whose zeroness signifies the keyboard input mode to use
+
+Return values:
+- None 
+
