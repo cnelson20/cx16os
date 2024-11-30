@@ -1,12 +1,7 @@
+[a-z]*[a-z]
+!*.*
+
 *.s
 *.o
 
 a.out
-
-cat
-ctest
-cat_c
-date
-wc
-cmp
-untar
