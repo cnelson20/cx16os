@@ -156,6 +156,23 @@ putc_v:
 	jmp CHROUT ; just so -echo flag on emu looks nicer
 	:
 	
+	cmp #$9 ; '\t'
+	bne :++
+	pla
+	sec
+	jsr PLOT
+	tya
+	and #3
+	tay
+	lda #' '
+	:
+	jsr CHROUT
+	iny
+	cpy #4
+	bcc :-
+	rts
+	:
+	
 	cmp #PLOT_X
 	beq :+
 	cmp #PLOT_Y
@@ -205,7 +222,9 @@ putc_v:
 	:
 	lda valid_c_table_1, X
 	:
-	bne @valid_char
+	beq :+
+	jmp @valid_char
+	:
 	
 	; needs to be appended ;
 	lda #$80
