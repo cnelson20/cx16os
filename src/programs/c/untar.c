@@ -214,7 +214,7 @@ untar(FILE *a, const char *path)
 static void
 show_usage(void)
 {
-	printf("Usage: untar [OPTION...] [FILE]...\r"
+	printf("Usage: untar [OPTION]... [FILE]...\r"
 	"untar restores files from a ustar format archive\r\r"
 	"Options:\r"
 	"  -h: display this message\r\r");
