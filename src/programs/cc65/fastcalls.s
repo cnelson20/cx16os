@@ -1,5 +1,10 @@
 .include "routines.inc"
 
+.import _bzero
+
+.export __bzero
+__bzero := _bzero
+
 .export _getin
 _getin := GETIN
 

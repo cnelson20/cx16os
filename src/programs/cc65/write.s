@@ -19,6 +19,12 @@ r1 := $04
     stx r0 + 1
 
     jsr popax
-    jmp write_file
+	jsr write_file
+	cpy #0
+	beq :+
+	lda #$FF
+	tax	
+	:
+	rts
 .endproc
 
