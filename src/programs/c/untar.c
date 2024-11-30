@@ -30,15 +30,11 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <peekpoke.h>
-
-unsigned char stp_rts[2] = {0xDB, 0x60};
 /* Parse an octal number, ignoring leading and trailing nonsense. */
 static int
 parseoct(const char *p, size_t n)
 {
-	static unsigned int i;
-	i = 0;
+	int i = 0;
 	
 	while (*p < '0' || *p > '7') {
 		++p;
@@ -187,8 +183,6 @@ untar(FILE *a, const char *path)
 			f = create_file(buff, parseoct(buff + 100, 8));
 			break;
 		}
-		POKEW(0x02, filesize);
-		__asm__ ("jsr %v", stp_rts);
 		while (filesize > 0) {
 			bytes_read = fread(buff, 1, 512, a);
 			if (bytes_read < 512) {
@@ -217,6 +211,16 @@ untar(FILE *a, const char *path)
 	}
 }
 
+static void
+show_usage(void)
+{
+	printf("Usage: untar [OPTION...] [FILE]...\r"
+	"untar restores files from a ustar format archive\r\r"
+	"Options:\r"
+	"  -h: display this message\r\r");
+	exit(EXIT_SUCCESS);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -225,6 +229,8 @@ main(int argc, char **argv)
 	(void)argc;
 	++argv; /* Skip program name */
 	for ( ;*argv != NULL; ++argv) {
+		if (!strcmp(*argv, "-h")) show_usage();
+		
 		a = fopen(*argv, "r");
 		if (a == NULL)
 			fprintf(stderr, "Unable to open %s\r", *argv);
