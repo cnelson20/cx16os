@@ -1,62 +1,171 @@
 .include "routines.inc"
 .segment "CODE"
 
-BYTES_PER_ROW = 8
+r0 := $02
+r1 := $04
+r2 := $06
 
-r0L := $02
-r0H := $03
-r1L := $04
-r1H := $05
-r2L := $06
+ptr0 := $30
+ptr1 := $32
+
+NEWLINE = $d
 
 init:
 	jsr get_args
-	stx $31
-	sta $30
-	sty argc	
-main:
-	dec argc
-	bne continue
+	stx ptr0 + 1
+	sta ptr0
+	dey
+	sty argc
+	
+	lda #16
+	sta BYTES_PER_ROW
+	lda #4
+	sta DATA_OFFSET_LEN
+	
+	stz file_list_size
+parse_options:
+	lda argc
+	bne :+
+	jmp end_parse_options
+	:
+	jsr get_next_arg
+	
+	lda (ptr0)
+	cmp #'-'
+	beq :+
+	jmp add_file_to_parse_list
+	: ; options start w/ '-'
+	
+	ldy #1
+	lda (ptr0), Y
+	; compare to different flag letters
+	cmp #'h'
+	bne :+
+	jmp print_usage
+	:
+	
+	cmp #'c'
+	bne :+
+	lda argc
+	beq @option_requires_argument
+	jsr get_next_arg
+	lda ptr0
+	ldx ptr0 + 1
+	jsr parse_num
+	cpy #0
+	bne parse_options
+	sta BYTES_PER_ROW
+	bra parse_options
+	:
+	
+	cmp #'w'
+	bne :+
+	lda argc
+	beq @option_requires_argument
+	jsr get_next_arg
+	lda ptr0
+	ldx ptr0 + 1
+	jsr parse_num
+	cpy #0
+	bne parse_options
+	cmp #4 + 1
+	bcs parse_options
+	sta DATA_OFFSET_LEN
+	bra parse_options
+	:
+	
+@invalid_option:	
+	; invalid option
+	lda #<invalid_option_str
+	ldx #>invalid_option_str
+	bra @print_ax_ptr0_newline_exit
+
+@option_requires_argument:
+	lda #<opt_requires_arg_str
+	ldx #>opt_requires_arg_str
+@print_ax_ptr0_newline_exit:
+	jsr print_str
+	lda ptr0
+	ldx ptr0 + 1
+	inc A
+	bne :+
+	inx
+	:
+	jsr print_str
+	lda #NEWLINE
+	jsr CHROUT
+	lda #1
 	rts
-continue:
-	
+
+get_next_arg:
+	dec argc ; decrement argc	
 	ldy #0
-	lda ($30), Y
-	beq found_end_word
+	:
+	lda (ptr0), Y
+	beq :+
+	iny
+	bra :-
+	:
+	tya
+	sec ; like incrementing .A
+	adc ptr0
+	sta ptr0
+	lda ptr0 + 1
+	adc #0
+	sta ptr0 + 1
+	rts
+
+add_file_to_parse_list:
+	ldx file_list_size
+	lda ptr0
+	sta file_list_lo, X
+	lda ptr0 + 1
+	sta file_list_hi, X
+	inx
+	stx file_list_size
+	jmp parse_options
 	
-	inc $30
-	bne continue
-	inc $31
-	jmp continue
+end_parse_options:
+	stz file_list_ind
+@loop:
+	ldx file_list_ind
+	cpx file_list_size
+	bcs @end_loop
 	
-found_end_word:
-	inc $30
-	bne @skip
-	inc $31
-@skip:
-	lda $30
-	ldx $31
-	ldy #0 ; read??
+	lda file_list_lo, X
+	sta ptr0
+	lda file_list_hi, X
+	sta ptr0 + 1
+	jsr dump_file
 	
+	inc file_list_ind
+	bra @loop
+@end_loop:
+	lda #0
+	rts
+
+dump_file:
+	lda ptr0
+	ldx ptr0 + 1
+	ldy #'R'
 	jsr open_file
 	sta fd
 	cmp #$FF
-	bne file_print_loop
+	bne :+
 	jmp file_error ; if = $FF , jmp to file_error
-	
+	:
 file_print_loop:
-	;stp
 	lda #<buff
-	sta r0L
+	sta r0
 	lda #>buff
-	sta r0H
+	sta r0 + 1
 
-	stz r2L
+	stz r2 + 0
 	
-	lda #BYTES_PER_ROW ; low one row of display
-	sta r1L
+	lda BYTES_PER_ROW ; low one row of display
+	sta r1
 	lda #0
-	sta r1H
+	sta r1 + 1
 	
 	lda fd
 	jsr read_file
@@ -68,7 +177,7 @@ file_print_loop:
 @dont_jump_file_error_read:
 	stz read_again
 	
-	cmp #BYTES_PER_ROW
+	cmp BYTES_PER_ROW
 	bcc @print_read_bytes
 	
 	ldx #1
@@ -76,7 +185,8 @@ file_print_loop:
 @print_read_bytes:
 
 	; print data offset ;
-	ldy #3
+	ldy DATA_OFFSET_LEN
+	dey
 	:
 	phy
 	lda data_offset, Y
@@ -90,7 +200,7 @@ file_print_loop:
 	
 	lda #':'
 	jsr CHROUT
-	lda #$20
+	lda #' '
 	jsr CHROUT
 
 	ldy #0
@@ -102,7 +212,7 @@ print_hex_loop:
 	txa
 	jsr CHROUT
 	
-	lda #$20
+	lda #' '
 	jsr CHROUT
 	
 	ply
@@ -111,10 +221,10 @@ print_hex_loop:
 	bcc print_hex_loop
 	
 @finish_hex_loop:
-	cpy #BYTES_PER_ROW
+	cpy BYTES_PER_ROW
 	bcs @print_hex_done
 	
-	lda #$20
+	lda #' '
 	jsr CHROUT
 	jsr CHROUT
 	jsr CHROUT
@@ -123,7 +233,7 @@ print_hex_loop:
 	jmp @finish_hex_loop
 @print_hex_done:
 	
-	lda #$20
+	lda #' '
 	jsr CHROUT
 	
 	ldx #0
@@ -144,16 +254,16 @@ print_text_loop:
 	bcc print_text_loop
 
 @finish_text_loop:	
-	cpx #BYTES_PER_ROW
+	cpx BYTES_PER_ROW
 	bcs print_text_done
 	
-	lda #$20
+	lda #' '
 	jsr CHROUT
 	inx
 	jmp @finish_text_loop	
 	
 print_text_done:
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 	lda read_again
@@ -161,7 +271,7 @@ print_text_done:
 	
 	clc
 	lda data_offset
-	adc #BYTES_PER_ROW
+	adc BYTES_PER_ROW
 	sta data_offset 
 	lda data_offset + 1
 	adc #0
@@ -176,13 +286,13 @@ print_text_done:
 	jmp file_print_loop
 	
 file_out_bytes:
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 
 	lda fd
 	jsr close_file
 	
-	jmp main
+	rts
 	
 file_error_read:
 	tya
@@ -199,8 +309,8 @@ dont_need_close:
 	ldx #>error_msg_p1
 	jsr PRINT_STR
 	
-	lda $30
-	ldx $31
+	lda ptr0
+	ldx ptr1
 	jsr PRINT_STR
 	
 	lda #<error_msg_p2
@@ -213,14 +323,38 @@ dont_need_close:
 	txa
 	jsr CHROUT
 	
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
-	jmp main
+	rts
+
+print_usage:
+	lda #<@print_usage_txt
+	ldx #>@print_usage_txt
+	jsr print_str
+	lda #0
+	rts
+@print_usage_txt:
+	.byte "Usage: xxd [OPTION]... [FILE]...", NEWLINE
+	.byte "", NEWLINE
+	.byte "  -c:     change the number of bytes to display in a row", NEWLINE
+	.byte "  -h:     show this message and exit", NEWLINE
+	.byte "  -w:     change the width of the offset to print", NEWLINE
+	.byte "", NEWLINE
+	.byte "By default, COLS is 16", NEWLINE
+	.byte "", NEWLINE
+	.byte 0
+
+; data
 
 data_offset:
 	.res 4
-	
+
+BYTES_PER_ROW:
+	.byte 0
+DATA_OFFSET_LEN:
+	.byte 0
+
 fd:
 	.byte 0
 err_num:
@@ -232,11 +366,26 @@ read_again:
 bytes_read:
 	.byte 0
 
+file_list_size:
+	.byte 0
+file_list_ind:
+	.byte 0
+
+invalid_option_str:
+	.asciiz "ps: unknown option -- "
+opt_requires_arg_str:
+	.asciiz "ps: option requires an argument -- "
 error_msg_p1:
 	.asciiz "Error opening file '"
-
 error_msg_p2:
 	.asciiz "', code #:"
 
+.SEGMENT "BSS"
+
 buff:
-	.res BYTES_PER_ROW
+	.res 256
+
+file_list_lo:
+	.res 128
+file_list_hi:
+	.res 128
