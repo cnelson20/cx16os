@@ -145,6 +145,7 @@ end_parse_options:
 	rts
 
 dump_file:
+	stz fd
 	lda ptr0
 	ldx ptr0 + 1
 	ldy #'R'
@@ -305,27 +306,23 @@ file_error:
 	jsr close_file
 dont_need_close:
 	
-	lda #<error_msg_p1
-	ldx #>error_msg_p1
+	lda #<file_open_error_msg_p1
+	ldx #>file_open_error_msg_p1
 	jsr PRINT_STR
 	
 	lda ptr0
-	ldx ptr1
+	ldx ptr0 + 1
 	jsr PRINT_STR
 	
-	lda #<error_msg_p2
-	ldx #>error_msg_p2
+	lda #<file_open_error_msg_p2
+	ldx #>file_open_error_msg_p2
 	jsr PRINT_STR
 	
-	lda err_num
-	jsr GET_HEX_NUM
-	jsr CHROUT
-	txa
-	jsr CHROUT
-	
-	lda #NEWLINE
-	jsr CHROUT
-	
+	lda #$01
+	xba
+	lda #$FD
+	tcs
+	lda #1
 	rts
 
 print_usage:
@@ -375,10 +372,10 @@ invalid_option_str:
 	.asciiz "ps: unknown option -- "
 opt_requires_arg_str:
 	.asciiz "ps: option requires an argument -- "
-error_msg_p1:
-	.asciiz "Error opening file '"
-error_msg_p2:
-	.asciiz "', code #:"
+file_open_error_msg_p1:
+	.asciiz "xxd: "
+file_open_error_msg_p2:
+	.byte ": No such file exists", NEWLINE, 0
 
 .SEGMENT "BSS"
 
