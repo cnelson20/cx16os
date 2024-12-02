@@ -8,7 +8,7 @@
 ; int dup2(int oldfd, int newfd);
 ;
 .proc _dup2: near
-    pha
+	pha
 	jsr popax ; put oldfd in .A
 	plx	; put newfd in .X
 	cpx #$10

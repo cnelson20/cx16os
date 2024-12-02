@@ -8,7 +8,7 @@
 .SEGMENT "CODE"
 
 ;
-; void bin_to_bcd(int, char *);
+; void bin_to_bcd(int, unsigned char *);
 ;
 .proc _bin_to_bcd: near
 	phx
@@ -16,21 +16,19 @@
 	jsr popax
 	
 	ply
-	sty ptr1 + 1
-	ply
 	sty ptr1
+	ply
+	sty ptr1 + 1
 	jsr bin_to_bcd16
-	pha
-	tya
+	phy
+	phx
 	sta (ptr1)
 	ldy #1
-	txa
+	pla
 	sta (ptr1), Y
 	iny
 	pla
 	sta (ptr1), Y
 	iny
-	lda #0
-	sta (ptr1), Y
 	rts
 .endproc
