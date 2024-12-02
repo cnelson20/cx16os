@@ -41,3 +41,5 @@ _set_own_priority := set_own_priority
 .export _surrender_process_time
 _surrender_process_time := surrender_process_time
 
+.export _set_stdin_read_mode
+_set_stdin_read_mode := set_stdin_read_mode

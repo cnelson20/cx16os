@@ -52,8 +52,8 @@
 | $9DAE | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | | &mdash; |
 | $9DB1 | [`pwrite_extmem_xy`](extmem.md#pwrite_extmem_xy) | .A, .X, .Y | | | &mdash; |
 | $9DB4 | [`get_console_info`](#9db4-get_console_info) | | .A, .X, r0 | .Y | &cross; |
-| $9DB7 | [`set_console_mode`](#9db7-set_console_mode) | .A | .A | .X, .Y | &cross; |
-| $9DBA | [`set_stdin_read_mode`](#9dba-set_stdin_read_mode) | .A | | .A, .X, .Y | &cross; |
+| $9DB7 | [`set_console_mode`](#9db7-set_console_mode) | .A | .A | .X, .Y | &check; |
+| $9DBA | [`set_stdin_read_mode`](#9dba-set_stdin_read_mode) | .A | | .A, .X, .Y | &check; |
 
 ### Note:
 Functions with an '&mdash;' under the `C Wrapper Implemented?` column mean that existing C builtins or functions provide the same functionality and are not necessary. 

@@ -34,3 +34,6 @@ void __fastcall__ set_own_priority(unsigned char);
 void __fastcall__ surrender_process_time(void);
 
 void __fastcall__ bin_to_bcd(int, char *);
+
+int __fastcall__ set_console_mode(unsigned char);
+void __fastcall__ set_stdin_read_mode(unsigned char);
