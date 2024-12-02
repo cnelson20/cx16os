@@ -87,7 +87,7 @@ create_dir(char *pathname, int mode)
 		}
 	}
 	if (r != 0)
-		fprintf(stderr, "Could not create directory %s\r", pathname);
+		printf("untar: Could not create directory %s\r", pathname);
 }
 
 #define CREATE_FILE_MODE "w"
@@ -143,8 +143,7 @@ untar(FILE *a, const char *path)
 	for (;;) {
 		bytes_read = fread(buff, 1, 512, a);
 		if (bytes_read < 512) {
-			fprintf(stderr,
-			    "Short read on %s: expected 512, got %d\r",
+			printf("untar: Short read on %s: expected 512, got %d\r",
 			    path, bytes_read);
 			return;
 		}
@@ -153,7 +152,7 @@ untar(FILE *a, const char *path)
 			return;
 		}
 		if (!verify_checksum(buff)) {
-			fprintf(stderr, "Checksum failure\r");
+			printf("untar: Checksum failure\r");
 			return;
 		}
 		filesize = parseoct(buff + 124, 12);
@@ -186,8 +185,7 @@ untar(FILE *a, const char *path)
 		while (filesize > 0) {
 			bytes_read = fread(buff, 1, 512, a);
 			if (bytes_read < 512) {
-				fprintf(stderr,
-				    "Short read on %s: Expected 512, got %d\r",
+				printf("untar: Short read on %s: Expected 512, got %d\r",
 				    path, bytes_read);
 				return;
 			}
@@ -197,7 +195,7 @@ untar(FILE *a, const char *path)
 				if (fwrite(buff, 1, bytes_read, f)
 				    != bytes_read)
 				{
-					fprintf(stderr, "Failed write\r");
+					printf("untar: Failed write\r");
 					fclose(f);
 					f = NULL;
 				}
@@ -233,7 +231,7 @@ main(int argc, char **argv)
 		
 		a = fopen(*argv, "r");
 		if (a == NULL)
-			fprintf(stderr, "Unable to open %s\r", *argv);
+			printf("untar: Unable to open %s\r", *argv);
 		else {
 			untar(a, *argv);
 			fclose(a);
