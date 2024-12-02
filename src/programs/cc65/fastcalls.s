@@ -43,3 +43,7 @@ _surrender_process_time := surrender_process_time
 
 .export _set_stdin_read_mode
 _set_stdin_read_mode := set_stdin_read_mode
+
+.export _detach_self
+_detach_self := _detach_self
+

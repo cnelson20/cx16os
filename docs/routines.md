@@ -43,11 +43,11 @@
 | $9D93 | [`lock_vera_regs`](system_hooks.md#lock_vera_regs) | .A | .XY | | &cross; |
 | $9D96 | [`unlock_vera_regs`](system_hooks.md#unlock_vera_regs) | .A | .XY | | &cross; |
 | $9D99 | [`bin_to_bcd16`](#9d99-bin_to_bcd16) | .AX | .AXY | | &check; |
-| $9D9C | [`move_fd`](#9d9c-move_fd) | .A, .X | .A | .Y | &cross; |
+| $9D9C | [`move_fd`](#9d9c-move_fd) | .A, .X | .A | .Y | &mdash; |
 | $9D9F | [`get_time`](#9d9f-get_time) | | r0, r1, r2, r3 | .AXY | &cross; |
-| $9DA2 | [`detach_self`](#9da2-detach_self) | .A | | .XY | &cross; |
+| $9DA2 | [`detach_self`](#9da2-detach_self) | .A | | .XY | &check; |
 | $9DA5 | [`active_table_lookup`](#9da5-active_table_lookup) | .A | .A, .X, .Y | | &cross; |
-| $9DA8 | [`copy_fd`](#9da8-copy_fd) | .A | .X | .Y | &cross; |
+| $9DA8 | [`copy_fd`](#9da8-copy_fd) | .A | .A | .Y | &mdash; |
 | $9DAB | [`get_sys_info`](#9dab-get_sys_info) | | .X, .Y, r0, r1, r2 | | &cross; |
 | $9DAE | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | | &mdash; |
 | $9DB1 | [`pwrite_extmem_xy`](extmem.md#pwrite_extmem_xy) | .A, .X, .Y | | | &mdash; |
