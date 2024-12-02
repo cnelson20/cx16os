@@ -58,7 +58,7 @@
 ### Note:
 Functions with an '&mdash;' under the `C Wrapper Implemented?` column mean that existing C builtins or functions provide the same functionality and are not necessary. 
 
-For example, the `open`, `close`, `read`, `write` C functions offer the same functionally as [`open_file`](#9d1e-open_file), [`close_file`](#9d21-close_file), `read_file`, and `write_file` respectively.
+For example, the `open`, `close`, `read`, `write` C functions offer the same functionally as [`open_file`](#9d1e-open_file), [`close_file`](#9d21-close_file), [`read_file`](#9d24-read_file), and [`write_file`](#9d27-write_file) respectively.
 
 `dup` and `dup2` are wrappers to [`copy_fd`](#9da8-copy_fd) and [`move_fd`](#9d9c-move_fd) routines.
 
