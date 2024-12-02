@@ -33,3 +33,4 @@ unsigned char __fastcall__ get_general_hook_info(unsigned char hook_num);
 void __fastcall__ set_own_priority(unsigned char);
 void __fastcall__ surrender_process_time(void);
 
+void __fastcall__ bin_to_bcd(int, char *);

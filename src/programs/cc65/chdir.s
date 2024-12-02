@@ -1,10 +1,10 @@
-.setcpu "65816"
-
-.include "zeropage.inc"
 .include "routines.inc"
 
 .export _chdir
-_chdir:
+
+.SEGMENT "CODE"
+
+.proc _chdir: near
     ; string in .AX
     jsr chdir
     cmp #0
@@ -13,3 +13,4 @@ _chdir:
     :
     tax
     rts
+.endproc
