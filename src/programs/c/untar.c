@@ -30,6 +30,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#pragma charmap (0xa, 0xd);
+
 /* Parse an octal number, ignoring leading and trailing nonsense. */
 static int
 parseoct(const char *p, size_t n)
@@ -87,7 +89,7 @@ create_dir(char *pathname, int mode)
 		}
 	}
 	if (r != 0)
-		printf("untar: Could not create directory %s\r", pathname);
+		printf("untar: Could not create directory %s\n", pathname);
 }
 
 #define CREATE_FILE_MODE "w"
@@ -139,53 +141,53 @@ untar(FILE *a, const char *path)
 	static size_t bytes_read;
 	static int filesize;
 	
-	printf("Extracting from %s\r", path);
+	printf("Extracting from %s\n", path);
 	for (;;) {
 		bytes_read = fread(buff, 1, 512, a);
 		if (bytes_read < 512) {
-			printf("untar: Short read on %s: expected 512, got %d\r",
+			printf("untar: Short read on %s: expected 512, got %d\n",
 			    path, bytes_read);
 			return;
 		}
 		if (is_end_of_archive(buff)) {
-			printf("End of %s\r", path);
+			printf("End of %s\n", path);
 			return;
 		}
 		if (!verify_checksum(buff)) {
-			printf("untar: Checksum failure\r");
+			printf("untar: Checksum failure\n");
 			return;
 		}
 		filesize = parseoct(buff + 124, 12);
 		switch (buff[156]) {
 		case '1':
-			printf(" Ignoring hardlink %s\r", buff);
+			printf(" Ignoring hardlink %s\n", buff);
 			break;
 		case '2':
-			printf(" Ignoring symlink %s\r", buff);
+			printf(" Ignoring symlink %s\n", buff);
 			break;
 		case '3':
-			printf(" Ignoring character device %s\r", buff);
+			printf(" Ignoring character device %s\n", buff);
 			break;
 		case '4':
-			printf(" Ignoring block device %s\r", buff);
+			printf(" Ignoring block device %s\n", buff);
 			break;
 		case '5':
-			printf(" Extracting dir %s\r", buff);
+			printf(" Extracting dir %s\n", buff);
 			create_dir(buff, parseoct(buff + 100, 8));
 			filesize = 0;
 			break;
 		case '6':
-			printf(" Ignoring FIFO %s\r", buff);
+			printf(" Ignoring FIFO %s\n", buff);
 			break;
 		default:
-			printf(" Extracting file %s\r", buff);
+			printf(" Extracting file %s\n", buff);
 			f = create_file(buff, parseoct(buff + 100, 8));
 			break;
 		}
 		while (filesize > 0) {
 			bytes_read = fread(buff, 1, 512, a);
 			if (bytes_read < 512) {
-				printf("untar: Short read on %s: Expected 512, got %d\r",
+				printf("untar: Short read on %s: Expected 512, got %d\n",
 				    path, bytes_read);
 				return;
 			}
@@ -195,7 +197,7 @@ untar(FILE *a, const char *path)
 				if (fwrite(buff, 1, bytes_read, f)
 				    != bytes_read)
 				{
-					printf("untar: Failed write\r");
+					printf("untar: Failed write\n");
 					fclose(f);
 					f = NULL;
 				}
@@ -212,10 +214,10 @@ untar(FILE *a, const char *path)
 static void
 show_usage(void)
 {
-	printf("Usage: untar [OPTION]... [FILE]...\r"
-	"untar restores files from a ustar format archive\r\r"
-	"Options:\r"
-	"  -h: display this message\r\r");
+	puts("Usage: untar [OPTION]... [FILE]...\n"
+	"untar restores files from a ustar format archive\n\n"
+	"Options:\n"
+	"  -h: display this message\n");
 	exit(EXIT_SUCCESS);
 }
 
@@ -231,7 +233,7 @@ main(int argc, char **argv)
 		
 		a = fopen(*argv, "r");
 		if (a == NULL)
-			printf("untar: Unable to open %s\r", *argv);
+			printf("untar: Unable to open %s\n", *argv);
 		else {
 			untar(a, *argv);
 			fclose(a);
