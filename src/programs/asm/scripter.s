@@ -50,12 +50,19 @@ init:
 
 	sty argc
 	
+	stz program_total_args
+	stz program_args_offset
+	stz expect_args
+	
 	rep #$10
 	.i16
 
 parse_options:
 	dec argc
 	beq @end_parse_options
+	
+	lda expect_args
+	bne @end_parse_options
 	
 	ldx ptr0
 	jsr strlen
@@ -69,6 +76,9 @@ parse_options:
 	; use this file as the script
 	ldx ptr0
 	stx input_file_ptr
+	
+	lda #1
+	sta expect_args
 	bra parse_options
 	:
 	
@@ -93,9 +103,17 @@ parse_options:
 	
 	cmp #'i'
 	bne :+
+	lda expect_args
+	bne @end_parse_options
 	lda #1
 	sta interactive_mode
+	sta expect_args
 	bra parse_options
+	:
+	
+	cmp #'h'
+	bne :+
+	jmp print_usage
 	:
 	
 	; option does not exist
@@ -107,7 +125,14 @@ parse_options:
 	jmp terminate
 	
 @end_parse_options:
-
+	jsr get_args
+	tya
+	sec
+	sbc argc
+	sta program_args_offset
+	lda argc
+	sta program_total_args
+	
 main:
 	lda interactive_mode
 	beq @non_interactive_mode
@@ -1161,6 +1186,21 @@ run_kernal_routine:
 	lda #0
 	jsr set_label_value
 	
+	lda routine_x_reg_value
+	xba
+	lda routine_a_reg_value
+	tax
+	jsr strlen
+	tay
+	cpy #LABEL_VALUE_SIZE / 2
+	bcc :+
+	ldx #empty_str
+	:
+	txy
+	ldx #ax_str_reg_var_str
+	lda #1
+	jsr set_label_value
+	
 	rts
 @string_vars_buff_used:
 	.word 0
@@ -1902,9 +1942,7 @@ END_EXTMEM = $C000
 LABEL_VALUE_SIZE = 128
 
 ;
-; 
 ; label in .X, value in .Y, .A = 0: int, .A != 0: str
-; errors if label is already defined
 ;
 set_label_value:
 	pha
@@ -2536,6 +2574,10 @@ kernal_routines_list:
 	.word strlen_user
 	.asciiz "puts"
 	.word puts_user
+	.asciiz "get_argc"
+	.word get_argc_user
+	.asciiz "get_arg"
+	.word get_arg_num_user
 kernal_routines_list_end:
 
 set_special_var_labels:
@@ -2552,6 +2594,11 @@ set_special_var_labels:
 	ldx #return_reg_var_str
 	jsr @lday_0_set_label_value
 	
+	ldx #ax_str_reg_var_str
+	ldy #empty_str
+	lda #1
+	jmp set_label_value
+	
 @lday_0_set_label_value:
 	ldy #0
 	tya
@@ -2567,24 +2614,77 @@ x_reg_var_str:
 	.asciiz ".X"
 y_reg_var_str:
 	.asciiz ".Y"
+
+ax_str_reg_var_str:
+	.byte ".STR"
+empty_str:
+	.asciiz ""
+
 return_reg_var_str:
 	.asciiz "RETURN"
 
 strlen_user:
 	sep #$30
-	.a16
 	xba
 	txa
 	xba
 	rep #$10
 	tax
-	.a8
 	jmp strlen
 
 puts_user:
 	jsr print_str
 	lda #NEWLINE
 	jmp CHROUT
+
+get_argc_user:
+	sep #$30
+	lda #0
+	xba
+	lda program_total_args
+	rts
+
+get_arg_num_user:
+	sep #$30
+	rep #$10
+	cmp program_total_args
+	bcc :+
+	lda #<empty_str
+	ldx #>empty_str
+	rts
+	:
+	
+	pha
+	jsr get_args
+	xba
+	txa
+	xba
+	tax
+	lda #0
+	xba
+	pla
+	clc
+	adc program_args_offset
+	tay
+	
+	cpy #0
+	beq @end_loop
+	dex
+@loop:
+	inx
+	lda $00, X
+	bne @loop
+	dey
+	bne @loop
+	inx
+@end_loop:
+	rep #$20
+	txa
+	sep #$20
+	xba
+	tax
+	xba
+	rts
 
 ;
 ; print_usage
@@ -2924,6 +3024,13 @@ eof_reached:
 argc:
 	.byte 0
 
+program_total_args:
+	.byte 0
+program_args_offset:
+	.byte 0
+expect_args:
+	.byte 0
+
 curr_line_num:
 	.word 0
 total_num_lines:
@@ -2987,8 +3094,11 @@ file_error_str_p2:
 	.asciiz "', code #:"
 
 usage_string:
-	.byte "Usage: cp [options] source_file", $d
-	.byte "Run a scripter language file", $d
+	.byte "Usage: scripter [options] file [args...]", NEWLINE
+	.byte "       scripter [options] -i [args...]", NEWLINE
+	.byte NEWLINE
+	.byte "Run a scripter language file, or launch scripter in interactive mode", NEWLINE
+	.byte NEWLINE
 	.byte 0
 
 .SEGMENT "BSS"
