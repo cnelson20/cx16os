@@ -25,3 +25,11 @@ void __fastcall__ write_word_extmem(unsigned int i, char *ptr, unsigned offset);
 
 unsigned char __fastcall__ memmove_extmem(unsigned char dest_bank, void *dest, unsigned char src_bank, void *src, size_t count);
 void __fastcall__ fill_extmem(unsigned char bank, void *s, size_t count);
+
+int __fastcall__ send_message_general_hook(unsigned char hook_num, char *msg, unsigned char msg_len, unsigned char msg_bnk);
+int __fastcall__ send_byte_chrout_hook(char c);
+
+unsigned char __fastcall__ get_general_hook_info(unsigned char hook_num);
+void __fastcall__ set_own_priority(unsigned char);
+void __fastcall__ surrender_process_time(void);
+

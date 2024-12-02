@@ -31,3 +31,13 @@ _set_extmem_rbank := set_extmem_rbank
 
 .export _set_extmem_wbank
 _set_extmem_wbank := set_extmem_wbank
+
+.export _get_general_hook_info
+_get_general_hook_info := get_general_hook_info
+
+.export _set_own_priority
+_set_own_priority := set_own_priority
+
+.export _surrender_process_time
+_surrender_process_time := surrender_process_time
+

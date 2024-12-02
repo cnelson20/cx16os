@@ -34,11 +34,11 @@
 | $9D78 | [`release_chrout_hook`](system_hooks.md#release_chrout_hook) | | .A | .XH, .YH | &cross; |
 | $9D7B | [`setup_general_hook`](system_hooks.md#setup_general_hook) | .A, .X, r0, r1 | .AX | .Y | &cross; |
 | $9D7E | [`release_general_hook`](system_hooks.md#release_general_hook) | .A | .A | .XY | &cross; |
-| $9D81 | [`get_general_hook_info`](system_hooks.md#get_general_hook_info) | .A | .A, TBD | .XY | &cross; |
-| $9D84 | [`send_message_general_hook`](system_hooks.md#send_message_general_hook) | .A, .X, r0, r1 | .A | .XY | &cross; |
-| $9D87 | [`send_byte_chrout_hook`](system_hooks.md#send_byte_chrout_hook) | .A | .A | .XY | &cross; |
-| $9D8A | [`set_own_priority`](#9d8a-set_own_priority) | .A | | .X, .YH | &cross; |
-| $9D8D | [`surrender_process_time`](#9d8d-surrender_process_time) | | | | &cross; |
+| $9D81 | [`get_general_hook_info`](system_hooks.md#get_general_hook_info) | .A | .A, TBD | .XY | &check; |
+| $9D84 | [`send_message_general_hook`](system_hooks.md#send_message_general_hook) | .A, .X, r0, r1 | .A | .XY | &check; |
+| $9D87 | [`send_byte_chrout_hook`](system_hooks.md#send_byte_chrout_hook) | .A | .A | .XY | &check; |
+| $9D8A | [`set_own_priority`](#9d8a-set_own_priority) | .A | | .X, .YH | &check; |
+| $9D8D | [`surrender_process_time`](#9d8d-surrender_process_time) | | | | &check; |
 | $9D90 | [`mark_last_hook_message_received`](system_hooks.md#mark_last_hook_message_received) | .A | | .XY | &cross; |
 | $9D93 | [`lock_vera_regs`](system_hooks.md#lock_vera_regs) | .A | .XY | | &cross; |
 | $9D96 | [`unlock_vera_regs`](system_hooks.md#unlock_vera_regs) | .A | .XY | | &cross; |
