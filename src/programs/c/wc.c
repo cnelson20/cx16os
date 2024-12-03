@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 }
 
 void zero_wc_struct(struct wc *x) {
-	x->lines = 1;
+	x->lines = 0;
 	x->words = 0;
 	x->chars = 0;
 	
@@ -225,11 +225,12 @@ void calc_word_count(char *filename) {
 			static unsigned char c;
 			
 			c = read_buff[i];
-			if (last_char_whitespace && !isspace(c)) last_char_whitespace = 0;
-			else if (!last_char_whitespace && isspace(c)) {
+			if (last_char_whitespace && !isspace(c)) {
+				last_char_whitespace = 0;
 				++count.words;
-				last_char_whitespace = 1;
 			}
+			else if (!last_char_whitespace && isspace(c)) last_char_whitespace = 1;
+			
 			if (c == '\r') {
 				++count.lines;
 				if (line_length > count.max_line_length) { count.max_line_length = line_length; }
