@@ -32,6 +32,8 @@ ptr1 := $32
 ptr2 := $34
 ptr3 := $36
 
+PROGRAM_START_ADDR := $A000
+
 CARRIAGE_RETURN = $d
 LINE_FEED = $a
 TAB = 9
@@ -1190,10 +1192,14 @@ run_kernal_routine:
 	xba
 	lda routine_a_reg_value
 	tax
+	cpx #PROGRAM_START_ADDR
+	bcc @load_empty_str
+	
 	jsr strlen
 	tay
 	cpy #LABEL_VALUE_SIZE / 2
 	bcc :+
+@load_empty_str:
 	ldx #empty_str
 	:
 	txy
