@@ -2026,10 +2026,13 @@ do_dos_cmd:
 	jsr OPEN
 	bcs dos_cmd_open_error
 	
+	jsr check_channel_status
+	pha
+	
 	lda #15
 	jsr CLOSE
 	
-	jsr check_channel_status
+	pla
 	bne dos_cmd_open_error ; if an error occured, exit with non-zero return value
 	
 	jsr free_dos_channel
@@ -2123,7 +2126,7 @@ single_arg_dos_cmd:
 	
 	cmp #0
 	bne @scratch_error
-		
+	
 	lda #0
 	rts
 @cd_error:
