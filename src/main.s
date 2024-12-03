@@ -7,7 +7,7 @@
 .import strlen, strncpy_int
 .import setup_kernal_file_table, setup_process_file_table_int, close_process_files_int
 .import get_dir_filename_int
-.import clear_process_extmem_banks, setup_process_extmem_table
+.import clear_process_extmem_banks, setup_process_extmem_table, check_process_owns_bank
 .import hex_num_to_string_kernal
 .import setup_system_hooks, release_all_process_hooks
 
@@ -317,19 +317,30 @@ irq_re_caller:
 	lda STORE_PROG_RAMBANK
 	plx
 	stx RAM_BANK
-	cmp #1
-	bcc :+
-	beq :+
+	cmp #2
+	bcc :+ ; branch if = 0 or 1
+	tax
 	and #%11111110
 	cmp current_program_id
 	beq :+
+	lda RAM_BANK
+	pha
+	lda current_program_id
+	sta RAM_BANK
+	txa
+	jsr check_process_owns_bank
+	ply
+	sty RAM_BANK
+	cmp #0
+	beq :+ ; process owns extmem bank
+	
 	lda STORE_PROG_ADDR + 1
 	cmp #$A0 ; process running in code space 
 	bcc :+
 	cmp #$C0
 	bcs :+
 	; process trampled into another bank, need to kill
-	lda STORE_PROG_RAMBANK
+	txa ; STORE_PROG_RAMBANK
 	ldx #RETURN_PAGE_ENTERED
 	jsr program_exit
 	lda current_program_id
