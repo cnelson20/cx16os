@@ -1,8 +1,8 @@
 .include "routines.inc"
 .segment "CODE"
 
-ptr0 = $02
-ptr1 = $03
+ptr0 = $30
+ptr1 = $32
 
 .macro inc_word addr
 	inc addr
@@ -16,6 +16,8 @@ begin:
 	stx ptr0 + 1
 	sta ptr0
 	
+	stz return_code
+	
 	cpy #2
 	bcs :+
 	jmp print_no_args
@@ -26,22 +28,27 @@ main:
 	dec argc
 	bne continue
 	
-	lda #0
+	lda return_code
 	rts
 continue:
-	
-	ldy #0
-	lda (ptr0), Y
+	lda (ptr0)
 	beq found_end_word
-	
 	inc_word ptr0
-	bra continue
-	
+	bra continue	
 found_end_word:
 	inc_word ptr0
+	jsr strlen_ptr0
+	cpy #0
+	beq :+
+	lda (ptr0), Y
+	cmp #'/'
+	bne :+
+	lda #0
+	sta (ptr0), Y
+	:
+	
 	lda ptr0
 	ldx ptr0 + 1
-	
 	jsr mkdir
 	cmp #0
 	bne file_error
@@ -61,6 +68,8 @@ file_error:
 	ldx #>error_msg_p2
 	jsr PRINT_STR
 	
+	lda #1
+	sta return_code
 	jmp main
 
 print_no_args:
@@ -71,6 +80,19 @@ print_no_args:
 	lda #1
 	rts
 
+strlen_ptr0:
+	ldy #0
+	:
+	lda (ptr0), Y
+	beq :+
+	iny
+	bne :-
+	:
+	dey
+	rts
+
+return_code:
+	.byte 0
 argc:
 	.byte 0
 	
