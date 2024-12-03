@@ -205,6 +205,9 @@ end_parse_args:
 	sta ptr1 + 1
 	sta r1 + 1
 	phy
+	jsr set_ptr1_basename
+	ply
+	phy
 @inner_loop:
 	lda (ptr1)
 	sta (r0), Y
@@ -225,6 +228,43 @@ end_parse_args:
 	rts
 @copy_error:
 	lda #1
+	rts
+
+set_ptr1_basename:
+	ldy #0
+	:
+	lda (ptr1), Y
+	beq :+
+	iny
+	bne :-
+	:
+	cpy #2
+	bcc :+ ; won't have a basename if its length is 0 or 1 chars
+	dey
+	lda (ptr1), Y
+	bne :++ ; if last char is '/', is a dir and we can just exit early
+	:
+	rts
+	:
+@loop:
+	lda (ptr1), Y
+	cmp #'/'
+	beq @found_slash
+
+	cpy #0
+	beq @end_loop
+	dey
+	bra @loop
+@found_slash:
+	iny
+@end_loop:
+	tya
+	clc
+	adc ptr1
+	sta ptr1
+	lda ptr1 + 1
+	adc #0
+	sta ptr1 + 1
 	rts
 
 print_usage:
