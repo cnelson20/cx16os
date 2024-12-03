@@ -1,8 +1,10 @@
 @get_argc
 $argc .A
 $i 0
+% #loop_check
 #loop
 @get_arg .A=$i
 !echo args[ $i ]: '#.STR'
 $i $i + 1
+#loop_check
 ? $argc - $i, % #loop
