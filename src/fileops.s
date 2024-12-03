@@ -1,6 +1,7 @@
 .include "prog.inc"
 .include "cx16.inc"
 .include "macs.inc"
+.include "errors.inc"
 .include "ascii_charmap.inc"
 
 .SEGMENT "CODE"
@@ -720,11 +721,11 @@ open_file_kernal_ext:
 	stz PV_TMP_FILENAME, X
 	
 	jsr find_file_pres
-	cmp #$FF
+	cmp #NO_FILE
 	bne :+
 	; couldn't find filenum
 	; .A = FF
-	ldx #$FF
+	ldx #NO_FILES_LEFT
 	rts
 	:
 	
@@ -757,13 +758,14 @@ open_file_kernal_ext:
 	jmp @open_failure
 	
 @open_failure:
-	ldx #3
+	ldx #NO_SUCH_FILE
 	stx KZE1
 
 	jmp @open_failure_merge
 	
 @open_failure_early:
-	jsr READST
+	; jsr READST
+	lda #NO_SUCH_FILE
 	sta KZE1
 
 @open_failure_merge:
