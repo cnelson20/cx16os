@@ -1,8 +1,8 @@
 .include "routines.inc"
 .segment "CODE"
 
-ptr0 = $02
-ptr1 = $04
+ptr0 = $30
+ptr1 = $32
 
 .macro inc_word addr
 	inc addr
