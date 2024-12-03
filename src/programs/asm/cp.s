@@ -64,7 +64,7 @@ found_end_word:
 	cmp #'-'
 	bne :+
 	iny
-	lda (ptr0)
+	lda (ptr0), Y
 	bne :+
 	lda #1
 	sta no_more_options
@@ -228,6 +228,10 @@ end_parse_args:
 	rts
 
 print_usage:
+	lda #<usage_str
+	ldx #>usage_str
+	jsr print_str
+	
 	lda #0
 	rts
 
