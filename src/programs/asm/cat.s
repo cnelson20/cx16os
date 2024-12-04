@@ -11,10 +11,18 @@ init:
 	jsr get_args
 	stx $31
 	sta $30
-	sty argc	
+	sty argc
+	cpy #2
+	bcs main
+	lda #0
+	sta fd
+	lda #1
+	sta bytes_to_read
+	bra file_print_loop
 main:
 	dec argc
 	bne continue
+	lda #0
 	rts
 continue:
 	
@@ -40,14 +48,17 @@ found_end_word:
 	sta fd
 	cmp #$FF
 	beq file_error
-
+	
+	lda #128
+	sta bytes_to_read
+	
 file_print_loop:
 	lda #<buff
 	sta r0L
 	lda #>buff
 	sta r0H
 	
-	lda #128
+	lda bytes_to_read
 	sta r1L
 	lda #0
 	sta r1H
@@ -62,7 +73,7 @@ file_print_loop:
 	bne file_error_read
 	stz read_again
 	
-	cmp #128
+	cmp bytes_to_read
 	bcc @print_read_bytes
 	
 	ldx #1
@@ -130,6 +141,9 @@ argc:
 read_again:
 	.byte 0
 bytes_read:
+	.byte 0
+
+bytes_to_read:
 	.byte 0
 
 error_msg_p1:

@@ -1,6 +1,7 @@
 .include "prog.inc"
 .include "cx16.inc"
 .include "macs.inc"
+.include "errors.inc"
 .include "ascii_charmap.inc"
 
 .SEGMENT "CODE"
@@ -23,6 +24,7 @@
 .import readf_byte_extmem_y, vread_byte_extmem_y, writef_byte_extmem_y, vwrite_byte_extmem_y
 .import free_extmem_bank_extwrapper, share_extmem_bank, memmove_extmem, fill_extmem
 .import pread_extmem_xy, pwrite_extmem_xy
+.import open_pipe_ext
 
 .import setup_chrout_hook, release_chrout_hook, CHROUT_screen, send_byte_chrout_hook
 .import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook, mark_last_hook_message_received
@@ -106,6 +108,7 @@ call_table:
 	jmp get_console_info ; $9DB4
 	jmp set_console_mode ; $9DB7
 	jmp set_stdin_read_mode ; $9DBA
+	jmp pipe_call ; $9DBD
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -748,3 +751,8 @@ set_console_mode:
 	xba
 	restore_p_816
 	rts
+
+pipe_call:
+	run_routine_8bit open_pipe_ext
+	rts
+

@@ -66,9 +66,6 @@ MAX_ALIVE_PROCESSES = (($100 - $10) / 2)
 sys_max_filelen = 128
 MAX_FILELEN = sys_max_filelen
 
-FILE_EOF = $42
-NO_FILE = $FF
-
 STDIN_FILENO = 0
 STDOUT_FILENO = 1
 USER_FILENO_START = 3

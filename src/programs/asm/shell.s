@@ -696,7 +696,7 @@ narg_not_0:
 @not_gt:	
 	cmp #'$'
 	bne @not_dsign
-		
+	
 	jsr parse_env_var	
 	inc curr_arg
 	jmp @parse_args_loop
@@ -1152,7 +1152,15 @@ narg_not_0_amp:
 	beq :+
 	jmp new_line
 	:
-
+	
+	jsr check_pipe
+	cmp #0
+	beq	@no_pipe
+@yes_pipe:
+	; stp ; for now
+	bra @no_pipe
+	
+@no_pipe:
 	jsr setup_prog_redirects
 	ldy num_args
 	lda new_stdin_fileno
@@ -1166,7 +1174,8 @@ narg_not_0_amp:
 	jsr exec
 	cmp #0
 	beq exec_error
-	
+
+@store_child_info:	
 	stz new_stdin_fileno
 	stz new_stdout_fileno
 	
@@ -1286,6 +1295,30 @@ setup_prog_redirects:
 	lda #$d
 	jsr CHROUT
 	jmp new_line
+
+; check pipe
+check_pipe:
+	ldy num_args
+	dey
+	beq @not_found
+@loop:
+	tyx
+	lda args_offset_arr, X
+	tax
+	lda output, X
+	cmp #'|'
+	bne :+
+	inx
+	lda output, X
+	bne :+
+	tya ; arg num now in .A
+	rts
+	:
+	dey
+	bne @loop
+@not_found:	
+	lda #0
+	rts
 
 ; returns non-zero in .A if a special cmd was encountered
 check_special_cmds:

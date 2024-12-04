@@ -12,6 +12,7 @@
 .import strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str, toupper, tolower
 .import check_process_owns_bank, getchar_from_keyboard
 .import current_program_id
+.import open_pipe_ext, close_pipe_ext, read_pipe_ext, write_pipe_ext
 
 .import CHROUT_screen
 
@@ -962,6 +963,7 @@ find_file_pres:
 ; find an available process fd, and set it to the value in .A
 ; returns the proc fd in .A, or $FF if there are no slots left
 ;
+.export find_proc_fd
 find_proc_fd:
 	set_atomic_st
 	ldy RAM_BANK
@@ -991,6 +993,27 @@ find_proc_fd:
 	rts
 
 ;
+; free_proc_fd
+;
+; marks the process fd in .A as closed
+;
+.export free_proc_fd
+free_proc_fd:
+	tax
+	cpx #PV_OPEN_TABLE_SIZE
+	bcc :+
+	rts
+	:
+	ldy RAM_BANK
+	lda current_program_id
+	inc A
+	sta RAM_BANK
+	lda #NO_FILE
+	sta PV_OPEN_TABLE, X
+	sty RAM_BANK
+	rts
+
+;
 ; close_file_kernal
 ;
 ; closes process fd in .A
@@ -1002,9 +1025,10 @@ close_file_kernal:
 	tay
 	lda PV_OPEN_TABLE, Y
 	tax
-	cpx #$FF
+	cpx #NO_FILE
 	bne :+
 	; file isn't open
+	lda #NO_SUCH_FILE
 	jmp @close_file_exit
 	:
 	lda #$FF
@@ -1013,10 +1037,21 @@ close_file_kernal:
 	tya
 	:
 	sta PV_OPEN_TABLE, Y
-
+	
 	cpx #2
 	bcc @close_file_exit ; if stdin/stdout, don't actually need to CLOSE file
 	
+	cpx #$10
+	bcc @close_file_disk
+	cpx #$30
+	bcs :+
+	stz atomic_action_st
+	dec RAM_BANK
+	txa
+	jmp close_pipe_ext
+	:
+	
+@close_file_disk:
 	lda #1
 	sta RAM_BANK
 	sta atomic_action_st
@@ -1026,8 +1061,8 @@ close_file_kernal:
 	txa
 	jsr CLOSE
 	stz atomic_action_st
+	lda #0
 	
-
 @close_file_exit:
 	ldy current_program_id
 	sty RAM_BANK
@@ -1049,14 +1084,21 @@ read_file_ext:
 	lda PV_OPEN_TABLE, Y
 	dec RAM_BANK
 	
-	cmp #$FF
+	ldy #NO_SUCH_FILE
+	cmp #NO_FILE
 	beq @exit_failure
-	cpy #0
-	bne @file_is_open
+	cmp #0
+	bne :+
 	jmp read_stdin
-	; file isn't open, return
+	:
+	cmp #$10
+	bcc @file_is_open
+	cmp #$30
+	bcs :+
+	jmp read_pipe_ext
+	:
+	; fd maps to bad value, return
 @exit_failure:
-	ldy #$FF
 	bra :+
 @exit_eof:
 	ldy #0
@@ -1091,6 +1133,7 @@ read_file_ext:
 	cmp current_program_id
 	beq :+
 	jsr check_process_owns_bank
+	ldy #INVALID_BANK ; in case branch is taken
 	cmp #0
 	bne @exit_failure
 	:
@@ -1337,6 +1380,13 @@ write_file_ext:
 	
 	cmp #$FF
 	beq @file_doesnt_exist
+	
+	cmp #$10
+	bcc :+
+	cmp #$30
+	bcs :+
+	jmp write_pipe_ext
+	:
 	
 	ldstx_word r0, KZE0
 	ldstx_word r1, KZE1

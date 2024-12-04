@@ -1,6 +1,7 @@
 .include "cx16.inc"
 .include "prog.inc"
 .include "macs.inc"
+.include "errors.inc"
 .include "ascii_charmap.inc"
 
 .import print_str_ext, setup_call_table
@@ -317,7 +318,7 @@ irq_re_caller:
 	lda STORE_PROG_RAMBANK
 	plx
 	stx RAM_BANK
-	cmp #2
+	cmp #FIRST_PROGRAM_BANK
 	bcc :+ ; branch if = 0 or 1
 	tax
 	and #%11111110

@@ -1,31 +1,32 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
 
 #include "cx16os.h"
 
-//char hello_str[] = "Hello, World!";
-char pwd_buff[128];
+#pragma charmap (0xa, 0xd);
 
-unsigned char stp_rts[] = {0xDB, 0x60};
+char hello_str[] = "Hello, World!";
 
-unsigned char bank;
+unsigned char fd[2];
 
-char *extmem_ptr = (char *)0xA000;
-unsigned short offset;
+char buff[256] = {'\0'};
 
 int main() {
-	unsigned char c;
-	getcwd(pwd_buff, 128);
-
-	bank = res_extmem_bank();
-	memmove_extmem(bank, extmem_ptr, 0, pwd_buff, 128);
-	offset = 0;
-	set_extmem_rbank(bank);
-	while (c = read_byte_extmem(extmem_ptr, offset)) {
-		putchar(c);
-		++offset;
-	}
-	putchar('\r');
+	__asm__ ("jsr %w", 0x9DBD);
+	__asm__ ("sta %v", fd);
+	__asm__ ("stx %v + 1", fd);
+	printf("%hu %hu\n", fd[0], fd[1]);
+	
+	write(fd[1], hello_str, 8);
+	close(fd[1]);
+	
+	read(fd[0], buff, sizeof(hello_str));
+	
+	printf("'%s'\r", buff);
+	
+	close(fd[0]);
+	
 	return 0;
 }

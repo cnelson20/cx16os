@@ -1,6 +1,7 @@
 .include "prog.inc"
 .include "cx16.inc"
 .include "macs.inc"
+.include "errors.inc"
 .include "ascii_charmap.inc"
 
 .SEGMENT "CODE"
@@ -10,6 +11,8 @@
 .import memcpy_banks_ext
 .import check_process_owns_bank
 .import putc_v, setup_display, reset_display, try_unlock_vera_regs
+
+.import find_proc_fd, free_proc_fd
 
 CHROUT_BUFF_SIZE = $1000
 
@@ -698,4 +701,344 @@ mark_last_hook_message_received:
 	lda #1
 	restore_p_816
 	rts
+
+PIPE_START_ADDR := $A000
+PIPE_END_ADDR := $B000
+
+PIPE_START_PTR := PIPE_END_ADDR
+PIPE_END_PTR := PIPE_START_PTR + 2
+
+pipe_table:
+	.res 2, NO_FILE
+	.res FIRST_PROGRAM_BANK - 2 , 0
+pipe_table_end:
+
+get_unused_pipe:
+	ldy #pipe_table_end - pipe_table - 1
+	:
+	lda pipe_table, Y
+	beq @found
+	dey
+	bne :-
+@none:
+	lda #$FF
+	rts
+@found:
+	tya
+	rts
+
+init_pipe:
+	tax
+	set_atomic_st_disc_a
+	ldy RAM_BANK
+	stx RAM_BANK ; bank of pipe, $1 - $F
+	stz PIPE_START_PTR
+	stz PIPE_END_PTR
+	lda #>PIPE_START_ADDR
+	sta PIPE_START_PTR + 1
+	sta PIPE_END_PTR + 1	
+	sty RAM_BANK
+	clear_atomic_st
+	rts
+
+;
+; open_pipe
+;
+; returns a read fd in .A and a write fd in .X
+; if an error occurred, .Y will return a non-zero value
+;
+.export open_pipe_ext
+open_pipe_ext:
+	jsr get_unused_pipe
+	cmp #NO_FILE
+	bne :+
+	ldy #NO_PIPES_AVAIL
+@no_files_left: ; load error code in .Y
+	lda #$FF
+	tax
+	rts	
+	:
+	sta KZE0
+	ora #$10 ; read end of pipe
+	jsr find_proc_fd
+	cmp #NO_FILE
+	bne :+
+	ldy #NO_FILES_LEFT
+	bra @no_files_left
+	:
+	pha
+	lda KZE0
+	ora #$20 ; write end of pipe
+	jsr find_proc_fd
+	cmp #NO_FILE
+	bne :+
+	pla
+	jsr free_proc_fd
+	ldy #NO_FILES_LEFT
+	bra @no_files_left
+	:
+	pha
 	
+	lda #$11
+	ldx KZE0
+	sta pipe_table, X
+	txa
+	jsr init_pipe
+	
+	plx
+	pla
+	ldy #0
+	rts
+
+.export close_pipe_ext
+close_pipe_ext:
+	sta KZE0
+	and #$0F
+	sta KZE1
+	tax
+	lda pipe_table, X
+	bne :+
+	lda #NO_SUCH_FILE
+	rts ; return with error code
+	:
+	lda KZE0
+	and #$10
+	cmp #$10 ; read end of the pipe
+	bne @write_end
+@read_end:
+	lda pipe_table, X
+	and #$10
+	sta pipe_table, X
+	bra @return_success
+@write_end:
+	lda pipe_table, X
+	and #$01
+	sta pipe_table, X
+@return_success:
+	lda #0
+	rts
+
+;
+; TODO for read and write: don't block forever if other end of pipe closes
+;
+	
+.export read_pipe_ext
+read_pipe_ext:
+	cmp #$20 ; is this the write end of the pipe?
+	bcc :+
+	ldy #1
+	lda #0
+	tax
+	rts
+	:
+	and #$0F
+	sta KZE0
+	stz KZE0 + 1
+	lda r1
+	ora r1 + 1
+	bne :+
+	lda #0
+	tax
+	tay
+	rts ; just exit if 0 bytes are requested
+	:
+	
+	lda r2
+	bne :+
+	lda current_program_id
+	bra @valid_read_bank
+	:
+	jsr check_process_owns_bank
+	cmp #0
+	beq :+
+	lda #0
+	tax
+	ldy #INVALID_BANK
+	rts
+	:
+	lda r2
+@valid_read_bank:
+	sta KZE3
+	
+	rep #$10
+	.i16
+	
+	ldx r0
+	stx KZE1
+	ldx r1
+	stx KZE2
+	lda KZE0
+	sta RAM_BANK
+@wait_loop:
+	set_atomic_st_disc_a
+	:
+	ldx PIPE_START_PTR
+	txy
+	inx
+	cpx #PIPE_END_ADDR
+	bcc :+
+	ldx #PIPE_START_ADDR
+	:
+	cpx PIPE_END_PTR
+	bne @can_read_byte
+	ldx KZE0
+	lda pipe_table, X
+	cmp #$11 ; both ends open
+	bne @never_will_read
+	jsr surrender_process_time
+	bra :--	
+@can_read_byte:
+	lda $00, Y
+	xba
+	lda KZE3
+	sta RAM_BANK
+	xba
+	sta (KZE1)
+	lda KZE0
+	sta RAM_BANK
+	stx PIPE_START_PTR
+	clear_atomic_st
+	
+	ldy KZE2
+	dey
+	beq @done
+	sty KZE2
+	ldy KZE1
+	iny
+	sty KZE1
+	bra @wait_loop
+@done:
+	lda current_program_id
+	sta RAM_BANK
+	
+	sep #$10
+	.i8
+	lda r1
+	ldx r1 + 1
+	ldy #0
+	rts
+
+@never_will_read:
+	clear_atomic_st
+	.i16 ; X is clear when branch occurs
+	lda current_program_id
+	sta RAM_BANK
+	rep #$20
+	.a16
+	lda r1
+	sec
+	sbc KZE2
+	sep #$30
+	.a8
+	.i8
+	beq @no_bytes_read_err
+	xba
+	tax
+	xba
+	ldy #0
+	rts
+@no_bytes_read_err:
+	tax
+	ldy #FILE_EOF
+	rts
+	
+.export write_pipe_ext
+write_pipe_ext:
+	cmp #$20
+	bcs :+
+	ldy #1 ; wrong end of the pipe
+	lda #0
+	tax
+	rts
+	:
+	and #$0F
+	sta KZE0
+	lda r1
+	ora r1 + 1
+	bne :+
+	lda #0
+	tax
+	tay
+	rts ; just exit if 0 bytes are requested
+	:
+	
+	lda KZE0
+	sta RAM_BANK
+	rep #$10
+	.i16
+	
+	ldx r0
+	stx KZE1
+	ldx r1
+	stx KZE2
+@wait_loop:
+	set_atomic_st_disc_a
+	:
+	ldx PIPE_END_PTR
+	txy
+	inx
+	cpx #PIPE_END_ADDR
+	bcc :+
+	ldx #PIPE_START_ADDR
+	:
+	cpx PIPE_START_PTR
+	bne @can_write_byte
+	ldx KZE0
+	lda pipe_table, X
+	cmp #$11 ; both ends open
+	bne @never_will_write
+	jsr surrender_process_time
+	bra :--	
+@can_write_byte:
+	lda current_program_id
+	sta RAM_BANK
+	lda (KZE1)
+	xba
+	lda KZE0
+	sta RAM_BANK
+	xba
+	sta $00, Y
+	clear_atomic_st
+	stx PIPE_END_PTR
+	
+	ldy KZE2
+	dey
+	beq @done
+	sty KZE2
+	ldy KZE1
+	iny
+	sty KZE1
+	bra @wait_loop
+@done:
+	lda current_program_id
+	sta RAM_BANK
+	
+	sep #$10
+	.i8
+	lda r1
+	ldx r1 + 1
+	ldy #0
+	rts
+@never_will_write:
+	clear_atomic_st
+	.i16 ; X is clear when branch occurs
+	lda current_program_id
+	sta RAM_BANK
+	rep #$20
+	.a16
+	lda r1
+	sec
+	sbc KZE2
+	sep #$30
+	.a8
+	.i8
+	beq @no_bytes_written_err
+	xba
+	tax
+	xba
+	ldy #0
+	rts
+@no_bytes_written_err:
+	tax
+	ldy #FILE_EOF
+	rts
