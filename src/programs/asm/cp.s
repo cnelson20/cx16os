@@ -28,8 +28,13 @@ init:
 	bcs :+
 	jmp print_no_operands
 	:
+	cpy #3
+	bcs :+
+	jmp print_operand_error
+	:
 	sty argc
 	
+	stz error_code
 	stz no_more_options
 	stz file_list_size
 	stz file_list_ind
@@ -141,13 +146,29 @@ end_parse_args:
 	dey
 	lda file_list_hi, Y
 	sta r1 + 1
+	tax
 	lda file_list_lo, Y
 	sta r1
+	ldy #0
+	jsr open_file
+	pha
+	jsr close_file
+	pla
+	cmp #$FF
+	bne :+
+	ply
+	lda r1
+	ldx r1 + 1
+	jsr source_file_doesnt_exist_err
+	bra @exit
+	:
+	
 	jsr copy_file
 	cmp #0
-	beq :+
-	lda #1
-	:
+	beq @exit
+	jsr other_copy_err
+@exit:
+	lda error_code
 	rts
 
 @target_is_dir:
@@ -197,14 +218,32 @@ end_parse_args:
 	dec file_list_size
 	dec file_list_size
 @copy_loop:
-	ldx file_list_size
-	lda file_list_lo, X
-	sta ptr1
-	sta r1
-	lda file_list_hi, X
+	phy
+	ldy file_list_size
+	lda file_list_hi, Y
+	tax
+	lda file_list_lo, Y
+	ldy #0
+	pha
+	phx
+	jsr open_file
+	pha
+	jsr close_file
+	pla
+	cmp #$FF
+	bne :+
+	plx
+	pla
+	ply
+	jsr source_file_doesnt_exist_err
+	jmp @end_copy_loop_iter
+	:
+	pla
 	sta ptr1 + 1
 	sta r1 + 1
-	phy
+	pla
+	sta ptr1
+	sta r1
 	jsr set_ptr1_basename
 	ply
 	phy
@@ -221,14 +260,63 @@ end_parse_args:
 	cmp #0
 	beq @copy_error
 	
+@end_copy_loop_iter:
 	dec file_list_size
 	bpl @copy_loop
 	
-	lda #0
+	lda error_code
 	rts
 @copy_error:
+	jsr other_copy_err
+	jmp @end_copy_loop_iter
+
+source_file_doesnt_exist_err:
+	pha
+	phx
+	lda #<@source_file_err_p1
+	ldx #>@source_file_err_p1
+	jsr print_str
+	plx
+	pla
+	jsr print_str
+	lda #<@source_file_err_p2
+	ldx #>@source_file_err_p2
+	jsr print_str
+	
 	lda #1
+	sta error_code
 	rts
+
+@source_file_err_p1:
+	.asciiz "cp: source file '"
+@source_file_err_p2:
+	.byte "' does not exist", $d, 0
+
+other_copy_err:
+	lda #<@other_copy_err_p1
+	ldx #>@other_copy_err_p1
+	jsr print_str
+	lda r1
+	ldx r1 + 1
+	jsr print_str
+	lda #<@other_copy_err_p2
+	ldx #>@other_copy_err_p2
+	jsr print_str
+	lda r0
+	ldx r0 + 1
+	jsr print_str
+	lda #$27
+	jsr CHROUT
+	lda #$d ; newline
+	jsr CHROUT
+	
+	lda #1
+	sta error_code
+	rts
+@other_copy_err_p1:
+	.asciiz "cp: unable to copy file '"
+@other_copy_err_p2:
+	.asciiz "' to path '"
 
 set_ptr1_basename:
 	ldy #0
@@ -289,7 +377,7 @@ usage_str:
 print_no_operands:
 	lda #<no_operands_error_msg
 	ldx #>no_operands_error_msg
-	jsr PRINT_STR
+	jsr print_str
 	
 	lda #1
 	rts
@@ -305,15 +393,22 @@ target_not_dir_error_msg_p2:
 print_operand_error:
 	lda #<error_msg
 	ldx #>error_msg
-	jsr PRINT_STR
+	jsr print_str
 	
-	lda r1
-	ldx r1 + 1
-	jsr PRINT_STR
+@loop:	
+	lda (ptr0)
+	beq @end_loop
+	inc_word ptr0
+	bra @loop
+@end_loop:
+	inc_word ptr0
+	lda ptr0
+	ldx ptr0 + 1
+	jsr print_str
 	
 	lda #<error_msg_p2
 	ldx #>error_msg_p2
-	jsr PRINT_STR
+	jsr print_str
 	
 	lda #1
 	rts
@@ -326,6 +421,8 @@ error_msg_p2:
 .segment "BSS"
 
 no_more_options:
+	.byte 0
+error_code:
 	.byte 0
 
 argc:
