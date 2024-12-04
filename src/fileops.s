@@ -732,15 +732,13 @@ open_file_kernal_ext:
 	phx ; push process file no
 	pha ; push sys file no
 	
-	lda #1
-	sta atomic_action_st ; need to call SETLFS , SETNAM, OPEN all at once
+	set_atomic_st_disc_a ; need to call SETLFS , SETNAM, OPEN all at once
 	
 	ldax_addr PV_TMP_FILENAME_PREFIX
 	jsr strlen
 	ldx #<PV_TMP_FILENAME_PREFIX
 	ldy #>PV_TMP_FILENAME_PREFIX
 	jsr SETNAM
-	
 	pla
 	sta KZE0
 	pha ; pull & push back sys file num
@@ -752,17 +750,13 @@ open_file_kernal_ext:
 	bcs @open_failure_early
 	
 	jsr check_channel_status
-	stz atomic_action_st
 	cmp #0
-	beq @success
-	jmp @open_failure
+	bne @open_failure
+	stz atomic_action_st
+	bra @success
 	
 @open_failure:
-	ldx #NO_SUCH_FILE
-	stx KZE1
-
-	jmp @open_failure_merge
-	
+	; currently, both have the same behavior, but may want to have seperate ones in the future
 @open_failure_early:
 	; jsr READST
 	lda #NO_SUCH_FILE
@@ -783,7 +777,7 @@ open_file_kernal_ext:
 	ora #1
 	sta RAM_BANK
 	plx
-	lda #$FF
+	lda #NO_FILE
 	sta PV_OPEN_TABLE, X
 	
 	lda current_program_id
@@ -792,7 +786,7 @@ open_file_kernal_ext:
 	stz atomic_action_st
 	
 	ldx KZE1
-	lda #$FF ; FF = error
+	lda #NO_FILE ; FF = error
 	rts
 @success:
 	; restore ram bank and exit ;
@@ -2153,9 +2147,26 @@ copy_file_ext:
 	bra copy_rename_file
 
 copy_rename_file:
+	phy
+	
+	ply
 	push_zp_word KZES4
 	push_zp_word KZES5
 	phy
+	
+	lda r1
+	ldx r1 + 1
+	ldy #0
+	jsr open_file_kernal_ext
+	pha
+	jsr close_file_kernal
+	pla
+	cmp #NO_FILE
+	bne :+
+	ply
+	lda #NO_SUCH_FILE
+	bra @done_dos_cmd
+	:
 	
 	ldsta_word r0, KZES4
 	ldsta_word r1, KZES5
@@ -2184,7 +2195,8 @@ copy_rename_file:
 	stz PV_TMP_FILENAME + 2
 	
 	jsr do_dos_cmd
-	
+
+@done_dos_cmd:
 	ldy current_program_id
 	sty RAM_BANK
 	clear_atomic_st
@@ -2194,7 +2206,7 @@ copy_rename_file:
 	cmp #0
 	bne @rename_error
 	
-	lda #0
+	; 0 already in .A ; lda #0
 	rts
 	
 @cd_error:	
