@@ -258,7 +258,7 @@ end_parse_args:
 	jsr copy_file
 	ply
 	cmp #0
-	beq @copy_error
+	bne @copy_error
 	
 @end_copy_loop_iter:
 	dec file_list_size
