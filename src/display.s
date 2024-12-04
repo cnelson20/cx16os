@@ -36,6 +36,7 @@ setup_display:
 	lda #COLOR_WHITE
 	sta programs_fore_color_table + 0
 	
+	stz prog_using_vera_regs
 	rts
 	
 .export reset_display
@@ -59,6 +60,69 @@ reset_display:
 	
 	lda #CLEAR
 	jmp CHROUT
+
+
+.export prog_using_vera_regs
+prog_using_vera_regs:
+	.byte 0
+
+;
+; lock_vera_regs
+;
+.export lock_vera_regs
+lock_vera_regs:
+	save_p_816_8bitmode
+	set_atomic_st_disc_a
+
+	lda prog_using_vera_regs
+	bne @return_failure
+
+	lda current_program_id
+	sta prog_using_vera_regs
+
+	lda #0
+	bra @return
+@return_failure:
+	lda #1
+@return:
+	xba
+	lda #0
+	xba
+	
+	clear_atomic_st
+	restore_p_816
+	rts
+
+;
+; unlock_vera_regs
+;
+.export unlock_vera_regs
+unlock_vera_regs:
+	save_p_816_8bitmode
+	lda current_program_id
+	jsr try_unlock_vera_regs
+
+	xba
+	lda #0
+	xba
+	
+	restore_p_816
+	rts
+
+.export try_unlock_vera_regs
+try_unlock_vera_regs:
+	cmp prog_using_vera_regs
+	beq :+
+	
+	lda #1
+	rts
+
+	:
+	jsr reset_display
+	
+	stz prog_using_vera_regs
+	lda #0
+	rts
 
 .export setup_process_display_vars
 setup_process_display_vars:

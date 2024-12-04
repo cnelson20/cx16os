@@ -9,7 +9,7 @@
 .import surrender_process_time, schedule_timer
 .import memcpy_banks_ext
 .import check_process_owns_bank
-.import putc_v, setup_display, reset_display
+.import putc_v, setup_display, reset_display, try_unlock_vera_regs
 
 CHROUT_BUFF_SIZE = $1000
 
@@ -26,8 +26,7 @@ chrout_info_addr:
 setup_system_hooks:
 	; get screen mode when cx16os starts
 	jsr setup_display
-	stz prog_using_vera_regs
-		
+	
 	jsr reset_chrout_hook
 	jsr reset_other_hooks
 	rts
@@ -699,66 +698,4 @@ mark_last_hook_message_received:
 	lda #1
 	restore_p_816
 	rts
-
-.export prog_using_vera_regs
-prog_using_vera_regs:
-	.byte 0
-
-;
-; lock_vera_regs
-;
-.export lock_vera_regs
-lock_vera_regs:
-	save_p_816_8bitmode
-	set_atomic_st_disc_a
-
-	lda prog_using_vera_regs
-	bne @return_failure
-
-	lda current_program_id
-	sta prog_using_vera_regs
-
-	lda #0
-	bra @return
-@return_failure:
-	lda #1
-@return:
-	xba
-	lda #0
-	xba
-	
-	clear_atomic_st
-	restore_p_816
-	rts
-
-;
-; unlock_vera_regs
-;
-.export unlock_vera_regs
-unlock_vera_regs:
-	save_p_816_8bitmode
-	lda current_program_id
-	jsr try_unlock_vera_regs
-
-	xba
-	lda #0
-	xba
-	
-	restore_p_816
-	rts
-
-try_unlock_vera_regs:
-	cmp prog_using_vera_regs
-	beq :+
-	
-	lda #1
-	rts
-
-	:
-	jsr reset_display
-	
-	stz prog_using_vera_regs
-	lda #0
-	rts
-
 	
