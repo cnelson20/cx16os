@@ -178,6 +178,10 @@ file_print_loop:
 @dont_jump_file_error_read:
 	stz read_again
 	
+	cmp #0
+	bne :+
+	jmp file_out_bytes
+	:
 	cmp BYTES_PER_ROW
 	bcc @print_read_bytes
 	
@@ -287,9 +291,6 @@ print_text_done:
 	jmp file_print_loop
 	
 file_out_bytes:
-	lda #NEWLINE
-	jsr CHROUT
-
 	lda fd
 	jsr close_file
 	
