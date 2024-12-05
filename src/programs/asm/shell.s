@@ -1153,15 +1153,21 @@ narg_not_0_amp:
 	jmp new_line
 	:
 	
+	jsr setup_prog_redirects
+	
 	jsr check_pipe
 	cmp #0
 	beq	@no_pipe
 @yes_pipe:
 	; stp ; for now
-	bra @no_pipe
+	tax
+	inx
+	cpx num_args
+	bcc :+ ; nothing after the pipe
+	
+	:
 	
 @no_pipe:
-	jsr setup_prog_redirects
 	ldy num_args
 	lda new_stdin_fileno
 	sta r2
