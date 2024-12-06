@@ -1176,7 +1176,7 @@ narg_not_0_amp:
 	sta new_stdin_fileno
 	sty r2
 	stx r2 + 1
-	lda do_wait_child
+	lda #0
 	sta r0
 	pla
 	pha
