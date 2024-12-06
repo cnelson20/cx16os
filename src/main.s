@@ -1119,6 +1119,8 @@ new_prog_args:
 ; .AX = args, .Y = program bank, r0.L = active?, r1.L = argc, r1.H = sizeof(args)
 ; r2.L = stdin_fileno (if != 0), r2.H = stdout_fileno
 ;
+MAX_VALID_FILE = $2F
+
 setup_process_info:
 	sty RAM_BANK ; .Y holds new bank
 	
@@ -1269,7 +1271,7 @@ setup_process_info:
 	tax
 	cpx #2
 	bcc :+
-	cpx #$10
+	cpx #MAX_VALID_FILE + 1 ; valid files go up to 2F
 	bcs :+
 	; is valid file!
 	; clear entry in host file table ;
@@ -1291,7 +1293,7 @@ setup_process_info:
 	lda PV_OPEN_TABLE, Y
 	cmp #2
 	bcc :+
-	cmp #$10
+	cmp #MAX_VALID_FILE + 1
 	bcs :+
 	; again, valid file ;
 	ldy r2

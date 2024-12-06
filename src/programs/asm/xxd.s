@@ -126,6 +126,12 @@ add_file_to_parse_list:
 	jmp parse_options
 	
 end_parse_options:
+	lda file_list_size
+	bne :+
+	lda #0
+	jsr dump_entry
+	bra @end_loop
+	:
 	stz file_list_ind
 @loop:
 	ldx file_list_ind
@@ -150,6 +156,7 @@ dump_file:
 	ldx ptr0 + 1
 	ldy #'R'
 	jsr open_file
+dump_entry:
 	sta fd
 	cmp #$FF
 	bne :+
@@ -171,11 +178,10 @@ file_print_loop:
 	lda fd
 	jsr read_file
 	sta bytes_read
-	
 	cpy #0
-	beq @dont_jump_file_error_read
+	beq :+
 	jmp file_error_read
-@dont_jump_file_error_read:
+	:
 	stz read_again
 	
 	cmp #0

@@ -12,7 +12,7 @@
 .import strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str, toupper, tolower
 .import check_process_owns_bank, getchar_from_keyboard
 .import current_program_id
-.import open_pipe_ext, close_pipe_ext, read_pipe_ext, write_pipe_ext
+.import open_pipe_ext, close_pipe_ext, close_pipe_int, read_pipe_ext, write_pipe_ext
 
 .import CHROUT_screen
 
@@ -122,6 +122,9 @@ setup_kernal_file_table:
 	sta RAM_BANK
 	rts
 
+;
+; close process's files on exit
+;
 .export close_process_files_int
 close_process_files_int:
 	; pid in .A
@@ -130,31 +133,45 @@ close_process_files_int:
 	
 	inc A ; ram bank = pid + 1
 	sta RAM_BANK ; holds process file table
+	tax
 	
 	ldy #PV_OPEN_TABLE_SIZE - 1
-@close_loop:	
+@close_loop:
 	lda PV_OPEN_TABLE, Y
 	cmp #$FF ; FF means entry is empty
-	beq :+
+	beq @dont_need_close
 	cmp #2 ; < 2 means stdin/out
-	bcc :+
-	
+	bcc @dont_need_close
+
 	phx
 	pha ; preserve file num
 	phy ; preserve index in loop
+	
+	cmp #$10
+	bcc @close_file_disk
+	cmp #$30
+	bcs :+
+	jsr close_pipe_int
+	bra @mark_fd_free
+	:
+	
+	; shouldn't get here, fd points to val >= $30
+	
+@close_file_disk:
 	jsr CLOSE
+	bra @mark_fd_free
+
+@mark_fd_free:	
 	ply ; pull back off index
 	plx ; pull file num/SA from stack
-	
 	lda #1 ; file_table_count is located in bank #1
 	sta RAM_BANK
 	stz file_table_count, X
 	
 	plx
 	stx RAM_BANK
-	inc RAM_BANK
 	
-	:
+@dont_need_close:
 	dey
 	bpl @close_loop
 
@@ -1295,8 +1312,11 @@ try_read_slow:
 	rts
 	
 read_stdin:
-	ldsta_word r0, KZE0
-	ldsta_word r1, KZE1
+	push_zp_word KZES4
+	push_zp_word KZES5
+	
+	ldsta_word r0, KZES4
+	ldsta_word r1, KZES5
 	
 	lda r2
 	bne :+
@@ -1305,12 +1325,12 @@ read_stdin:
 	beq :+
 	jsr check_process_owns_bank
 	cmp #0
-	bne @exit_failure
+	bne @return_failure
 	:
 	sta RAM_BANK
 @loop:
-	lda KZE1
-	ora KZE1 + 1
+	lda KZES5
+	ora KZES5 + 1
 	bne @continue
 @exit_success:
 	;no more bytes to copy, return
@@ -1320,23 +1340,24 @@ read_stdin:
 	lda r1
 	ldx r1 + 1
 	ldy #0
+	bra @return
 	rts	
 @continue:
 	jsr getchar_from_keyboard
 	cpx #0
 	bne @out_bytes
-	sta (KZE0)
+	sta (KZES4)
 	
-	lda KZE1
+	lda KZES5
 	bne :+
-	dec KZE1 + 1
+	dec KZES5 + 1
 	:
 	dec A
-	sta KZE1
+	sta KZES5
 	
-	inc KZE0
+	inc KZES4
 	bne @loop
-	inc KZE0 + 1
+	inc KZES4 + 1
 	bra @loop
 
 @out_bytes:
@@ -1344,20 +1365,24 @@ read_stdin:
 	sta RAM_BANK
 	
 	sec
-	lda KZE0
+	lda KZES4
 	sbc r0
 	pha
-	lda KZE0 + 1
+	lda KZES4 + 1
 	sbc r0 + 1
 	tax
 	pla
 	ldy #0
-	rts
-	
-@exit_failure:
-	ldy #$FF
+	bra @return
+@return_failure:
+	ldy #INVALID_BANK
 	lda #0
 	tax
+@return:
+	xba
+	pla_word KZES5
+	pla_word KZES4
+	xba
 	rts
 
 ;

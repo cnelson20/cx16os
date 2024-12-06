@@ -1153,30 +1153,73 @@ narg_not_0_amp:
 	jmp new_line
 	:
 	
+	; stp
 	jsr setup_prog_redirects
-	
+	stz starting_arg
+
+@pipe_loop:
+	lda starting_arg
+	inc A
 	jsr check_pipe
-	cmp #0
+	cmp #$FF
 	beq	@no_pipe
 @yes_pipe:
-	; stp ; for now
+	cmp #0
+	beq @no_pipe
 	tax
 	inx
 	cpx num_args
-	bcc :+ ; nothing after the pipe
-	
+	bcs @no_pipe ; nothing after the pipe
+	pha
+	jsr pipe
+	ldy new_stdin_fileno
+	sta new_stdin_fileno
+	sty r2
+	stx r2 + 1
+	lda do_wait_child
+	sta r0
+	pla
+	pha
+	sec
+	sbc starting_arg
+	tay ; number of args = (arg # of pipe) - starting_arg
+	ldx starting_arg
+	lda args_offset_arr, X
+	clc
+	adc #<output
+	ldx #>output
+	bcc :+
+	inx
 	:
+	phy
+	jsr exec
+	ply
+	cmp #0
+	beq exec_error
+	
+	iny
+	sty starting_arg
+	bra @pipe_loop
 	
 @no_pipe:
-	ldy num_args
+	lda num_args
+	sec
+	sbc starting_arg
+	tay ; number of args
 	lda new_stdin_fileno
 	sta r2
 	lda new_stdout_fileno
 	sta r2 + 1
 	lda do_wait_child
 	sta r0
-	lda #<output
+	ldx starting_arg
+	lda args_offset_arr, X
+	clc
+	adc #<output
 	ldx #>output
+	bcc :+
+	inx
+	:
 	jsr exec
 	cmp #0
 	beq exec_error
@@ -1304,9 +1347,11 @@ setup_prog_redirects:
 
 ; check pipe
 check_pipe:
-	ldy num_args
-	dey
-	beq @not_found
+	tax
+	inx
+	cpx num_args
+	bcs @not_found
+	tay
 @loop:
 	tyx
 	lda args_offset_arr, X
@@ -1320,10 +1365,11 @@ check_pipe:
 	tya ; arg num now in .A
 	rts
 	:
-	dey
-	bne @loop
+	iny
+	cpy num_args
+	bcc @loop
 @not_found:	
-	lda #0
+	lda #$FF
 	rts
 
 ; returns non-zero in .A if a special cmd was encountered
@@ -1963,6 +2009,8 @@ last_background_instance:
 env_extmem_bank:
 	.byte 0
 num_args:
+	.byte 0
+starting_arg:
 	.byte 0
 child_id:
 	.byte 0

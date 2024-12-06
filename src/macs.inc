@@ -84,6 +84,30 @@
 	.endif
 .endmacro
 
+.macro phx_word addr
+	.if .isize = 8
+	ldx addr + 1
+	phx
+	ldx addr
+	phx
+	.else 
+	ldx addr
+	phx
+	.endif
+.endmacro
+
+.macro plx_word addr
+	.if .isize = 8
+	plx 
+	stx addr
+	plx
+	stx addr + 1
+	.else
+	plx
+	stx addr
+	.endif
+.endmacro
+
 .macro phy_byte addr
 	.assert .asize = 8, error, "Accumulator not 8 bits"
 	ldy addr

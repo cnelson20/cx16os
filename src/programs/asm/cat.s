@@ -14,6 +14,7 @@ init:
 	sty argc
 	cpy #2
 	bcs main
+	
 	lda #0
 	sta fd
 	lda #1
@@ -70,7 +71,7 @@ file_print_loop:
 	sta bytes_read
 	
 	cpy #0
-	bne file_error_read
+	bne file_out_bytes
 	stz read_again
 	
 	cmp bytes_to_read
@@ -105,6 +106,7 @@ file_error:
 	stx err_num
 	
 	lda fd
+	cmp #$FF
 	beq dont_need_close
 	jsr close_file
 dont_need_close:

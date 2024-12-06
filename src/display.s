@@ -586,8 +586,10 @@ set_stdin_read_mode:
 	; if .A = 0
 	lda programs_stdin_mode_table, X
 	bne @return
-	lda #1
+	lda #2
 	sta programs_stdin_mode_table, X
+	stz STORE_PROG_CHRIN_BUFF_IND
+	stz STORE_PROG_CHRIN_BUFF_LEN
 	bra @return
 	:
 	; if .A <> 0

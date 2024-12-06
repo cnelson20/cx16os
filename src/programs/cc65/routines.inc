@@ -39,6 +39,7 @@ get_pwd := $9D2D
 chdir := $9D30
 move_fd := $9D9C
 copy_fd := $9DA8
+pipe := $9DBD
 
 ;
 ; Extmem routines ;

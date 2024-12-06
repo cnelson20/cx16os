@@ -24,7 +24,7 @@
 .import readf_byte_extmem_y, vread_byte_extmem_y, writef_byte_extmem_y, vwrite_byte_extmem_y
 .import free_extmem_bank_extwrapper, share_extmem_bank, memmove_extmem, fill_extmem
 .import pread_extmem_xy, pwrite_extmem_xy
-.import open_pipe_ext
+.import open_pipe_ext, write_pipe_ext
 
 .import setup_chrout_hook, release_chrout_hook, CHROUT_screen, send_byte_chrout_hook
 .import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook, mark_last_hook_message_received
@@ -113,6 +113,12 @@ call_table:
 .export call_table_end
 call_table_end:
 
+.macro run_routine_8bit addr
+	save_p_816_8bitmode
+	jsr addr
+	restore_p_816
+.endmacro
+
 ;
 ; setup_call_table
 ;
@@ -189,53 +195,24 @@ putc:
 .export fputc
 fputc:
 	save_p_816_8bitmode
-	cpx #<PV_OPEN_TABLE_SIZE
-	bcs @exit_nsuch_file
-	
-	pha
-	inc RAM_BANK
-	lda PV_OPEN_TABLE, X
-	dec RAM_BANK
-	tax
-	pla
-	cpx #$FF
-	beq @exit_nsuch_file
-	
-	cpx #1 ; STDIN
-	bne :+
-	jsr CHROUT_screen
+	sta STORE_PROG_IO_SCRATCH
+	txa ; file num in .A
+	push_zp_word r0
+	push_zp_word r1
+	rep #$10
+	.i16
+	ldx #STORE_PROG_IO_SCRATCH
+	stx r0
+	ldx #1
+	stx r1
+	run_routine_8bit write_file_ext
+	; error code in .Y
+	plx_word r1
+	plx_word r0
 	restore_p_816
-	rts
-	:
-	
-	ldy #1
-	sty atomic_action_st
-	
-	pha
-	jsr CHKOUT
-	pla
-	bcs @chkout_error
-	
-	; can now just print normally to a file ;
-	jsr CHROUT
-	pha
-	jsr CLRCHN
-	pla
-
-	stz atomic_action_st
-	ldy #0
-	restore_p_816
+	.i8
 	rts
 	
-@exit_nsuch_file:
-	ldy #$FF
-	restore_p_816
-	rts
-@chkout_error:
-	stz atomic_action_st
-	tay
-	restore_p_816
-	rts
 
 ;
 ; Returns char from stdin in .A
@@ -262,71 +239,25 @@ getc:
 .export fgetc
 fgetc:
 	save_p_816_8bitmode
-	pha
-	inc RAM_BANK
-	lda PV_OPEN_TABLE, X
-	tax
-	dec RAM_BANK
-	pla
-	
-	cpx #$FF
-	beq @exit_nsuch_file
-	cpx #0
-	bne :+
-	; reading from stdin
-	jsr getchar_from_keyboard
-	bra @exit_success
-	:
-	lda #1
-	sta RAM_BANK
-	lda file_table_count, X
-	pha
-	lda current_program_id
-	sta RAM_BANK
-	pla
-	cmp #1 ; normal status
-	bne @eof
-	
-	set_atomic_st
-	
-	stx KZE0
-	jsr CHKIN
-	bcs @chkout_error
-	
-	jsr GETIN
-	pha
-	jsr READST
-	and #$40
-	beq :+
-	
-	lda #1
-	sta RAM_BANK
-	lda #FILE_EOF
-	ldx KZE0
-	sta file_table_count, X
-	lda current_program_id
-	sta RAM_BANK
-	
-	:
-	jsr CLRCHN
-	pla
-	clear_atomic_st
-
-@exit_success:	
-	ldx #0
+	txa ; file num in .A
+	push_zp_word r0
+	push_zp_word r1
+	push_zp_word r2
+	rep #$10
+	.i16
+	ldx #STORE_PROG_IO_SCRATCH
+	stx r0
+	ldx #1
+	stx r1
+	stz r2
+	run_routine_8bit read_file_ext
+	tyx ; error code in .Y, need to pass to .X
+	lda STORE_PROG_IO_SCRATCH
+	ply_word r2
+	ply_word r1
+	ply_word r0
 	restore_p_816
-	rts
-	
-@exit_nsuch_file:
-	lda #0
-	; .X = $FF already
-	restore_p_816
-	rts
-@eof:
-@chkout_error:
-	stz atomic_action_st
-	tax
-	restore_p_816
+	.i8
 	rts
 
 ;
@@ -490,12 +421,6 @@ kill_process:
 	jsr kill_process_kernal
 	restore_p_816
 	rts
-
-.macro run_routine_8bit addr
-	save_p_816_8bitmode
-	jsr addr
-	restore_p_816
-.endmacro
 
 ;
 ; File I/O routines

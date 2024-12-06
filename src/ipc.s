@@ -790,6 +790,23 @@ open_pipe_ext:
 	ldy #0
 	rts
 
+.export close_pipe_int
+close_pipe_int:
+	push_zp_word KZE0
+	push_zp_word KZE1
+	; push_zp_word KZE2 ; close_pipe doesn't write to KZE2 or KZE3, so don't need to preserve
+	; push_zp_word KZE3
+	jsr close_pipe_ext
+	rep #$10
+	.i16
+	; ply_word KZE3
+	; ply_word KZE2
+	ply_word KZE1
+	ply_word KZE0
+	sep #$10
+	.i8
+	rts
+
 .export close_pipe_ext
 close_pipe_ext:
 	sta KZE0
@@ -806,11 +823,13 @@ close_pipe_ext:
 	cmp #$10 ; read end of the pipe
 	bne @write_end
 @read_end:
+	; KZE1 in .X
 	lda pipe_table, X
 	and #$10
 	sta pipe_table, X
 	bra @return_success
 @write_end:
+	; KZE1 in .X
 	lda pipe_table, X
 	and #$01
 	sta pipe_table, X
@@ -872,14 +891,8 @@ read_pipe_ext:
 @wait_loop:
 	set_atomic_st_disc_a
 	:
-	ldx PIPE_START_PTR
-	txy
-	inx
-	cpx #PIPE_END_ADDR
-	bcc :+
-	ldx #PIPE_START_ADDR
-	:
-	cpx PIPE_END_PTR
+	ldy PIPE_START_PTR
+	cpy PIPE_END_PTR
 	bne @can_read_byte
 	ldx KZE0
 	lda pipe_table, X
@@ -896,16 +909,21 @@ read_pipe_ext:
 	sta (KZE1)
 	lda KZE0
 	sta RAM_BANK
-	stx PIPE_START_PTR
+	iny
+	cpy #PIPE_END_ADDR
+	bcc :+
+	ldy #PIPE_START_ADDR
+	:
+	sty PIPE_START_PTR
 	clear_atomic_st
 	
-	ldy KZE2
-	dey
+	ldx KZE2
+	dex
 	beq @done
-	sty KZE2
-	ldy KZE1
-	iny
-	sty KZE1
+	stx KZE2
+	ldx KZE1
+	inx
+	stx KZE1
 	bra @wait_loop
 @done:
 	lda current_program_id
