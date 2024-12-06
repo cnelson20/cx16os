@@ -1194,11 +1194,12 @@ narg_not_0_amp:
 	phy
 	jsr exec
 	ply
+	plx
 	cmp #0
 	beq exec_error
 	
-	iny
-	sty starting_arg
+	inx
+	stx starting_arg
 	bra @pipe_loop
 	
 @no_pipe:
