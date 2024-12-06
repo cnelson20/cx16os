@@ -899,7 +899,7 @@ read_pipe_ext:
 	cmp #$11 ; both ends open
 	bne @never_will_read
 	jsr surrender_process_time
-	bra :--	
+	bra :-
 @can_read_byte:
 	lda $00, Y
 	xba
