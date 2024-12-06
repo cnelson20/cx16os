@@ -852,6 +852,17 @@ read_pipe_ext:
 	:
 	and #$0F
 	sta KZE0
+	tax
+	lda pipe_table, X
+	beq :+
+	cmp #$FF
+	bne :++
+	:
+	lda #0
+	tax
+	ldy #NO_SUCH_FILE
+	rts
+	:
 	stz KZE0 + 1
 	lda r1
 	ora r1 + 1
@@ -949,15 +960,15 @@ read_pipe_ext:
 	sep #$30
 	.a8
 	.i8
-	beq @no_bytes_read_err
+	beq @no_bytes_read
 	xba
 	tax
 	xba
 	ldy #0
 	rts
-@no_bytes_read_err:
+@no_bytes_read:
 	tax
-	ldy #FILE_EOF
+	ldy #0
 	rts
 	
 .export write_pipe_ext
