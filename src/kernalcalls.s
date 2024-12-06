@@ -206,6 +206,12 @@ fputc:
 	ldx #1
 	stx r1
 	run_routine_8bit write_file_ext
+	cpy #0
+	bne :+
+	cmp #1
+	bcs :+ ; all good if 1 byte was written
+	ldy #$FF ; otherwise some error occurred
+	:
 	; error code in .Y
 	plx_word r1
 	plx_word r0
@@ -251,6 +257,12 @@ fgetc:
 	stx r1
 	stz r2
 	run_routine_8bit read_file_ext
+	cpy #0
+	bne :+
+	cmp #1
+	bcs :+
+	ldy #FILE_EOF
+	:
 	tyx ; error code in .Y, need to pass to .X
 	lda STORE_PROG_IO_SCRATCH
 	ply_word r2
