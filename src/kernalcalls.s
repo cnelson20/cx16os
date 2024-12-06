@@ -6,7 +6,7 @@
 
 .SEGMENT "CODE"
 
-.import parse_num_kernal_ext, bin_bcd16_ext
+.import parse_num_kernal_ext, bin_bcd16_ext, strlen, strlen_16bit
 .import hex_num_to_string_kernal
 
 .import get_process_name_kernal_ext
@@ -281,18 +281,23 @@ print_str_ext:
 	xba
 	txa
 	xba
-	index_16_bit
+	accum_index_16_bit
 	.i16
-	tax
-	:
-	lda $00, X
-	beq :+
-	jsr putc
-	inx
-	bra :-
-	:
-	restore_p_816
+	.a16
+	push_zp_word r0
+	push_zp_word r1
+	sta r0
+	tax ; strlen_16bit takes arg in .X
+	jsr strlen_16bit
+	sta r1
+	accum_index_8_bit
 	.i8
+	.a8
+	lda #1
+	jsr write_file_ext
+	pla_word r1
+	pla_word r0
+	restore_p_816
 	rts
 
 ;
