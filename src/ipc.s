@@ -982,6 +982,17 @@ write_pipe_ext:
 	:
 	and #$0F
 	sta KZE0
+	tax
+	lda pipe_table, X
+	beq :+
+	cmp #$FF
+	bne :++
+	:
+	lda #0
+	tax
+	ldy #NO_SUCH_FILE
+	rts
+	:	
 	lda r1
 	ora r1 + 1
 	bne :+
