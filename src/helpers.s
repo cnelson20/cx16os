@@ -33,7 +33,7 @@ strlen_16bit:
 	rts
 	
 	:
-
+	accum_8_bit
 	.i16
 	ldy #0
 	:
