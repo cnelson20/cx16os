@@ -52,7 +52,7 @@
 | $9DAE | [`pread_extmem_xy`](extmem.md#pread_extmem_xy) | .X, .Y | .A | | &mdash; |
 | $9DB1 | [`pwrite_extmem_xy`](extmem.md#pwrite_extmem_xy) | .A, .X, .Y | | | &mdash; |
 | $9DB4 | [`get_console_info`](#9db4-get_console_info) | | .A, .X, r0 | .Y | &cross; |
-| $9DB7 | [`set_console_mode`](#9db7-set_console_mode) | .A | .A | .X, .Y | &check; |
+| $9DB7 | [`set_console_mode`](#9db7-set_console_mode) | .A, .X | .A | .Y | &check; |
 | $9DBA | [`set_stdin_read_mode`](#9dba-set_stdin_read_mode) | .A | | .A, .X, .Y | &check; |
 
 ### Note:
@@ -424,6 +424,7 @@ Return values:
 
 Arguments:
 - A -> the X16 terminal screen mode to use
+- If .X is a power of two >= 2, set the default VERA's VSCALE register value to .X
 
 Return values:
 - A -> 0 on success, non-zero on failure to change the screen mode
