@@ -22,6 +22,9 @@ NEWLINE = $d
 .export default_screen_mode
 default_screen_mode:
 	.byte 0
+.export default_vscale
+default_vscale:
+	.byte 0
 
 ;
 ; sets up some display vars
@@ -31,6 +34,9 @@ setup_display:
 	sec
 	jsr screen_mode
 	sta default_screen_mode
+	stz VERA::CTRL
+	lda VERA::VSCALE
+	sta default_vscale
 	
 	lda #COLOR_BLACK
 	sta programs_back_color_table + 0
@@ -58,6 +64,9 @@ reset_display:
 	lda default_screen_mode
 	clc
 	jsr screen_mode
+	stz VERA::CTRL
+	lda default_vscale
+	sta VERA::VSCALE
 	
 	lda #CLEAR
 	jmp CHROUT
