@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <cx16os.h>
 
 #define MAX(a, b) ((a >= b) ? (a) : (b))
 #define MIN(a, b) ((a < b) ? (a) : (b))
@@ -37,6 +38,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 unsigned int MAX_WIDTH = 40;
 
 unsigned char print_lines_sep = 0;
+
+unsigned char input_extmem_bank = 0;
 
 static unsigned char is_printable(char c) {
 	return ((c & 0x7F) >= 0x20) && (c != 0x7F);
@@ -66,13 +69,26 @@ static size_t printable_count(char *str, size_t count) {
 	}
 }
 
+static char *copy_one_arg(char *s) {
+	static char buff[128];
+	
+	if (input_extmem_bank) {
+		memmove_extmem(0, buff, input_extmem_bank, s, 128);
+		buff[128 - 1] = '\0';
+		return buff;
+	} else {
+		// Already in mem
+		return s;
+	}
+}
+
 // Returns the length of the longst line of the message.
 static size_t LongestLineLength(int argc, char** argv) {
 	size_t max_len = 0;
 	size_t cur_line = 0;
 	
 	for (; *argv; ++argv, --argc) {
-		char *str = *argv;
+		char *str = copy_one_arg(*argv);
 		size_t word_len = printable_strlen(str) + 1;
 		// If the word itself is too long to fit in a line, then
 		// we return the maximum width.
@@ -99,7 +115,7 @@ static void PrintPaddedBreak(size_t pad) {
 static void PrintMessage(int argc, char** argv, size_t longest) {
 	size_t cur_line_len = 0;
 	for (; *argv; ++argv, --argc) {
-		char* str = *argv;
+		char* str = copy_one_arg(*argv);
 		size_t word_len = printable_strlen(str) + 1;
 		
 		if (cur_line_len == 0)
@@ -131,7 +147,7 @@ static void PrintMessage(int argc, char** argv, size_t longest) {
 				size_t len = MIN(MAX_WIDTH, printable_strlen(str));
 				printf("%.*s", printable_count(str, len), str);
 				PrintPaddedBreak(longest - len);
-				str += len;
+				str += printable_count(str, len);
 				processed += len;
 				if (processed >= word_len - 1)
 					break;
@@ -148,7 +164,7 @@ static void PrintMessage(int argc, char** argv, size_t longest) {
 	}
 }
 
-#define MAX_STDIN_WORDS 64
+#define MAX_STDIN_WORDS 128
 
 char *stdin_argv[MAX_STDIN_WORDS + 1];
 
@@ -161,7 +177,10 @@ char **read_argv_from_stdin() {
 	static char *file_copy_buff;
 	static int bytes_read;
 	
-	file_copy_buff = malloc(1);
+	input_extmem_bank = res_extmem_bank();
+	set_extmem_wbank(input_extmem_bank);
+	
+	file_copy_buff = (char *)0xA000;
 	temp_argv = stdin_argv;
 	*temp_argv = file_copy_buff;
 	
@@ -169,19 +188,19 @@ char **read_argv_from_stdin() {
 		static unsigned char i;
 		for (i = 0; i < bytes_read; ++i) {
 			if ('\r' == read_buff[i]) {
-				*file_copy_buff = '\0';
+				write_byte_extmem('\0', file_copy_buff, 0);
 				++file_copy_buff;
 				++temp_argv;
 				*temp_argv = file_copy_buff;
 			} else {
-				*file_copy_buff = read_buff[i];
+				write_byte_extmem(read_buff[i], file_copy_buff, 0);
 				++file_copy_buff;
 			}
 			if (file_copy_buff >= (char *)0xBFFF) goto out_of_mem;
 		}
 	}
 	out_of_mem:
-	*file_copy_buff = '\0';
+	write_byte_extmem('\0', file_copy_buff, 0);
 	temp_argv[1] = NULL;
 	return stdin_argv;
 }
@@ -189,6 +208,8 @@ char **read_argv_from_stdin() {
 int main(int argc, char** argv) {
 	size_t bubble_width, i;
 	char **temp_argv;
+	
+	input_extmem_bank = 0; // Only set to val if reading from stdin
 	
 	++argv;
 	--argc; // skip past program name
