@@ -1267,8 +1267,14 @@ exec_error:
 	ldx #>exec_error_p1_message
 	jsr print_str
 	
-	lda #<output
+	ldx starting_arg
+	lda args_offset_arr, X
+	clc
+	adc #<output
 	ldx #>output
+	bcc :+
+	inx
+	:
 	jsr print_str
 	
 	lda #<exec_error_p2_message
