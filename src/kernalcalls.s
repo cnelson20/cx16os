@@ -707,6 +707,7 @@ set_console_mode:
 	lda #0
 	bra @end
 @valid_vscale_value:
+	lda KZE1
 	sta default_vscale
 	stz VERA::CTRL
 	sta VERA::VSCALE
