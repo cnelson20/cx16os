@@ -31,9 +31,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unistd.h>
 #include <string.h>
 
-#define MAX_WIDTH 40
-#define MAX(a, b) ((a > b) ? a : b)
-#define MIN(a, b) ((a < b) ? a : b)
+#define MAX(a, b) ((a >= b) ? (a) : (b))
+#define MIN(a, b) ((a < b) ? (a) : (b))
+
+unsigned int MAX_WIDTH = 40;
+
+unsigned char print_lines_sep = 0;
 
 static unsigned char is_printable(char c) {
 	return ((c & 0x7F) >= 0x20) && (c != 0x7F);
@@ -75,7 +78,7 @@ static size_t LongestLineLength(int argc, char** argv) {
 		// we return the maximum width.
 		if (word_len >= MAX_WIDTH)
 			return MAX_WIDTH;
-		if (cur_line + word_len >= MAX_WIDTH) {
+		if ((print_lines_sep) || (cur_line + word_len >= MAX_WIDTH)) {
 			cur_line = word_len;
 		} else {
 			cur_line += word_len;
@@ -102,7 +105,7 @@ static void PrintMessage(int argc, char** argv, size_t longest) {
 		if (cur_line_len == 0)
 			printf("| ");
 		// If it all fits in the line, then print the word and move on.
-		if (cur_line_len + word_len <= MAX_WIDTH) {
+		if ((!print_lines_sep) && (cur_line_len + word_len <= MAX_WIDTH)) {
 			printf("%s ", str);
 			if (cur_line_len + word_len == MAX_WIDTH) {
 				PrintPaddedBreak(longest - cur_line_len - word_len);
@@ -145,7 +148,7 @@ static void PrintMessage(int argc, char** argv, size_t longest) {
 	}
 }
 
-#define MAX_STDIN_WORDS 256
+#define MAX_STDIN_WORDS 64
 
 char *stdin_argv[MAX_STDIN_WORDS + 1];
 
@@ -185,23 +188,39 @@ char **read_argv_from_stdin() {
 
 int main(int argc, char** argv) {
 	size_t bubble_width, i;
+	char **temp_argv;
 	
-	if (argc < 2) {
-		char **temp_argv;
+	++argv;
+	--argc; // skip past program name
+	for (temp_argv = argv; *temp_argv; ++temp_argv) {
+		if (!strcmp(*temp_argv, "-h")) {
+			printf("Usage: cowsay [message]\r");
+			printf("  If message is empty, read text from stdin\r\r");
+			return 0;
+		} else if (!strcmp(*temp_argv, "-w")) {
+			if (!temp_argv[1]) {
+				printf("cowsay: option %s must be followed by argument\r", *temp_argv);
+				exit(EXIT_FAILURE);
+			}
+			++temp_argv;
+			++argv;
+			--argc;
+			MAX_WIDTH = atoi(*temp_argv);
+			++argv;
+			--argc;
+		} else if (!strcmp(*temp_argv, "-l")) {
+			print_lines_sep = 1;
+			++argv;
+			--argc;
+		}
+	}
+	if (argc == 0) {
+		// Read from stdin
 		temp_argv = argv = read_argv_from_stdin();
 		argc = 0;
 		for (; *temp_argv; ++temp_argv) {
 			++argc;
 		}
-	} else { // Read from stdin
-		for (i = 0; i < argc; ++i) {
-			if (!strcmp(argv[i], "-h")) {
-				printf("Usage: cowsay [message]\r");
-				return 0;
-			}
-		}
-		++argv;
-		--argc;
 	}
 	// No wordwrap because I'm too lazy.
 	bubble_width = LongestLineLength(argc, argv) + 1;
