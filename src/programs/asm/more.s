@@ -92,6 +92,7 @@ end_parse_options:
 	bne :+
 	lda #0
 	bra @print_file
+	:
 	
 	lda input_filename
 	ldx input_filename + 1
@@ -119,6 +120,10 @@ print_file:
 	lda #1
 	jsr set_stdin_read_mode
 	jsr get_console_info
+	sta starting_colors + 0
+	txa
+	sta starting_colors + 1
+	
 	lda r0
 	sta term_width
 	lda r0 + 1
@@ -130,6 +135,8 @@ print_file:
 	lda #>buff
 	sta r0 + 1
 	
+	lda #$93 ; clear screen
+	jsr CHROUT
 	stz just_print_file
 	stz ptr0
 	stz ptr0 + 1
@@ -139,7 +146,9 @@ read_file_loop:
 	ldx fd
 	jsr fgetc
 	cpx #0
-	bne @file_out_bytes
+	beq :+
+	jmp @file_out_bytes
+	:
 	
 	ldx just_print_file
 	beq :+
@@ -169,39 +178,93 @@ read_file_loop:
 	cmp term_height
 	bcc read_file_loop	
 	; wait for a enter to be pressed ;
+	jsr print_invert_colors
+	lda #<more_wait_str
+	ldx #>more_wait_str
+	jsr print_str
+	jsr print_starting_colors
 @wait_kbd_loop:
 	ldx keyboard_fd
 	jsr fgetc
 	cpx #0
 	bne @key_input_closed
+	cmp #'q'
+	bne :+
+	lda #<more_done_wait_str
+	ldx #>more_done_wait_str
+	jsr print_str
+	lda fd
+	jsr close_file
+	rts
+	:
 	cmp #PAGE_DOWN
 	bne :+
 	stz ptr1 + 1
-	bra read_file_loop
+	bra @print_done_wait_str
 	:
 	cmp #NEWLINE
-	beq read_file_loop
+	beq @print_done_wait_str
 	bra @wait_kbd_loop
+@print_done_wait_str:
+	lda #<more_done_wait_str
+	ldx #>more_done_wait_str
+	jsr print_str
+	jmp read_file_loop
 	
 @key_input_closed:
 	lda #1
 	sta just_print_file
-	bra read_file_loop
+	jmp read_file_loop
 
 @byte_not_newline:
 	jsr is_printable_char
-	beq read_file_loop
+	bne :+
+	jmp read_file_loop
+	:
 	lda ptr1
 	inc A
 	sta ptr1
 	cmp term_width
-	bcc read_file_loop
-	bra @found_newline_byte
-	
+	bcs @found_newline_byte
+	jmp read_file_loop
+
 @file_out_bytes:
 	lda fd
 	jsr close_file
 	
+	jsr print_invert_colors
+	lda #<end_wait_str
+	ldx #>end_wait_str
+	jsr print_str
+	jsr print_starting_colors
+	
+	:
+	ldx keyboard_fd
+	jsr fgetc
+	cpx #0
+	bne @end
+	cmp #0
+	bne :-
+@wait_end_loop:
+	ldx keyboard_fd
+	jsr fgetc
+	cpx #0
+	bne @end
+	cmp #0
+	beq @wait_end_loop
+	
+	cmp #'q'
+	beq @end
+	cmp #'Q'
+	beq @end
+	
+	lda #7 ; bell
+	jsr CHROUT
+	bra @wait_end_loop
+@end:
+	lda #<end_done_wait_str
+	ldx #>end_done_wait_str
+	jsr print_str	
 	rts
 	
 	
@@ -234,6 +297,22 @@ file_error:
 	tcs
 	lda #1
 	rts
+
+print_invert_colors:
+	lda starting_colors + 0
+	jsr CHROUT
+	lda #1 ; SWAP_COLORS
+	jsr CHROUT
+	lda starting_colors + 1
+	jmp CHROUT
+
+print_starting_colors:
+	lda starting_colors + 1
+	jsr CHROUT
+	lda #1 ; SWAP_COLORS
+	jsr CHROUT
+	lda starting_colors + 0
+	jmp CHROUT
 
 ;
 ; Returns result in .X & Z flag
@@ -272,6 +351,16 @@ print_usage:
 stdin_str:
 	.asciiz "#stdin"
 
+more_wait_str:
+	.byte "--More--", $0D, 0
+more_done_wait_str:
+	.byte "        ", $0D, 0
+
+end_wait_str:
+	.byte "(END)", $0D, 0
+end_done_wait_str:
+	.byte "     ", $0D, 0
+
 ; data
 
 keyboard_fd:
@@ -293,12 +382,15 @@ term_width:
 term_height:
 	.word 0
 
+starting_colors:
+	.res 2
+
 invalid_option_str:
-	.asciiz "ps: unknown option -- "
+	.asciiz "more: unknown option -- "
 opt_requires_arg_str:
-	.asciiz "ps: option requires an argument -- "
+	.asciiz "more: option requires an argument -- "
 file_open_error_msg_p1:
-	.asciiz "xxd: "
+	.asciiz "more: "
 file_open_error_msg_p2:
 	.byte ": No such file exists", NEWLINE, 0
 
