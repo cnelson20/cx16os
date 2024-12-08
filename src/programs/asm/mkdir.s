@@ -100,7 +100,7 @@ error_msg_p1:
 	.asciiz "Error creating directory '"
 
 error_msg_p2:
-	.byte "'", $d, 0
+	.byte "'", $a, 0
 
 no_args_str:
-	.byte "mkdir: missing operand", $d, 0
+	.byte "mkdir: missing operand", $a, 0

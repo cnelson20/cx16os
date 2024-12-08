@@ -18,6 +18,8 @@ RIGHT_CURSOR = $1D
 BACKSPACE = $14
 DEL = $19
 
+NEWLINE = $a
+
 SINGLE_QUOTE = 39
 
 SWAP_COLORS = 1
@@ -123,7 +125,7 @@ prog_args_error:
 
 	lda #SINGLE_QUOTE
 	jsr CHROUT
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 
 	lda #0
@@ -296,7 +298,7 @@ wait_for_input:
 	bne :+
 	jmp new_line
 	:
-	lda #$0D ; if eof has been reached, exec what's in buffer (unless buffer is empty)
+	lda #NEWLINE ; if eof has been reached, exec what's in buffer (unless buffer is empty)
 @not_end_of_file_input:
 	cmp #0
 	bne @key_buff_not_empty
@@ -305,7 +307,7 @@ wait_for_input:
 	
 @key_buff_not_empty:
 
-	cmp #$0D ; return
+	cmp #NEWLINE ; return
 	beq :+
 	cmp #$8D ; shifted return
 	bne :++
@@ -535,7 +537,7 @@ command_entered:
 	lda #' '
 	:
 	jsr CHROUT
-	lda #$0d
+	lda #NEWLINE
 	jsr CHROUT
 	:
 	
@@ -1328,7 +1330,7 @@ setup_prog_redirects:
 	jsr CHROUT
 	txa
 	jsr CHROUT
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	jmp new_line
 
@@ -1348,7 +1350,7 @@ setup_prog_redirects:
 	jsr CHROUT
 	txa
 	jsr CHROUT
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	jmp new_line
 
@@ -1643,10 +1645,10 @@ change_shell_colors:
 	
 	lda #SINGLE_QUOTE
 	jsr CHROUT
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	rts
-			
+
 color_table:
 	.byte $90, $05, $1C, $9F, $9C, $1E, $1F, $9E
 	.byte $81, $95, $96, $97, $98, $99, $9A, $9B
@@ -1901,7 +1903,7 @@ open_shell_file:
 	txa
 	jsr CHROUT
 
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 	lda #1
@@ -1945,37 +1947,37 @@ get_next_arg:
 ;
 welcome_string:
 	.byte "Commander X16 OS Shell"
-	.byte $0d, $00
+	.byte NEWLINE, $00
 exec_error_p1_message:
 	.asciiz "Error in exec '"
 exec_error_p2_message:
 	.byte "'"
-	.byte $0d, $00
+	.byte NEWLINE, $00
 
 source_err_string:
 	.byte "source: filename argument required"
-	.byte $d, 0
+	.byte NEWLINE, 0
 source_inception_str:
 	.byte "source: cannot run another script within a script"
-	.byte $d, 0
+	.byte NEWLINE, 0
 
 set_env_err_string:
 	.byte "setenv: need name and value argument"
-	.byte $d, 0
+	.byte NEWLINE, 0
 set_env_out_space:
 	.byte "setenv: no memory left for variables"
-	.byte $d, 0
+	.byte NEWLINE, 0
 
 color_no_args_err_string:
 	.byte "color: argument required"
-	.byte $d, 0
+	.byte NEWLINE, 0
 color_invalid_arg_err_string:
 	.byte "color: invalid operand '"
 	.byte 0
 
 cd_error_string:
 	.byte "cd: error changing directory"
-	.byte $d, 0
+	.byte NEWLINE, 0
 
 open_error_p1:
 	.asciiz "Error opening file '"

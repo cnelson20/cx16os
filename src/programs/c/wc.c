@@ -101,7 +101,7 @@ void print_wc_struct(struct wc *cnt, char *filename) {
 	}
 	
 	if (yet_printed) printf(" ");
-	printf("%s\r", filename);
+	printf("%s\n", filename);
 }
 
 void zero_print_options() {
@@ -175,7 +175,7 @@ void parse_options(int argc, char *argv[]) {
 					print_usage();
 					exit(0);
 				default:
-					printf("wc: invalid option '%s'\r", s);
+					printf("wc: invalid option '%s'\n", s);
 					exit(2);
 			}
 		}
@@ -183,15 +183,15 @@ void parse_options(int argc, char *argv[]) {
 }
 
 void print_usage() {
-	printf("Usage: wc [OPTION]... [FILE]...\r");
+	printf("Usage: wc [OPTION]... [FILE]...\n");
 	printf("Print newline, word, and byte counts for each FILE, and a total line if "
 		"more than one FILE is specified.  A word is a non-zero-length sequence of "
-		"printable characters delimited by white space.\r");
-	printf("  -c    print the character counts\r");
-	printf("  -l    print the newline counts\r");
-	printf("  -L    print the maximum line length\r");
-	printf("  -w    print the word counts\r");
-	printf("  -h    display this message and exit\r");
+		"printable characters delimited by white space.\n");
+	printf("  -c    print the character counts\n");
+	printf("  -l    print the newline counts\n");
+	printf("  -L    print the maximum line length\n");
+	printf("  -w    print the word counts\n");
+	printf("  -h    display this message and exit\n");
 }
 
 #define BUFF_SIZE 128
@@ -207,7 +207,7 @@ void calc_word_count(char *filename) {
 	
 	fd = open(filename, O_RDONLY);
 	if (fd == -1) {
-		printf("wc: error opening file %s\r", filename);
+		printf("wc: error opening file %s\n", filename);
 		file_open_error = 1;
 		return;
 	}
@@ -231,7 +231,7 @@ void calc_word_count(char *filename) {
 			}
 			else if (!last_char_whitespace && isspace(c)) last_char_whitespace = 1;
 			
-			if (c == '\r') {
+			if (c == '\n') {
 				++count.lines;
 				if (line_length > count.max_line_length) { count.max_line_length = line_length; }
 				line_length = 0;

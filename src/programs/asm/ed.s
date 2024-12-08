@@ -92,7 +92,7 @@ EXTMEM_CHUNK_LEN = $40
 LEFT_CURSOR = $9D
 SPACE = $20
 UNDERSCORE = $5F
-NEWLINE = $d
+NEWLINE = $0A
 
 ERRNO_INVALID_FORMAT := $01
 ERRNO_UNK_CMD := $02
@@ -1144,7 +1144,7 @@ set_print_default_filename:
 	ldx #>default_filename
 	jsr PRINT_STR
 	
-	lda #$d
+	lda #NEWLINE
 	jmp CHROUT
 
 exit_ed:
@@ -1229,7 +1229,7 @@ print_line_nums:
 	txa
 	jsr CHROUT
 	
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 	inc_word ptr0
@@ -1393,7 +1393,7 @@ print_lines:
 	jsr CHROUT
 	:
 	
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 @inc_lines:
@@ -2224,17 +2224,8 @@ read_buf_file:
 	cmp #MAX_LINE_LENGTH
 	bcs @end_of_line
 	
-	cmp #1
-	bne :+
 	lda (r0)
-	cmp #$a
-	bne :+
-	dec ptr1 ; ignore this \n
-	jmp @read_next_line_loop
-	:
-	
-	lda (r0)
-	cmp #$d
+	cmp #NEWLINE
 	beq @end_of_line
 	
 	cmp #9
@@ -2273,7 +2264,7 @@ read_buf_file:
 	lda @read_buf_file_have_more_bytes
 	beq :+
 	lda (r0) ; last byte read into input
-	cmp #$d
+	cmp #NEWLINE
 	bne :+
 	dex
 	:
@@ -2413,7 +2404,7 @@ read_buf_file:
 	ldx count_file_size + 1
 	jsr bin_to_bcd16
 	jsr print_bcd_num
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 	lda #1
@@ -2528,7 +2519,7 @@ write_buf_file:
 	beq @last_line_dont_add_cr
 	:
 	
-	lda #$d
+	lda #NEWLINE
 	sta line_copy, X
 	inx
 @last_line_dont_add_cr:
@@ -2569,7 +2560,7 @@ write_buf_file:
 	ldx count_file_size + 1
 	jsr bin_to_bcd16
 	jsr print_bcd_num
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 	stz edits_made
@@ -2613,7 +2604,7 @@ print_cmd_info:
 	ldx #>input
 	jsr PRINT_STR	
 	
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 	plx	
@@ -2719,7 +2710,7 @@ print_error:
 	pla
 	jsr PRINT_STR
 	
-	lda #$d
+	lda #NEWLINE
 	jmp CHROUT
 
 errno_pointers:

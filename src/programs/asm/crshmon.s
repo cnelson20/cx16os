@@ -60,7 +60,7 @@ print_process_err:
 	:
 	stx exit_code
     
-    lda #$d
+    lda #$a
     jsr CHROUT
 
     lda #<str_p1
@@ -83,7 +83,7 @@ print_process_err:
     txa
     jsr CHROUT 
 
-    lda #$d
+    lda #$a
     jsr CHROUT
 
     rts

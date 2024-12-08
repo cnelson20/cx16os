@@ -153,7 +153,7 @@ print_result_name:
 	ldx #>copy_buff
 	jsr print_str
 	
-	lda #$d
+	lda #$a
 	jmp CHROUT
 
 strlen:
@@ -193,7 +193,7 @@ strcmp:
 	rts
 
 missing_operand_str:
-	.byte "dirname: missing operand", $d, 0
+	.byte "dirname: missing operand", $a, 0
 	
 double_slash_str:
 	.asciiz "//"

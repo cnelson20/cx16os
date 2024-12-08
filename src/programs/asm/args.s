@@ -5,6 +5,8 @@ ptr = $30
 ptrL = $30
 ptrH = $31
 
+NEWLINE = $a
+
 main:
 	jsr get_args
 	sta ptr
@@ -54,7 +56,7 @@ end_find_nul:
 	
 	lda #$27 ; '
 	jsr CHROUT
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 	inc argc_inc

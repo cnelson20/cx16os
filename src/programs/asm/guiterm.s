@@ -217,7 +217,7 @@ process_char:
     jsr writef_byte_extmem_y
 
     lda char_printed
-    cmp #$d
+    cmp #$0A
     bne @not_newline
 
 @flush_buff_end_of_line:

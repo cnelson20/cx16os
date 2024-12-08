@@ -103,11 +103,11 @@ error_msg_p1:
 	.asciiz "rm: error removing '"
 
 error_msg_p2:
-	.byte "': Unknown error", $d, 0
+	.byte "': Unknown error", $a, 0
 
 no_such_file_str:
 	.byte "': No such file"
-	.byte $d, 0
+	.byte $a, 0
 
 no_args_str:
-	.byte "rm: missing operand", $d, 0
+	.byte "rm: missing operand", $a, 0

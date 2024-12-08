@@ -7,6 +7,8 @@ r2 := $06
 
 ptr0 := $30
 
+NEWLINE = $0A
+
 init:	
 	jsr get_args
 	stx ptr0 + 1
@@ -162,7 +164,7 @@ outer_file_open:
 	ldx #>string_buff
 	jsr PRINT_STR
 	
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 @return_to_loop:	
@@ -286,7 +288,7 @@ dont_need_close:
 	txa
 	jsr CHROUT
 	
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 	lda #1
@@ -521,16 +523,16 @@ error_msg_p2:
 	.asciiz "', code #:"
 
 no_filename_err_str:
-	.byte "strings: missing file operand", $d, 0
+	.byte "strings: missing file operand", NEWLINE, 0
 usage_str:
-	.byte "Usage: strings [option(s)] [file(s)]", $d
-	.byte " Display printable strings in [file(s)]", $d
-	.byte " The options are:", $d
+	.byte "Usage: strings [option(s)] [file(s)]", NEWLINE
+	.byte " Display printable strings in [file(s)]", NEWLINE
+	.byte " The options are:", NEWLINE
 
-	.byte "  -f          Print the name of the file before each string", $d
-	.byte "  -n <number> Print any sequence of at least <number> chars", $d
-	.byte "  -t={d,x}  Print the location of the string in base 10 or 16", $d
-	.byte "  -h          Display this information", $d, 0
+	.byte "  -f          Print the name of the file before each string", NEWLINE
+	.byte "  -n <number> Print any sequence of at least <number> chars", NEWLINE
+	.byte "  -t={d,x}  Print the location of the string in base 10 or 16", NEWLINE
+	.byte "  -h          Display this information", NEWLINE, 0
 
 buff_offset:
 	.byte 0

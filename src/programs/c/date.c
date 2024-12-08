@@ -25,7 +25,7 @@ char weekday;
 
 int main(int argc, char *argv[]) {
 	if (argc >= 3) {
-		printf("date: extra operand '%s'\r", argv[2]);
+		printf("date: extra operand '%s'\n", argv[2]);
 		exit(1);
 	} 
 	
@@ -53,7 +53,7 @@ void parse_date(char *date_str) {
 	unsigned char c;
 	
 	if (*date_str != '+') {
-		printf("date: invalid date '%s'\r", date_str);
+		printf("date: invalid date '%s'\n", date_str);
 		exit(1);
 	}
 	++date_str;
@@ -73,7 +73,7 @@ void parse_date(char *date_str) {
 		++date_str;
 	}
 	
-	putchar ('\r');
+	putchar ('\n');
 }
 
 char is_leap_year(short year) {

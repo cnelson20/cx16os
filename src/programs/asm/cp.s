@@ -12,6 +12,8 @@ ptr1 := $32
 ptr2 := $34
 ptr3 := $36
 
+NEWLINE = $0A
+
 .macro inc_word addr
 	inc addr
 	bne :+
@@ -290,7 +292,7 @@ source_file_doesnt_exist_err:
 @source_file_err_p1:
 	.asciiz "cp: source file '"
 @source_file_err_p2:
-	.byte "' does not exist", $d, 0
+	.byte "' does not exist", NEWLINE, 0
 
 other_copy_err:
 	lda #<@other_copy_err_p1
@@ -307,7 +309,7 @@ other_copy_err:
 	jsr print_str
 	lda #$27
 	jsr CHROUT
-	lda #$d ; newline
+	lda #NEWLINE
 	jsr CHROUT
 	
 	lda #1
@@ -364,14 +366,14 @@ print_usage:
 	rts
 
 usage_str:
-	.byte "Usage: cp [OPTION]... [-T] SOURCE DEST", $d
-	.byte "  or:  cp [OPTION]... SOURCE... DIRECTORY", $d
-	.byte "Copy SOURCE to DEST, or multiple SOURCE(s) to DIRECTORY.", $d
-	.byte $d
-	.byte "Options:", $d
-	.byte "  -h: display this message", $d
-	.byte "  --: indicate all following arguments are files and not options", $d
-	.byte $d
+	.byte "Usage: cp [OPTION]... [-T] SOURCE DEST", NEWLINE
+	.byte "  or:  cp [OPTION]... SOURCE... DIRECTORY", NEWLINE
+	.byte "Copy SOURCE to DEST, or multiple SOURCE(s) to DIRECTORY.", NEWLINE
+	.byte NEWLINE
+	.byte "Options:", NEWLINE
+	.byte "  -h: display this message", NEWLINE
+	.byte "  --: indicate all following arguments are files and not options", NEWLINE
+	.byte NEWLINE
 	.byte 0
 
 print_no_operands:
@@ -383,12 +385,12 @@ print_no_operands:
 	rts
 	
 no_operands_error_msg:
-	.byte "cp: missing file operand", $d, 0
+	.byte "cp: missing file operand", NEWLINE, 0
 
 target_not_dir_error_msg_p1:
 	.asciiz "cp: target '"
 target_not_dir_error_msg_p2:
-	.byte "' is not a directory", $d, 0
+	.byte "' is not a directory", NEWLINE, 0
 
 print_operand_error:
 	lda #<error_msg
@@ -416,7 +418,7 @@ print_operand_error:
 error_msg:	
 .asciiz "cp: missing destination file operand after '"
 error_msg_p2:
-	.byte "'", $d, 0
+	.byte "'", NEWLINE, 0
 
 .segment "BSS"
 

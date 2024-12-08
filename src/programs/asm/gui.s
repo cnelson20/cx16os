@@ -32,7 +32,7 @@ COMMAND_DISPLAY_CHARS = 0
 COMMAND_EXIT_GUI = 1
 
 ; special cntrl chars ;
-NEWLINE = $d
+NEWLINE = $0A
 LEFT_CURSOR = $9d
 SWAP_COLORS = $01
 

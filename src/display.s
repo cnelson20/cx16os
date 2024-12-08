@@ -14,12 +14,11 @@
 
 PLOT_X = $0B
 PLOT_Y = $0C
-HOME = $13
 
 LEFT_CURSOR = $9D
 CARRIAGE_RETURN = $d
 LINE_FEED = $a
-NEWLINE = CARRIAGE_RETURN
+NEWLINE = LINE_FEED
 
 .export default_screen_mode
 default_screen_mode:
@@ -226,10 +225,10 @@ putc_v:
 
 	cmp #NEWLINE ; '\r'
 	bne :+
+	lda #CARRIAGE_RETURN
 	jsr CHROUT
 	pla
-	lda #LINE_FEED ; '\n'
-	jmp CHROUT ; just so -echo flag on emu looks nicer
+	rts
 	:
 	
 	cmp #$9 ; '\t'
@@ -258,7 +257,7 @@ putc_v:
 	rts ; just return, don't print these escaped
 	:
 	
-	cmp #HOME
+	cmp #CARRIAGE_RETURN
 	bne :+
 	pla
 	sec
@@ -375,6 +374,14 @@ programs_stdin_mode_table:
 ;
 .export getchar_from_keyboard
 getchar_from_keyboard:
+	jsr :++
+	cmp #CARRIAGE_RETURN
+	bne :+
+	lda #LINE_FEED
+	:
+	rts
+	:
+	
 	lda current_program_id
 	tay
 	lsr A
@@ -442,7 +449,7 @@ get_line_from_user:
 	beq @wait_kbd_buff_nempty
 	plx
 	
-	cmp #NEWLINE
+	cmp #CARRIAGE_RETURN
 	beq @newline
 	
 	cmp #$14 ; backspace

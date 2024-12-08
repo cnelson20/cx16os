@@ -14,6 +14,8 @@ ptr3 := $36
 BUFF_SIZE = $80
 MAX_LINE_LEN = 512
 
+NEWLINE = $0A
+
 init:
 	jsr get_args
 
@@ -89,7 +91,7 @@ parse_file_loop:
 	jmp @end_of_line
 	:
 	ply
-	cmp #$d
+	cmp #NEWLINE
 	beq @end_of_line
 	sta line_buff, Y
 	iny
@@ -100,7 +102,7 @@ parse_file_loop:
 	; just wait for end of line, chop rest of line off
 	:
 	jsr get_next_char
-	cmp #$d
+	cmp #NEWLINE
 	bne :-
 
 	ldy #MAX_LINE_LEN - 1
@@ -658,7 +660,7 @@ dont_need_close:
 	txa
 	jsr CHROUT
 	
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 	lda #1
@@ -689,7 +691,7 @@ print_error_line:
 	dey
 	bne @loop
 
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 
 	ldx $01FD
@@ -722,7 +724,7 @@ error_msg_p2:
 	.asciiz "', code #:"
 
 no_filename_err_str:
-	.byte "cron: missing crontab file to open", $d, 0
+	.byte "cron: missing crontab file to open", NEWLINE, 0
 
 shell_str:
 	.asciiz "shell"

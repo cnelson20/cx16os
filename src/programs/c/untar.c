@@ -30,8 +30,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#pragma charmap (0xa, 0xd);
-
 /* Parse an octal number, ignoring leading and trailing nonsense. */
 static int
 parseoct(const char *p, size_t n)

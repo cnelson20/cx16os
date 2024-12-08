@@ -108,7 +108,7 @@ static void PrintPaddedBreak(size_t pad) {
 	for (i = 0; i < pad; i++) {
 		printf(" ");
 	}
-	printf(" |\r");
+	printf(" |\n");
 }
 
 // Prints the message
@@ -187,7 +187,7 @@ char **read_argv_from_stdin() {
 	while ((bytes_read = read(STDIN_FILENO, read_buff, READ_BUFF_SIZE)) > 0) {
 		static unsigned char i;
 		for (i = 0; i < bytes_read; ++i) {
-			if ('\r' == read_buff[i]) {
+			if ('\n' == read_buff[i]) {
 				write_byte_extmem('\0', file_copy_buff, 0);
 				++file_copy_buff;
 				++temp_argv;
@@ -215,12 +215,12 @@ int main(int argc, char** argv) {
 	--argc; // skip past program name
 	for (temp_argv = argv; *temp_argv; ++temp_argv) {
 		if (!strcmp(*temp_argv, "-h")) {
-			printf("Usage: cowsay [message]\r");
-			printf("  If message is empty, read text from stdin\r\r");
+			printf("Usage: cowsay [message]\n");
+			printf("  If message is empty, read text from stdin\n\n");
 			return 0;
 		} else if (!strcmp(*temp_argv, "-w")) {
 			if (!temp_argv[1]) {
-				printf("cowsay: option %s must be followed by argument\r", *temp_argv);
+				printf("cowsay: option %s must be followed by argument\n", *temp_argv);
 				exit(EXIT_FAILURE);
 			}
 			++temp_argv;
@@ -248,16 +248,16 @@ int main(int argc, char** argv) {
 	printf(" _");
 	for (i = 0; i < bubble_width; i++)
 		printf("_");
-	printf(" \r");
+	printf(" \n");
 	PrintMessage(argc, argv, bubble_width - 1);
 	printf(" -");
 	for (i = 0; i < bubble_width; i++)
 		printf("-");
-	printf("\r"
-"        \\   ^__^\r"
-"         \\  (oo)\\_______\r"
-"            (__)\\       )\\/\\\r"
-"                ||----w |\r"
-"                ||     ||\r");
+	printf("\n"
+"        \\   ^__^\n"
+"         \\  (oo)\\_______\n"
+"            (__)\\       )\\/\\\n"
+"                ||----w |\n"
+"                ||     ||\n");
 	return 0;
 }

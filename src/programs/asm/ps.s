@@ -7,7 +7,7 @@ ptr0 := $30
 ptr1 := $32
 
 SINGLE_QUOTE = $27
-NEWLINE = $d
+NEWLINE = $0A
 
 main:
 	jsr get_args
@@ -254,7 +254,7 @@ do_print_process:
 	lda #<buffer
 	ldx #>buffer
 	jsr PRINT_STR
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 no_such_process:
@@ -377,20 +377,20 @@ print_usage:
 	lda #0
 	rts
 @print_usage_txt:
-	.byte "Usage: ps [-aeh] [-p PID[,PID2...]]", $d
-	.byte "", $d
-	.byte " -a,-e  show all processes", $d
-	.byte " -h     show this message and exit", $d
-	.byte " -p     show info for specified PIDs", $d
-	.byte "", $d
-	.byte "By default, ps shows info for processes with a shared ancestor", $d
-	.byte "", $d
+	.byte "Usage: ps [-aeh] [-p PID[,PID2...]]", NEWLINE
+	.byte "", NEWLINE
+	.byte " -a,-e  show all processes", NEWLINE
+	.byte " -h     show this message and exit", NEWLINE
+	.byte " -p     show info for specified PIDs", NEWLINE
+	.byte "", NEWLINE
+	.byte "By default, ps shows info for processes with a shared ancestor", NEWLINE
+	.byte "", NEWLINE
 	.byte 0
 ; strings
 
 first_line:
 	.byte " PID  IID PPID CMD"
-	.byte $0d, $00
+	.byte NEWLINE, $00
 
 invalid_option_str:
 	.asciiz "ps: unknown option -- "

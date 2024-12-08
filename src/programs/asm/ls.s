@@ -5,6 +5,8 @@ COLOR_WHITE = $05
 COLOR_BLUE = $9A ; light blue
 COLOR_GREEN = $99 ; actually light green
 
+NEWLINE = $0A
+
 r0L = $02
 r0H = $03
 r1L = $04
@@ -186,7 +188,7 @@ print_dir:
 	
 	lda #':'
 	jsr CHROUT
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT	
 
 dont_change_dirs:	
@@ -259,7 +261,7 @@ print_dir_loop:
 	lda dir_names_size
 	cmp #2
 	bcc :+
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	:
 	rts
@@ -369,7 +371,7 @@ print_dir_loop:
 	sep #$10
 	.i8
 
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 
 	; end of loop
@@ -503,7 +505,7 @@ file_error:
 	txa
 	jsr CHROUT
 	
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 
 	lda #1
@@ -520,7 +522,7 @@ flag_error:
 	ldx ptr1 + 1
 	jsr print_str
 
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 
 	lda #2
@@ -562,7 +564,7 @@ no_details_str:
 no_such_dir_str_p1:
 	.asciiz "ls: cannot access '"
 no_such_dir_str_p2:
-	.byte "': No such directory exists", $d, 0
+	.byte "': No such directory exists", NEWLINE, 0
 
 .SEGMENT "BSS"
 pwd_buff:

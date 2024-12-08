@@ -7,6 +7,8 @@ r1L := $04
 r1H := $05
 r2L := $06
 
+NEWLINE = $0A
+
 init:
 	jsr get_args
 	stx $31
@@ -129,7 +131,7 @@ dont_need_close:
 	txa
 	jsr CHROUT
 	
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 	jmp main

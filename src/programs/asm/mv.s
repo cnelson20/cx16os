@@ -12,6 +12,8 @@ ptr1 := $32
 ptr2 := $34
 ptr3 := $36
 
+NEWLINE = $0A
+
 .macro inc_word addr
 	inc addr
 	bne :+
@@ -85,7 +87,7 @@ print_no_operands:
 	rts
 	
 no_operands_error_msg:
-	.byte "mv: missing file operand", $d, 0
+	.byte "mv: missing file operand", NEWLINE, 0
 
 print_operand_error:
 	lda #<error_msg
@@ -106,4 +108,4 @@ print_operand_error:
 error_msg:	
 .asciiz "mv: missing destination file operand after '"
 error_msg_p2:
-	.byte "'", $d, 0
+	.byte "'", NEWLINE, 0

@@ -22,6 +22,7 @@ COLOR_YELLOW = $9E
 COLOR_CYAN = $9F
 
 SINGLE_QUOTE = 39
+NEWLINE = $0A
 
 r0 := $02
 r1 := $04
@@ -221,7 +222,7 @@ use_file_config:
 	sta @eof
 	bra @end_loop
 	:
-	cmp #$d
+	cmp #NEWLINE
 	beq @end_loop
 	iny
 	bra @get_next_line_loop
@@ -642,7 +643,7 @@ get_length_first_ascii_line:
 	ldy #0
 	:
 	lda $00, X
-	cmp #$d
+	cmp #NEWLINE
 	beq :+
 	iny
 	inx
@@ -667,7 +668,7 @@ print_ascii_line:
 	ldy #0
 	:
 	lda $00, X
-	cmp #$d
+	cmp #NEWLINE
 	beq :+
 	jsr CHROUT
 	iny
@@ -1177,12 +1178,12 @@ invalid_option_err_str:
 opt_requires_arg_err_str:
 	.asciiz "neofetch: argument required following option '"
 config_file_doesnt_exist_err_str:
-	.byte "neofetch: could not open provided config file", $d, 0
+	.byte "neofetch: could not open provided config file", NEWLINE, 0
 new_config_file_exists_err_str:
-	.byte "neofetch: config filename to create already exists", $d, 0
+	.byte "neofetch: config filename to create already exists", NEWLINE, 0
 	
 print_cr:
-	lda #$d
+	lda #NEWLINE
 	jmp CHROUT
 
 ascii_ptr:
@@ -1193,51 +1194,51 @@ fore_color:
 	.byte 0
 
 default_config_file_text:
-	.byte "ascii default", $d
-	.byte "info os", $d
-	.byte "info kernal", $d
-	.byte "info programs", $d
-	.byte "info shell", $d
-	.byte "info terminal", $d
-	.byte "info cpu", $d
-	.byte "info gpu", $d
-	.byte "info memory", $d
-	.byte "blank", $d
-	.byte "info colors", $d
+	.byte "ascii default", NEWLINE
+	.byte "info os", NEWLINE
+	.byte "info kernal", NEWLINE
+	.byte "info programs", NEWLINE
+	.byte "info shell", NEWLINE
+	.byte "info terminal", NEWLINE
+	.byte "info cpu", NEWLINE
+	.byte "info gpu", NEWLINE
+	.byte "info memory", NEWLINE
+	.byte "blank", NEWLINE
+	.byte "info colors", NEWLINE
 default_config_file_text_end:
 	
 
 x16_ascii_art:
-	.byte COLOR_WHITE,	"                            ", $d
-	.byte COLOR_PURPLE,	"   |-----\          /-----| ", $d
-	.byte COLOR_PURPLE,	"   |\\\\\\\        ///////| ", $d
-	.byte COLOR_LBLUE,	"     \\\\\\\      ///////   ", $d
-	.byte COLOR_LBLUE,	"      \\\\\\\    ///////    ", $d
-	.byte COLOR_CYAN,	"       \\\\\\\  ///////     ", $d
-	.byte COLOR_CYAN,	"        \-\\\|  |///-/      ", $d
-	.byte COLOR_LGREEN,	"          \\\|  |///        ", $d
-	.byte COLOR_LGREEN,	"          ///|  |\\\        ", $d
-	.byte COLOR_YELLOW,	"        /-///|  |\\\-\      ", $d
-	.byte COLOR_YELLOW,	"       ///////  \\\\\\\     ", $d
-	.byte COLOR_ORANGE,	"      ///////    \\\\\\\    ", $d
-	.byte COLOR_ORANGE,	"     ///////      \\\\\\\   ", $d
-	.byte COLOR_RED,	"   |///////        \\\\\\\| ", $d
-	.byte COLOR_RED,	"   |-----/          \-----| ", $d
-	.byte COLOR_WHITE,	"                            ", $d
+	.byte COLOR_WHITE,	"                            ", NEWLINE
+	.byte COLOR_PURPLE,	"   |-----\          /-----| ", NEWLINE
+	.byte COLOR_PURPLE,	"   |\\\\\\\        ///////| ", NEWLINE
+	.byte COLOR_LBLUE,	"     \\\\\\\      ///////   ", NEWLINE
+	.byte COLOR_LBLUE,	"      \\\\\\\    ///////    ", NEWLINE
+	.byte COLOR_CYAN,	"       \\\\\\\  ///////     ", NEWLINE
+	.byte COLOR_CYAN,	"        \-\\\|  |///-/      ", NEWLINE
+	.byte COLOR_LGREEN,	"          \\\|  |///        ", NEWLINE
+	.byte COLOR_LGREEN,	"          ///|  |\\\        ", NEWLINE
+	.byte COLOR_YELLOW,	"        /-///|  |\\\-\      ", NEWLINE
+	.byte COLOR_YELLOW,	"       ///////  \\\\\\\     ", NEWLINE
+	.byte COLOR_ORANGE,	"      ///////    \\\\\\\    ", NEWLINE
+	.byte COLOR_ORANGE,	"     ///////      \\\\\\\   ", NEWLINE
+	.byte COLOR_RED,	"   |///////        \\\\\\\| ", NEWLINE
+	.byte COLOR_RED,	"   |-----/          \-----| ", NEWLINE
+	.byte COLOR_WHITE,	"                            ", NEWLINE
 	.byte 0
 
 alt_x16_art:
-	.byte COLOR_PURPLE,	"o                   o", $d
-	.byte COLOR_PURPLE,	"M@\               /@M", $d
-	.byte COLOR_LBLUE,	"M@@@\           /@@@M", $d
-	.byte COLOR_LBLUE,	":@@@@@\       /@@@@@:", $d
-	.byte COLOR_CYAN,	" \@@@@@@\   /@@@@@@/ ", $d
-	.byte COLOR_CYAN,	"   ''''**N N**''''   ", $d
-	.byte COLOR_LGREEN,	"         N N         ", $d
-	.byte COLOR_YELLOW,	"     ..-*N N*-..     ", $d
-	.byte COLOR_YELLOW,	"  :@@@@@/   \@@@@@:  ", $d
-	.byte COLOR_ORANGE,	"  M@@@/       \@@@M  ", $d
-	.byte COLOR_RED,	"  M@/           \@M  ", $d
+	.byte COLOR_PURPLE,	"o                   o", NEWLINE
+	.byte COLOR_PURPLE,	"M@\               /@M", NEWLINE
+	.byte COLOR_LBLUE,	"M@@@\           /@@@M", NEWLINE
+	.byte COLOR_LBLUE,	":@@@@@\       /@@@@@:", NEWLINE
+	.byte COLOR_CYAN,	" \@@@@@@\   /@@@@@@/ ", NEWLINE
+	.byte COLOR_CYAN,	"   ''''**N N**''''   ", NEWLINE
+	.byte COLOR_LGREEN,	"         N N         ", NEWLINE
+	.byte COLOR_YELLOW,	"     ..-*N N*-..     ", NEWLINE
+	.byte COLOR_YELLOW,	"  :@@@@@/   \@@@@@:  ", NEWLINE
+	.byte COLOR_ORANGE,	"  M@@@/       \@@@M  ", NEWLINE
+	.byte COLOR_RED,	"  M@/           \@M  ", NEWLINE
 	.byte 0
 
 filename_buffer:

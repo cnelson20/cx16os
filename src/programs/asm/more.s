@@ -9,7 +9,7 @@ ptr0 := $30
 ptr1 := $32
 
 PAGE_DOWN = 2
-NEWLINE = $d
+NEWLINE = $a
 
 init:
 	jsr get_args

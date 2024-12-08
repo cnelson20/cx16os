@@ -14,5 +14,5 @@ end:
 
 string:
 	.ascii "Hello World!"
-	.byte $0D, $00
+	.byte $0A, $00
 	

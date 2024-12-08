@@ -23,7 +23,7 @@ start:
 	ldx #>end
 	jsr PRINT_STR
 	
-	lda #$d
+	lda #$a
 	jsr CHROUT
 	rts
 

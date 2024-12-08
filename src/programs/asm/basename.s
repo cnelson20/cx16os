@@ -5,6 +5,8 @@ ptr0 := $30
 ptr1 := $32
 ptr2 := $34
 
+NEWLINE = $0A
+
 start:
 	stz ptr2
 	stz ptr2 + 1
@@ -167,7 +169,7 @@ print_result_name:
 	ldx #>copy_buff
 	jsr print_str
 	
-	lda #$d
+	lda #NEWLINE
 	jmp CHROUT
 
 strlen:
@@ -207,7 +209,7 @@ strcmp:
 	rts
 
 missing_operand_str:
-	.byte "basename: missing operand", $d, 0
+	.byte "basename: missing operand", NEWLINE, 0
 	
 .SEGMENT "BSS"	
 	

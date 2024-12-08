@@ -41,7 +41,7 @@ end_word:
 	jmp loop
 	
 end:
-	lda #$d
+	lda #$0A
 	jsr CHROUT
 
 	lda #0

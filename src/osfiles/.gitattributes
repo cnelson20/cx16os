@@ -1,4 +1,4 @@
-*.txt text eol=crlf
-*.asm text eol=crlf
-*.sh text eol=crlf
-*.sr text eol=crlf
+*.txt text eol=lf
+*.asm text eol=lf
+*.sh text eol=lf
+*.sr text eol=lf

@@ -8,7 +8,7 @@ r2 := $06
 ptr0 := $30
 ptr1 := $32
 
-NEWLINE = $d
+NEWLINE = $0A
 
 init:
 	jsr get_args

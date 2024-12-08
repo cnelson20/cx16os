@@ -24,7 +24,7 @@ int main() {
 	
 	read(fd[0], buff, sizeof(hello_str));
 	
-	printf("'%s'\r", buff);
+	puts(buff);
 	
 	close(fd[0]);
 	

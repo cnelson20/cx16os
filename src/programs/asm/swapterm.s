@@ -32,7 +32,10 @@ CURSOR_LEFT = $9D
 CURSOR_RIGHT = $1D
 CURSOR_UP = $91
 CURSOR_DOWN = $11
-HOME = $13
+
+CARRIAGE_RETURN = $0D
+LINE_FEED = $0A
+NEWLINE = LINE_FEED
 
 r0 = $02
 r1 = $04
@@ -495,7 +498,7 @@ process_char:
 	jsr writef_byte_extmem_y
 
 	lda char_printed
-	cmp #$d
+	cmp #NEWLINE
 	bne @not_newline
 
 @flush_buff_end_of_line:
@@ -568,7 +571,7 @@ flush_char_actions:
 
 @not_cursor_right:
 	
-	cmp #HOME
+	cmp #CARRIAGE_RETURN
 	bne :+
 	ldx prog_printing
 	lda prog_term_use, X
@@ -684,7 +687,7 @@ write_line_screen:
 	:
 
 @skip_read_byte:
-	cmp #$d ; newline
+	cmp #NEWLINE ; newline
 	bne @not_newline
 
 	inc temp_term_y_offset
@@ -828,7 +831,7 @@ write_line_screen:
 	inx
 	cpx TERM_WIDTH
 	bcc @dont_draw_char
-	lda #$d ; insert newline to wrap text around
+	lda #NEWLINE ; insert newline to wrap text around
 	jmp @skip_read_byte
 @dont_draw_char:
 	iny

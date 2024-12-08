@@ -409,7 +409,7 @@ process_char:
     jsr writef_byte_extmem_y
 
     lda char_printed
-    cmp #$d
+    cmp #$a
     bne @not_newline
 
 @flush_buff_end_of_line:
@@ -515,7 +515,7 @@ write_line_screen:
     :
 
 @skip_read_byte:
-    cmp #$d ; newline
+    cmp #$a ; newline
     bne @not_newline
     
     inc vera_addrh
@@ -611,7 +611,7 @@ write_line_screen:
     inx
     cpx temp_term_width
     bcc @dont_draw_char
-    lda #$d ; insert newline to wrap text around
+    lda #$a ; insert newline to wrap text around
     jmp @skip_read_byte
 @dont_draw_char:
     iny

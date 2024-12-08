@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 	parse_options(argc, argv);
 	
 	if (fd_lst_size < 2) {
-		if (!silent_mode) printf("cmp: Two filenames must be specified, only got %u\r", fd_lst_size);
+		if (!silent_mode) printf("cmp: Two filenames must be specified, only got %u\n", fd_lst_size);
 		return 2;
 	}
 	
@@ -53,14 +53,14 @@ int compare_files(void) {
 		if (!(read1 || read2)) return 0;
 		if (read1 != read2) {
 			// One file is longer than the other
-			if (!silent_mode) printf("cmp: EOF on %s after byte %lu\r", read1 ? fd_names_lst[1] : fd_names_lst[0], byte_count);
+			if (!silent_mode) printf("cmp: EOF on %s after byte %lu\n", read1 ? fd_names_lst[1] : fd_names_lst[0], byte_count);
 			return 1;
 		}
 		if (file1_byte != file2_byte) {
 			if (disp_each_difference) {
-				if (!silent_mode) printf("%lu %o %o\r", byte_count, file1_byte, file2_byte);
+				if (!silent_mode) printf("%lu %o %o\n", byte_count, file1_byte, file2_byte);
 			} else {
-				if (!silent_mode) printf("%s %s differ: char %lu, line %u\r",
+				if (!silent_mode) printf("%s %s differ: char %lu, line %u\n",
 					fd_names_lst[0], fd_names_lst[1], byte_count, line_count);
 				return 1;
 			}
@@ -83,12 +83,12 @@ void parse_options(int argc, char *argv[]) {
 		if (only_files || argv[0][0] != '-' || argv[0][1] == '\0') {
 			unsigned char new_fd;
 			if (fd_lst_size >= 2) {
-				printf("cmp: invalid argument '%s': Cannot compare more than 2 files\r", argv[0]);
+				printf("cmp: invalid argument '%s': Cannot compare more than 2 files\n", argv[0]);
 				exit(2);
 			}
 			new_fd = strcmp(argv[0], "-") ? open(argv[0], O_RDONLY) : STDIN_FILENO;
 			if (new_fd == 0xFF) {
-				printf("cmp: No such file '%s' exists\r", argv[0]);
+				printf("cmp: No such file '%s' exists\n", argv[0]);
 				exit(2);
 			}
 			fd_lst[fd_lst_size] = new_fd;
@@ -116,13 +116,13 @@ void parse_options(int argc, char *argv[]) {
 }
 
 void print_usage() {
-	printf("Usage: cmp [OPTION]... FILE1 FILE2\r"
-	"Compare two files byte by byte.\r"
-	"\r");
+	printf("Usage: cmp [OPTION]... FILE1 FILE2\n"
+	"Compare two files byte by byte.\n"
+	"\n");
 	exit(0);
 }
 
 void invalid_option(char *opt) {
-	printf("cmp: invalid option '%s'\r", opt);
+	printf("cmp: invalid option '%s'\n", opt);
 	exit(2);
 }

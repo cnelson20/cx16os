@@ -7,6 +7,10 @@ TWO_INPUT_FILES_ERR = 1
 FILE_DOESNT_EXIST_ERR = 2
 OPEN_WRITE_FAIL_ERR = 3
 
+CARRIAGE_RETURN = $d
+LINE_FEED = $a
+TAB = 9
+NEWLINE = LINE_FEED
 SINGLE_QUOTE = 39
 
 r0 := $02
@@ -493,7 +497,7 @@ first_parse:
 
 	lda #'"'
 	jsr CHROUT
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 
 	ldx ptr1
@@ -910,7 +914,7 @@ second_parse:
 	txa
 	jsr CHROUT
 	
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 
 	ldx ptr0 ; lines_extmem_ptr through loop
@@ -1147,7 +1151,7 @@ third_parse:
 	txa
 	jsr CHROUT	
 	
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT
 	
 	ldx ptr0 ; lines_extmem_ptr through loop
@@ -2000,7 +2004,7 @@ get_next_line_input:
 	cpx #0
 	bne @read_err
 
-	cmp #$d ; newline
+	cmp #NEWLINE ; newline
 	beq @newline
 
 	sta line_buf, Y
@@ -2236,15 +2240,15 @@ is_whitespace_char:
 	pha
 	cmp #' '
 	beq @yes
-	cmp #9 ; \t
+	cmp #LINE_FEED ; \n
 	beq @yes
-	cmp #$a ; \n
+	cmp #CARRIAGE_RETURN ; \r
+	beq @yes
+	cmp #TAB ; \t
 	beq @yes
 	cmp #0
 	beq @yes
-	cmp #$d ; \r
-	beq @yes
-
+	
 	; no
 	clc
 	pla
@@ -2666,7 +2670,7 @@ print_parse_msg:
 
 @parse_str_literal:
 	.byte " parse:"
-	.byte $d, 0
+	.byte NEWLINE, 0
 
 print_gen_err_str:
 	lda #<general_err_str
@@ -2694,7 +2698,7 @@ gen_error:
 	jsr print_str
 
 print_newline_exit:
-	lda #$d
+	lda #NEWLINE
 	jsr CHROUT 
 
 	lda #1   

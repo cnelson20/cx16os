@@ -186,7 +186,7 @@ err_invalid_hook_num:
     txa
     jsr CHROUT
 
-    lda #$d
+    lda #$a
     jsr CHROUT
 
     lda #1
@@ -195,7 +195,7 @@ err_invalid_hook_num:
 
 no_hook_num_str:
     .byte "Error: no hook num provided"
-    .byte $d, 0
+    .byte $a, 0
 
 invalid_hook_num_str:
     .asciiz "Error: invalid hook num $"
@@ -203,7 +203,7 @@ invalid_hook_num_str:
 invalid_flag_str_p1:
     .byte "Error: invalid flag ", '"', 0
 invalid_flag_str_p2:
-    .byte '"', $d, 0
+    .byte '"', $a, 0
 
 hook_num_to_send:
     .byte $FF

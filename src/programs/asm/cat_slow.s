@@ -112,7 +112,7 @@ dont_need_close:
 	txa
 	jsr CHROUT
 	
-	lda #$d
+	lda #$a
 	jsr CHROUT
 	
 	jmp main

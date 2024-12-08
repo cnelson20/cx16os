@@ -115,6 +115,6 @@ str1:
 	.asciiz "Hello, "
 str2:
 	.byte "World!"
-	.byte $d, 0
+	.byte $a, 0
 	
 combined := $B000

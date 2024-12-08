@@ -125,7 +125,7 @@ invalid_arg:
 	
 	lda #$27 ; single quote
 	jsr CHROUT
-	lda #$d
+	lda #$a
 	jsr CHROUT
 	
 	lda #1
@@ -143,7 +143,7 @@ no_args:
 	rts
 	
 no_args_string:
-	.byte "color: missing operand", $d, 0
+	.byte "color: missing operand", $a, 0
 
 color_table:
 	.byte $90, $05, $1C, $9F, $9C, $1E, $1F, $9E

@@ -71,10 +71,10 @@ num_error_string_p1:
 	.asciiz "kill: "
 num_error_string_p2:
 	.byte ": argument must be process ID / bank"
-	.byte $0d, $00
+	.byte $0A, $00
 	
 np_error_string_p1:
 	.asciiz "kill: ("
 np_error_string_p2:
 	.byte ") - No such process"
-	.byte $0d, $00
+	.byte $0A, $00
