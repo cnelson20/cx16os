@@ -17,7 +17,9 @@ PLOT_Y = $0C
 HOME = $13
 
 LEFT_CURSOR = $9D
-NEWLINE = $d
+CARRIAGE_RETURN = $d
+LINE_FEED = $a
+NEWLINE = CARRIAGE_RETURN
 
 .export default_screen_mode
 default_screen_mode:
@@ -222,11 +224,11 @@ putc_v:
 	pla
 	sta programs_last_printed_special_char, Y 
 
-	cmp #$d ; '\r'
+	cmp #NEWLINE ; '\r'
 	bne :+
 	jsr CHROUT
 	pla
-	lda #$a ; '\n'
+	lda #LINE_FEED ; '\n'
 	jmp CHROUT ; just so -echo flag on emu looks nicer
 	:
 	
