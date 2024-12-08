@@ -84,6 +84,9 @@ get_next_arg:
 	rts
 
 end_parse_options:
+	rep #$10
+	.i16
+	
 	lda input_filename
 	ora input_filename + 1
 	bne :+
@@ -121,7 +124,15 @@ print_file:
 	lda r0 + 1
 	dec A
 	sta term_height
+	
+	lda #<buff
+	sta r0
+	lda #>buff
+	sta r0 + 1
+	
 	stz just_print_file
+	stz ptr0
+	stz ptr0 + 1
 	stz ptr1 ; current term x
 	stz ptr1 + 1 ; current term y
 read_file_loop:
@@ -136,11 +147,21 @@ read_file_loop:
 	bra read_file_loop
 	:
 @got_char:
+	ldx ptr0
+	sta buff, X
+	inx
+	stx ptr0
+	
 	cmp #NEWLINE
 	bne @byte_not_newline
-	
 	; char is newline
-	jsr CHROUT
+@found_newline_byte:
+	ldx ptr0
+	stx r1
+	lda #1 ; stdout
+	jsr write_file
+	stz ptr0
+	stz ptr0 + 1
 	stz ptr1
 	lda ptr1 + 1
 	inc A
@@ -168,8 +189,6 @@ read_file_loop:
 	bra read_file_loop
 
 @byte_not_newline:
-	sta ptr0
-	jsr CHROUT
 	jsr is_printable_char
 	beq read_file_loop
 	lda ptr1
@@ -177,8 +196,7 @@ read_file_loop:
 	sta ptr1
 	cmp term_width
 	bcc read_file_loop
-	lda #NEWLINE
-	bra @got_char
+	bra @found_newline_byte
 	
 @file_out_bytes:
 	lda fd
@@ -242,13 +260,12 @@ print_usage:
 	lda #0
 	rts
 @print_usage_txt:
-	.byte "Usage: xxd [OPTION]... [FILE]...", NEWLINE
+	.byte "Usage: more [OPTION]... [FILE]", NEWLINE
 	.byte "", NEWLINE
-	.byte "  -c:     change the number of bytes to display in a row", NEWLINE
+	.byte "Options", NEWLINE
 	.byte "  -h:     show this message and exit", NEWLINE
-	.byte "  -w:     change the width of the offset to print", NEWLINE
 	.byte "", NEWLINE
-	.byte "By default, COLS is 16", NEWLINE
+	.byte "If no FILE argument is provided, read from stdin", NEWLINE
 	.byte "", NEWLINE
 	.byte 0
 
@@ -258,23 +275,23 @@ stdin_str:
 ; data
 
 keyboard_fd:
-	.byte 0
+	.word 0
 fd:
-	.byte 0
+	.word 0
 err_num:
-	.byte 0
+	.word 0
 argc:
-	.byte 0
+	.word 0
 
 input_filename:
 	.word 0
 
 just_print_file:
-	.byte 0
+	.word 0
 term_width:
-	.byte 0
+	.word 0
 term_height:
-	.byte 0
+	.word 0
 
 invalid_option_str:
 	.asciiz "ps: unknown option -- "
@@ -290,7 +307,3 @@ file_open_error_msg_p2:
 buff:
 	.res 256
 
-file_list_lo:
-	.res 128
-file_list_hi:
-	.res 128
