@@ -376,9 +376,9 @@ file_list_ind:
 	.byte 0
 
 invalid_option_str:
-	.asciiz "ps: unknown option -- "
+	.asciiz "xxd: unknown option -- "
 opt_requires_arg_str:
-	.asciiz "ps: option requires an argument -- "
+	.asciiz "xxd: option requires an argument -- "
 file_open_error_msg_p1:
 	.asciiz "xxd: "
 file_open_error_msg_p2:
