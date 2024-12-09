@@ -349,7 +349,7 @@ print_usage:
 	.byte 0
 
 stdin_str:
-	.asciiz "#stdin"
+	.asciiz "#input"
 
 more_wait_str:
 	.byte "--More--", $0D, 0
