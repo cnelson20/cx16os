@@ -622,7 +622,7 @@ strcmp_banks_ext:
 	stx RAM_BANK
 	sec
 	sbc (KZE1), Y
-	beq @not_eq
+	bne @not_eq
 	
 	lda (KZE1), Y
 	beq @eq
