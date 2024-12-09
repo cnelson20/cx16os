@@ -10,7 +10,7 @@
 .import surrender_process_time, atomic_action_st
 
 .import PV_OPEN_TABLE
-.import putc, send_byte_chrout_hook
+.import putc, CHROUT_screen, send_byte_chrout_hook
 
 PLOT_X = $0B
 PLOT_Y = $0C
@@ -475,14 +475,15 @@ get_line_from_user:
 @val_chr:
 	pla
 	
-	jsr putc
 	sta STORE_PROG_CHRIN_BUFF, X
+	phx ; preserve X
+	jsr CHROUT_screen
 	
 	jsr lda_underscore_putc
 	jsr lda_left_crsr_putc
 
 	jsr send_zero_chrout_hook_preserve_x
-	
+	plx ; pull back & increment
 	inx
 	jmp @input_loop
 	
@@ -490,9 +491,10 @@ get_line_from_user:
 	cpx #0
 	beq @input_loop
 	dex
+	phx ; preserve back X
 	jsr lda_space_putc
 	jsr lda_left_crsr_putc
-	jsr putc
+	jsr lda_left_crsr_putc
 	jsr lda_space_putc
 	jsr lda_left_crsr_putc
 	
@@ -500,13 +502,14 @@ get_line_from_user:
 	jsr lda_left_crsr_putc
 
 	jsr send_zero_chrout_hook_preserve_x
-
+	plx ; pull back X
 	jmp @input_loop
 	
 @newline:
 	jsr lda_space_putc
 	lda #NEWLINE
-	jsr putc
+	jsr CHROUT_screen
+	lda #NEWLINE
 	sta STORE_PROG_CHRIN_BUFF, X
 	inx
 @end_loop:
@@ -523,13 +526,13 @@ get_line_from_user:
 	
 lda_space_putc:
 	lda #' '
-	jmp putc
+	jmp CHROUT_screen
 lda_left_crsr_putc:
 	lda #LEFT_CURSOR
-	jmp putc
+	jmp CHROUT_screen
 lda_underscore_putc:
 	lda #'_'
-	jmp putc
+	jmp CHROUT_screen
 send_zero_chrout_hook_preserve_x:
 	phx
 	lda #0

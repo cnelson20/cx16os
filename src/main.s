@@ -1380,6 +1380,7 @@ in_active_processes_table:
 ;
 ; check if process in .A is in the active process table. if it is, replace it with process in .Y
 ;
+.export replace_active_processes_table
 replace_active_processes_table:
 	jsr in_active_processes_table
 	bne :+
