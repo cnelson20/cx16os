@@ -1158,6 +1158,7 @@ narg_not_0_amp:
 	; stp
 	jsr setup_prog_redirects
 	stz starting_arg
+	stz num_cmds_ran
 
 @pipe_loop:
 	lda starting_arg
@@ -1178,7 +1179,7 @@ narg_not_0_amp:
 	sta new_stdin_fileno
 	sty r2
 	stx r2 + 1
-	lda #0
+	lda do_wait_child
 	sta r0
 	pla
 	pha
@@ -1195,11 +1196,19 @@ narg_not_0_amp:
 	:
 	phy
 	jsr exec
+	cmp #0
+	bne :+
 	ply
 	plx
-	cmp #0
-	beq exec_error
-	
+	jmp exec_error
+	:
+	ldy num_cmds_ran
+	sta child_id_table, Y
+	txa
+	sta child_instance_table, Y
+	ply
+	plx
+	inc num_cmds_ran
 	inx
 	stx starting_arg
 	bra @pipe_loop
@@ -1231,15 +1240,20 @@ narg_not_0_amp:
 	stz new_stdin_fileno
 	stz new_stdout_fileno
 	
-	sta child_id
-	stx child_instance
-
+	ldy num_cmds_ran
+	sta child_id_table, Y
+	txa
+	sta child_instance_table, Y
+	inc num_cmds_ran
+	
 	lda do_wait_child
 	bne wait_child
-
-	lda child_id
+	
+	ldy num_cmds_ran
+	dey
+	lda child_id_table, Y
 	sta last_background_pid
-	lda child_instance
+	lda child_instance_table, Y
 	sta last_background_instance
 
 	lda #1
@@ -1247,9 +1261,17 @@ narg_not_0_amp:
 
 	jmp new_line
 wait_child:	
-	lda child_id
+	ldy #0
+	:
+	phy
+	lda child_id_table, Y
 	jsr wait_process
+	ply
+	iny
+	cpy num_cmds_ran
+	bcc :-
 	
+	; value in .A will be return code of last process in chain
 	sta last_return_val
 	jmp new_line
 	
@@ -2021,10 +2043,12 @@ num_args:
 	.byte 0
 starting_arg:
 	.byte 0
-child_id:
+num_cmds_ran:
 	.byte 0
-child_instance:
-	.byte 0
+child_id_table:
+	.res 16, 0
+child_instance_table:
+	.res 16, 0
 input:
 	.res CMD_MAX_SIZE, 0
 output:
