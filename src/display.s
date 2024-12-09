@@ -414,7 +414,7 @@ get_line_from_user:
 	jsr lda_underscore_putc
 	jsr lda_left_crsr_putc
 
-	jsr send_zero_chrout_hook_preserve_x
+	jsr send_zero_chrout_hook
 	
 	ldx #0
 	stx STORE_PROG_CHRIN_BUFF_LEN
@@ -482,7 +482,7 @@ get_line_from_user:
 	jsr lda_underscore_putc
 	jsr lda_left_crsr_putc
 
-	jsr send_zero_chrout_hook_preserve_x
+	jsr send_zero_chrout_hook
 	plx ; pull back & increment
 	inx
 	jmp @input_loop
@@ -501,14 +501,17 @@ get_line_from_user:
 	jsr lda_underscore_putc
 	jsr lda_left_crsr_putc
 
-	jsr send_zero_chrout_hook_preserve_x
+	jsr send_zero_chrout_hook
 	plx ; pull back X
 	jmp @input_loop
 	
 @newline:
+	phx
 	jsr lda_space_putc
 	lda #NEWLINE
 	jsr CHROUT_screen
+	
+	plx
 	lda #NEWLINE
 	sta STORE_PROG_CHRIN_BUFF, X
 	inx
@@ -533,11 +536,9 @@ lda_left_crsr_putc:
 lda_underscore_putc:
 	lda #'_'
 	jmp CHROUT_screen
-send_zero_chrout_hook_preserve_x:
-	phx
+send_zero_chrout_hook:
 	lda #0
 	jsr send_byte_chrout_hook
-	plx
 	rts
 	
 return_chrin_buff:
