@@ -130,7 +130,14 @@ close_process_files_int:
 	; pid in .A
 	sta KZP0
 	phy_byte RAM_BANK ; preserve RAM_BANK
+	sta RAM_BANK
+
+	lda STORE_PROG_STDIN_VAL
+	jsr close_file_int
+	lda STORE_PROG_STDOUT_VAL
+	jsr close_file_int
 	
+	lda RAM_BANK
 	inc A ; ram bank = pid + 1
 	sta RAM_BANK ; holds process file table
 	tax
@@ -560,6 +567,9 @@ get_dir_filename_ext:
 ;
 .export setup_process_file_table_int
 setup_process_file_table_int:
+	sta STORE_PROG_STDIN_VAL
+	stx STORE_PROG_STDOUT_VAL
+	
 	ldy RAM_BANK
 	phy
 	iny ; file data goes in bank + 1
@@ -870,7 +880,9 @@ open_stream:
 	lda KZE3 + 1 ; open_mode
 	cmp #'R'
 	bne @invalid_open_mode
-	lda #0
+	lda STORE_PROG_STDIN_VAL
+	cmp #NO_FILE
+	beq @return_err
 	jsr find_proc_fd
 	cmp #NO_FILE
 	beq @return_err
@@ -885,14 +897,31 @@ open_stream:
 	lda KZE3 + 1 ; open_mode
 	cmp #'R'
 	beq @invalid_open_mode
-	lda #1
+	lda STORE_PROG_STDOUT_VAL
+	cmp #NO_FILE
+	beq @return_err
 	jsr find_proc_fd
 	cmp #NO_FILE
 	beq @return_err
 	bra @return_success
 	:
 	
-	ldx #$FF ; no such stream
+	ldax_addr @key_input_name
+	stax_word KZE0
+	jsr strcmp_banks_ext
+	cmp #0
+	bne :+
+	lda KZE3 + 1 ; open_mode
+	cmp #'R'
+	bne @invalid_open_mode
+	lda #0 ; Returns fd to read from keyboard
+	jsr find_proc_fd
+	cmp #NO_FILE
+	beq @return_err
+	bra @return_success
+	:
+	
+	ldx #NO_SUCH_FILE ; no such stream
 @return_err:
 	lda #NO_FILE
 	rts
@@ -901,13 +930,15 @@ open_stream:
 	rts
 
 @invalid_open_mode:
-	ldx #$FE
+	ldx #INVALID_MODE
 	bra @return_err
 
 @stdin_name:
-	.asciiz "stdin"
+	.asciiz "#stdin"
 @stdout_name:
-	.asciiz "stdout"
+	.asciiz "#stdout"
+@key_input_name:
+	.asciiz "#input"
 
 ;
 ; finds and marks a file as in use
@@ -1030,6 +1061,20 @@ free_proc_fd:
 	sty RAM_BANK
 	rts
 
+.export close_file_int
+close_file_int:
+	push_zp_word KZE0
+	push_zp_word KZE1
+	push_zp_word KZE2
+	push_zp_word KZE3
+	inc RAM_BANK
+	jsr close_file_int_entry
+	ply_word KZE3
+	ply_word KZE2
+	ply_word KZE1
+	ply_word KZE0
+	rts
+
 ;
 ; close_file_kernal
 ;
@@ -1041,19 +1086,35 @@ close_file_kernal:
 	
 	tay
 	lda PV_OPEN_TABLE, Y
+close_file_int_entry:	
 	tax
 	cpx #NO_FILE
 	bne :+
 	; file isn't open
 	lda #NO_SUCH_FILE
+	dec RAM_BANK
 	jmp @close_file_exit
 	:
 	lda #$FF
-	cpy #2
-	bcs :+
-	tya
-	:
 	sta PV_OPEN_TABLE, Y
+	dec RAM_BANK
+	
+	phx ; push A
+	cpx STORE_PROG_STDIN_VAL
+	bne :+
+	cpx #0
+	beq :+
+	ldx #NO_FILE
+	stx STORE_PROG_STDIN_VAL
+	:
+	cpx STORE_PROG_STDOUT_VAL
+	bne :+
+	cpx #1
+	beq :+
+	ldx #NO_FILE
+	stx STORE_PROG_STDOUT_VAL
+	:
+	plx ; pull back A after this section is done
 	
 	cpx #2
 	bcc @close_file_exit ; if stdin/stdout, don't actually need to CLOSE file
@@ -1063,27 +1124,27 @@ close_file_kernal:
 	cpx #$30
 	bcs :+
 	stz atomic_action_st
-	dec RAM_BANK
 	txa
 	jmp close_pipe_ext
 	:
 	
 @close_file_disk:
+	pha_byte RAM_BANK
 	lda #1
 	sta RAM_BANK
-	sta atomic_action_st
+	set_atomic_st_disc_a
 	
 	stz file_table_count, X
 	
+	pla_byte RAM_BANK
+	
 	txa
 	jsr CLOSE
-	stz atomic_action_st
+	clear_atomic_st
 	lda #0
 	
 @close_file_exit:
-	ldy current_program_id
-	sty RAM_BANK
-	rts
+	rts	
 
 ;
 ; read_file_ext
