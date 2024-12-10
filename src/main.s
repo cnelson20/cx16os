@@ -1379,11 +1379,13 @@ in_active_processes_table:
 ; replace_active_processes_table
 ;
 ; check if process in .A is in the active process table. if it is, replace it with process in .Y
+; also returns index to active_processes_table in .X
 ;
 .export replace_active_processes_table
 replace_active_processes_table:
 	jsr in_active_processes_table
 	bne :+
+	ldx #$FF
 	rts
 	:
 
@@ -1399,7 +1401,10 @@ replace_active_processes_table:
 	rts
 @replace_pid_zero:
 	stz active_processes_table, X
-	jmp pass_active_process
+	phx
+	jsr pass_active_process
+	plx
+	rts
 
 ;
 ; add_active_processes_table
@@ -1506,7 +1511,7 @@ run_first_prog:
 ; info about current process ;
 .export current_program_id
 current_program_id:
-	.byte 0
+	.word 0
 	
 .export schedule_timer
 schedule_timer:
