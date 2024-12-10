@@ -7,7 +7,7 @@
 .SEGMENT "CODE"
 
 .import atomic_action_st, current_program_id
-.import surrender_process_time, schedule_timer
+.import surrender_process_time, surrender_to_process
 .import memcpy_banks_ext
 .import check_process_owns_bank
 .import putc_v, setup_display, reset_display, try_unlock_vera_regs
@@ -911,7 +911,6 @@ read_pipe_ext:
 	ldy #NO_SUCH_FILE
 	rts
 	:
-	stz KZE0 + 1
 	lda r1
 	ora r1 + 1
 	bne :+
@@ -945,6 +944,7 @@ read_pipe_ext:
 	stx KZE1
 	ldx r1
 	stx KZE2
+	stz KZE0 + 1
 	lda KZE0
 	sta RAM_BANK
 @wait_loop:
@@ -957,7 +957,8 @@ read_pipe_ext:
 	lda pipe_table, Y
 	cmp #$11 ; both ends open
 	bne @never_will_read
-	jsr surrender_process_time
+	lda pipe_table_write_end_pid, Y
+	jsr surrender_to_process
 	bra :-
 @can_read_byte:
 	lda $00, X
@@ -1050,6 +1051,7 @@ write_pipe_ext:
 	rts ; just exit if 0 bytes are requested
 	:
 	
+	stz KZE0 + 1
 	lda KZE0
 	sta RAM_BANK
 	rep #$10
@@ -1075,7 +1077,8 @@ write_pipe_ext:
 	lda pipe_table, X
 	cmp #$11 ; both ends open
 	bne @never_will_write
-	jsr surrender_process_time
+	lda pipe_table_read_end_pid, X
+	jsr surrender_to_process
 	bra :--	
 @can_write_byte:
 	lda current_program_id

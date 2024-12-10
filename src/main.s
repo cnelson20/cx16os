@@ -600,10 +600,8 @@ program_exit:
 	bne :+
 	jmp return_to_basic
 	:
-	lda process_parents_table, X
-	tay
 	txa
-	jsr replace_active_processes_table
+	jsr rest_active_process_table
 
 @not_active_process:
 
@@ -721,7 +719,7 @@ surrender_process_time:
 	pha
 	lda atomic_action_st
 	pha
-	stz atomic_action_st
+	clear_atomic_st
 	lda #1
 	sta schedule_timer
 	wai
@@ -729,6 +727,48 @@ surrender_process_time:
 	pla
 	sta atomic_action_st
 	pla
+	rts
+
+;
+; if the calling process is active and .A is non-zero, make .A active for one schedule cycle
+;
+.export surrender_to_process
+surrender_to_process:
+	save_p_816_8bitmode
+	tay
+	cmp #0
+	beq :+
+	lda current_program_id
+	jsr in_active_processes_table
+	bne :++
+	:
+	; if process isn't active, just wait and return
+	jsr surrender_process_time
+	bra @return
+	:
+	
+	lda active_processes_rest_table, X
+	pha
+	lda current_program_id
+	; Y holds process to make active
+	phy
+	jsr replace_active_processes_table
+	ply
+	
+	jsr surrender_process_time
+	lda current_program_id
+	cmp active_processes_rest_table, X
+	beq :+
+	pla
+	bra @return
+	:
+	tya
+	ldy current_program_id
+	jsr replace_active_processes_table
+	pla
+	sta active_processes_rest_table, X
+@return:
+	restore_p_816
 	rts
 
 store_vera_addr0:
@@ -1396,16 +1436,56 @@ replace_active_processes_table:
 	bne :+
 	sty active_process
 	:
+	sta active_processes_rest_table, X
 	tya
 	sta active_processes_table, X
 	rts
 @replace_pid_zero:
 	stz active_processes_table, X
+	stz active_processes_rest_table, X
 	phx
 	jsr pass_active_process
 	plx
 	rts
 
+;
+; rest_active_process_table
+;
+; if the pid in .A is in active_processes_table, 
+; replace it with its corresponding val in active_processes_rest_table
+;
+.export rest_active_process_table
+rest_active_process_table:
+	jsr in_active_processes_table
+	bne :+
+	ldx #$FF
+	rts
+	:
+	
+	pha
+	lda active_processes_rest_table, X
+	tay
+	pla
+	cpy #0
+	beq @replace_pid_zero
+
+	cmp active_process
+	bne :+
+	sty active_process
+	:
+	tya
+	sta active_processes_table, X
+	lda process_parents_table, Y
+	sta active_processes_rest_table, X
+	rts
+@replace_pid_zero:
+	stz active_processes_table, X
+	stz active_processes_rest_table, X
+	phx
+	jsr pass_active_process
+	plx
+	rts
+	
 ;
 ; add_active_processes_table
 ;
@@ -1424,6 +1504,7 @@ add_active_processes_table:
 	:
 	tya
 	sta active_processes_table, X
+	stz active_processes_rest_table, X
 	rts
 
 ;
@@ -1626,6 +1707,7 @@ setup_kernal_processes:
 
 PROCESS_TABLE_SIZE = $100
 INSTANCE_TABLE_SIZE = $80
+ACTIVE_PROCESSES_TABLE_SIZE = MAX_ALIVE_PROCESSES
 
 ; holds which ram banks have processes ;
 .export process_table
@@ -1652,10 +1734,12 @@ return_table = process_parents_table + PROCESS_TABLE_SIZE
 ; instance table of alive processes
 .export active_processes_table
 active_processes_table := return_table + INSTANCE_TABLE_SIZE
-ACTIVE_PROCESSES_TABLE_SIZE = MAX_ALIVE_PROCESSES
+
+.export active_processes_rest_table
+active_processes_rest_table := active_processes_table + ACTIVE_PROCESSES_TABLE_SIZE
 
 ; for fill operations
-END_PROCESS_TABLES = active_processes_table + ACTIVE_PROCESSES_TABLE_SIZE
+END_PROCESS_TABLES = active_processes_rest_table + ACTIVE_PROCESSES_TABLE_SIZE
 
 .export active_process
 active_process:
