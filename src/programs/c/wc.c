@@ -7,9 +7,9 @@
 #include <ctype.h>
 
 typedef struct wc {
-	unsigned int lines;
-	unsigned int words;
-	unsigned int chars;	
+	unsigned long int lines;
+	unsigned long int words;
+	unsigned long int chars;	
 	unsigned int max_line_length;
 };
 
@@ -82,22 +82,22 @@ void print_wc_struct(struct wc *cnt, char *filename) {
 	if (opts.print_lines) {
 		if (yet_printed) printf(" ");
 		else yet_printed = 1;
-		printf("%4d", cnt->lines);
+		printf("%4lu", cnt->lines);
 	}
 	if (opts.print_words) {
 		if (yet_printed) printf(" ");
 		else yet_printed = 1;
-		printf("%4d", cnt->words);
+		printf("%4lu", cnt->words);
 	}
 	if (opts.print_chars) {
 		if (yet_printed) printf(" ");
 		else yet_printed = 1;
-		printf("%5d", cnt->chars);
+		printf("%7lu", cnt->chars);
 	}
 	if (opts.print_max_line_length) {
 		if (yet_printed) printf(" ");
 		else yet_printed = 1;
-		printf("%3d", cnt->max_line_length);
+		printf("%3u", cnt->max_line_length);
 	}
 	
 	if (yet_printed) printf(" ");
