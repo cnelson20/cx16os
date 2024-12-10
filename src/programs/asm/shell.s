@@ -1179,7 +1179,7 @@ narg_not_0_amp:
 	sta new_stdin_fileno
 	sty r2
 	stx r2 + 1
-	lda do_wait_child
+	lda #0
 	sta r0
 	pla
 	pha
@@ -1260,16 +1260,11 @@ narg_not_0_amp:
 	sta last_background_alive
 
 	jmp new_line
-wait_child:	
-	ldy #0
-	:
-	phy
+wait_child:
+	ldy num_cmds_ran
+	dey
 	lda child_id_table, Y
 	jsr wait_process
-	ply
-	iny
-	cpy num_cmds_ran
-	bcc :-
 	
 	; value in .A will be return code of last process in chain
 	sta last_return_val
