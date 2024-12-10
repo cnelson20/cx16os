@@ -573,6 +573,17 @@ return_chrin_buff:
 ;
 .export close_active_proc_stdin
 close_active_proc_stdin:
+	ldx RAM_BANK
+	lda active_process
+	inc A
+	sta RAM_BANK
+	lda PV_OPEN_TABLE + 0
+	stx RAM_BANK
+	cmp #0
+	beq :+
+	rts
+	:
+	
 	lda active_process
 	lsr A
 	tax
