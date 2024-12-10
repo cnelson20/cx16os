@@ -12,7 +12,7 @@
 .import strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str, toupper, tolower
 .import check_process_owns_bank, getchar_from_keyboard
 .import current_program_id
-.import open_pipe_ext, close_pipe_ext, close_pipe_int, read_pipe_ext, write_pipe_ext
+.import open_pipe_ext, close_pipe_ext, close_pipe_int, read_pipe_ext, write_pipe_ext, pass_pipe_other_process
 
 .import CHROUT_screen
 
@@ -581,6 +581,16 @@ setup_process_file_table_int:
 	lda #2
 	sta PV_OPEN_TABLE + 2 ; stderr
 	
+	lda current_program_id
+	ldx RAM_BANK
+	dex
+	ldy PV_OPEN_TABLE + 0
+	jsr pass_fd_other_process
+	ldy PV_OPEN_TABLE + 1
+	jsr pass_fd_other_process
+	ldy PV_OPEN_TABLE + 2
+	jsr pass_fd_other_process
+	
 	lda #'@'
 	sta PV_TMP_FILENAME_PREFIX
 	lda #':'
@@ -672,6 +682,34 @@ free_dos_channel:
 	pla
 	rts
 
+;
+; pass_fd_other_process
+;
+; Changes the owner of an fd from one process to another
+; .A = from pid, .X = to pid, .Y = fd
+;
+; preserves .A & .X
+;
+.export pass_fd_other_process
+pass_fd_other_process:
+	cpy #2 + 1
+	bcs :+
+	rts ; stdin/out/err
+	:
+	
+	cpy #$10
+	bcc :+
+	cpy #$30
+	bcs :+
+	pha
+	phx
+	jsr pass_pipe_other_process
+	plx
+	pla
+	:
+	
+	; dont worry about files on disk
+	rts
 
 ;
 ; open_file_kernal_ext

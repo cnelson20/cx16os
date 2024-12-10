@@ -713,6 +713,11 @@ pipe_table:
 	.res FIRST_PROGRAM_BANK - 2 , 0
 pipe_table_end:
 
+pipe_table_read_end_pid:
+	.res FIRST_PROGRAM_BANK, 0
+pipe_table_write_end_pid:
+	.res FIRST_PROGRAM_BANK, 0
+
 get_unused_pipe:
 	ldy #pipe_table_end - pipe_table - 1
 	:
@@ -729,6 +734,10 @@ get_unused_pipe:
 
 init_pipe:
 	tax
+	lda current_program_id
+	sta pipe_table_read_end_pid, X
+	sta pipe_table_write_end_pid, X
+	
 	set_atomic_st_disc_a
 	ldy RAM_BANK
 	stx RAM_BANK ; bank of pipe, $1 - $F
@@ -827,15 +836,54 @@ close_pipe_ext:
 	lda pipe_table, X
 	and #$10
 	sta pipe_table, X
+	stz pipe_table_read_end_pid, X
 	bra @return_success
 @write_end:
 	; KZE1 in .X
 	lda pipe_table, X
 	and #$01
 	sta pipe_table, X
+	stz pipe_table_write_end_pid, X
 @return_success:
 	lda #0
 	rts
+
+;
+; Changes the read end of the pipe from one process to another
+; .A = from pid, .X = to pid, .Y = pipe
+;
+.export pass_pipe_other_process
+pass_pipe_other_process:
+	phx
+	pha
+	phy
+	tya
+	and #$0F
+	tax
+	pla
+	cmp #$20
+	bcs @write_end
+@read_end:
+	pla
+	cmp pipe_table_read_end_pid, X
+	beq :+
+	pla
+	rts
+	:
+	pla
+	sta pipe_table_read_end_pid, X
+	rts
+@write_end:
+	pla
+	cmp pipe_table_write_end_pid, X
+	beq :+
+	pla
+	rts
+	:
+	pla
+	sta pipe_table_write_end_pid, X
+	rts
+	:
 
 ;
 ; TODO for read and write: don't block forever if other end of pipe closes
@@ -845,7 +893,7 @@ close_pipe_ext:
 read_pipe_ext:
 	cmp #$20 ; is this the write end of the pipe?
 	bcc :+
-	ldy #1
+	ldy #INVALID_MODE
 	lda #0
 	tax
 	rts
@@ -902,17 +950,17 @@ read_pipe_ext:
 @wait_loop:
 	set_atomic_st_disc_a
 	:
-	ldy PIPE_START_PTR
-	cpy PIPE_END_PTR
+	ldx PIPE_START_PTR
+	cpx PIPE_END_PTR
 	bne @can_read_byte
-	ldx KZE0
-	lda pipe_table, X
+	ldy KZE0
+	lda pipe_table, Y
 	cmp #$11 ; both ends open
 	bne @never_will_read
 	jsr surrender_process_time
 	bra :-
 @can_read_byte:
-	lda $00, Y
+	lda $00, X
 	xba
 	lda KZE3
 	sta RAM_BANK
@@ -920,12 +968,12 @@ read_pipe_ext:
 	sta (KZE1)
 	lda KZE0
 	sta RAM_BANK
-	iny
-	cpy #PIPE_END_ADDR
+	inx
+	cpx #PIPE_END_ADDR
 	bcc :+
-	ldy #PIPE_START_ADDR
+	ldx #PIPE_START_ADDR
 	:
-	sty PIPE_START_PTR
+	stx PIPE_START_PTR
 	clear_atomic_st
 	
 	ldx KZE2
@@ -975,7 +1023,7 @@ read_pipe_ext:
 write_pipe_ext:
 	cmp #$20
 	bcs :+
-	ldy #1 ; wrong end of the pipe
+	ldy #INVALID_MODE ; wrong end of the pipe
 	lda #0
 	tax
 	rts
