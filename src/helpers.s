@@ -25,6 +25,10 @@ strlen:
 	restore_p_816
 	rts
 
+;
+; returns length of str in .X in .C
+; also returns pointer to null byte at end of str in .X
+;
 .export strlen_16bit
 strlen_16bit:
 	save_p_816
@@ -556,50 +560,32 @@ memcpy_banks_ext:
 ;
 .export rev_str
 rev_str:
-	phx
-	pha
-	
-	jsr strlen
-	pha 
-	lsr A
-	sta KZE2
-	pla
-	dec A
-	sta KZE2 + 1
-	
-	clc 
-	pla
+	stx KZE0 + 1
 	sta KZE0
-	adc KZE2 + 1
-	sta KZE1
-	pla
-	sta KZE0 + 1
-	adc #0
-	sta KZE1 + 1
-	
-	ldx KZE2
-	inx
-	ldy #0
+
+	save_p_816
+	index_16_bit
+	ldx KZE0
+	jsr strlen_16bit
+	txy
+	dey
+	ldx KZE0
 @loop:
-	dex
+	cpy KZE0
 	beq @end_loop
-	
-	lda (KZE0), Y
-	pha 
-	lda (KZE1)
-	sta (KZE0), Y
+	bcc @end_loop
+	lda $00, X
+	pha
+	lda $00, Y
+	sta $00, X
 	pla
-	sta (KZE1)
-	
-	iny
-	
-	dec KZE1
-	bne :+
-	dec KZE1 + 1
-	:
-	
+	sta $00, Y
+	inx
+	stx KZE0
+	dey
 	bra @loop
 @end_loop:	
+	restore_p_816
 	rts
 
 ;
