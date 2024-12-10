@@ -111,10 +111,7 @@ end_parse_options:
 
 print_file:
 	sta fd
-	lda #<stdin_str
-	ldx #>stdin_str
-	ldy #'R'
-	jsr open_file
+	lda #2 ; stderr
 	sta keyboard_fd
 	
 	lda #1
@@ -347,9 +344,6 @@ print_usage:
 	.byte "If no FILE argument is provided, read from stdin", NEWLINE
 	.byte "", NEWLINE
 	.byte 0
-
-stdin_str:
-	.asciiz "#input"
 
 more_wait_str:
 	.byte "--More--", $0D, 0
