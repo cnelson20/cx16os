@@ -374,13 +374,13 @@ programs_stdin_mode_table:
 ;
 .export getchar_from_keyboard
 getchar_from_keyboard:
-	jsr :++
+	jsr @main_function
 	cmp #CARRIAGE_RETURN
 	bne :+
 	lda #LINE_FEED
 	:
 	rts
-	:
+@main_function:
 	
 	lda current_program_id
 	tay
