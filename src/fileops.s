@@ -147,7 +147,7 @@ close_process_files_int:
 	lda PV_OPEN_TABLE, Y
 	cmp #$FF ; FF means entry is empty
 	beq @dont_need_close
-	cmp #2 ; < 2 means stdin/out
+	cmp #2 + 1 ; <= 2 means stdin/out/err
 	bcc @dont_need_close
 
 	phx
@@ -578,6 +578,8 @@ setup_process_file_table_int:
 	; set files 0 + 1 to stdin&out
 	sta PV_OPEN_TABLE
 	stx PV_OPEN_TABLE + 1
+	lda #2
+	sta PV_OPEN_TABLE + 2 ; stderr
 	
 	lda #'@'
 	sta PV_TMP_FILENAME_PREFIX
@@ -585,7 +587,7 @@ setup_process_file_table_int:
 	sta PV_TMP_FILENAME_PREFIX + 1
 	
 	; set files 2-15 as unused
-	ldx #2
+	ldx #3
 	lda #$FF
 	:
 	sta PV_OPEN_TABLE, X
@@ -906,15 +908,13 @@ open_stream:
 	bra @return_success
 	:
 	
-	ldax_addr @key_input_name
+	ldax_addr @stderr_name
 	stax_word KZE0
 	jsr strcmp_banks_ext
 	cmp #0
 	bne :+
-	lda KZE3 + 1 ; open_mode
-	cmp #'R'
-	bne @invalid_open_mode
-	lda #0 ; Returns fd to read from keyboard
+	; open_mode doesn't matter
+	lda #2 ; Returns fd to read from keyboard
 	jsr find_proc_fd
 	cmp #NO_FILE
 	beq @return_err
@@ -937,8 +937,8 @@ open_stream:
 	.asciiz "#stdin"
 @stdout_name:
 	.asciiz "#stdout"
-@key_input_name:
-	.asciiz "#input"
+@stderr_name:
+	.asciiz "#stderr"
 
 ;
 ; finds and marks a file as in use
@@ -1095,7 +1095,7 @@ close_file_int_entry:
 	dec RAM_BANK
 	jmp @close_file_exit
 	:
-	lda #$FF
+	lda #NO_FILE
 	sta PV_OPEN_TABLE, Y
 	dec RAM_BANK
 	
@@ -1116,8 +1116,8 @@ close_file_int_entry:
 	:
 	plx ; pull back A after this section is done
 	
-	cpx #2
-	bcc @close_file_exit ; if stdin/stdout, don't actually need to CLOSE file
+	cpx #2 + 1
+	bcc @close_file_exit ; if stdin/stdout/stderr, don't actually need to CLOSE file
 	
 	cpx #$10
 	bcc @close_file_disk
@@ -1166,7 +1166,10 @@ read_file_ext:
 	cmp #NO_FILE
 	beq @exit_failure
 	cmp #0
-	bne :+
+	beq :+
+	cmp #2
+	bne :++
+	:
 	jmp read_stdin
 	:
 	cmp #$10
@@ -1464,8 +1467,10 @@ write_file_ext:
 	
 	sta KZE2
 	
-	cmp #$FF
-	beq @file_doesnt_exist
+	cmp #NO_FILE
+	bne :+
+	jmp @file_doesnt_exist
+	:
 	
 	cmp #$10
 	bcc :+
@@ -1478,6 +1483,8 @@ write_file_ext:
 	ldstx_word r1, KZE1
 	
 	cmp #1
+	beq write_stdout
+	cmp #2
 	beq write_stdout
 	
 @write_to_file:
