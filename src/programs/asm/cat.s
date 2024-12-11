@@ -1,18 +1,20 @@
 .include "routines.inc"
 .segment "CODE"
 
-r0L := $02
-r0H := $03
-r1L := $04
-r1H := $05
+r0 := $02
+r1 := $04
 r2L := $06
+
+ptr0 := $30
 
 NEWLINE = $0A
 
+DEFAULT_READ_LEN = 512
+
 init:
 	jsr get_args
-	stx $31
-	sta $30
+	stx ptr0 + 1
+	sta ptr0
 	sty argc
 	cpy #2
 	bcs main
@@ -20,7 +22,8 @@ init:
 	lda #0
 	sta fd
 	lda #1
-	sta bytes_to_read
+	sta bytes_to_read + 0
+	stz bytes_to_read + 1
 	bra file_print_loop
 main:
 	dec argc
@@ -30,21 +33,21 @@ main:
 continue:
 	
 	ldy #0
-	lda ($30), Y
+	lda (ptr0), Y
 	beq found_end_word
 	
-	inc $30
+	inc ptr0
 	bne continue
-	inc $31
+	inc ptr0 + 1
 	jmp continue
 	
 found_end_word:
-	inc $30
+	inc ptr0
 	bne @skip
-	inc $31
+	inc ptr0 + 1
 @skip:
-	lda $30
-	ldx $31
+	lda ptr0
+	ldx ptr0 + 1
 	ldy #0 ; read??
 	
 	jsr open_file	
@@ -52,50 +55,62 @@ found_end_word:
 	cmp #$FF
 	beq file_error
 	
-	lda #128
+	rep #$20
+	.a16
+	lda #DEFAULT_READ_LEN
 	sta bytes_to_read
+	sep #$20
+	.a8
 	
 file_print_loop:
 	lda #<buff
-	sta r0L
+	sta r0
 	lda #>buff
-	sta r0H
-	
+	sta r0 + 1
+@file_read_loop:
 	lda bytes_to_read
-	sta r1L
-	lda #0
-	sta r1H
+	sta r1
+	lda bytes_to_read + 1
+	sta r1 + 1
 	
 	stz r2L
 
 	lda fd
 	jsr read_file
 	sta bytes_read
+	stx bytes_read + 1
 	
 	cpy #0
 	bne file_out_bytes
 	stz read_again
 	
+	rep #$20
+	.a16
+	lda bytes_read
 	cmp bytes_to_read
+	sep #$20
+	.a8
 	bcc @print_read_bytes
 	
 	ldx #1
 	stx read_again
 @print_read_bytes:
+	rep #$20
+	.a16
 	lda bytes_read
 	beq file_out_bytes
-	ldx #0
-@print_read_bytes_loop:
-	lda buff, X
-	jsr CHROUT
-	inx
-	cpx bytes_read
-	bcc @print_read_bytes_loop
+	sta r1
+	sep #$20
+	.a8
+	lda #1 ; STDOUT
+	jsr write_file
 	
 	lda read_again
-	bne file_print_loop
+	bne @file_read_loop
 	
 file_out_bytes:
+	sep #$20
+	.a8
 	lda fd
 	jsr close_file
 	
@@ -117,8 +132,8 @@ dont_need_close:
 	ldx #>error_msg_p1
 	jsr PRINT_STR
 	
-	lda $30
-	ldx $31
+	lda ptr0
+	ldx ptr0 + 1
 	jsr PRINT_STR
 	
 	lda #<error_msg_p2
@@ -145,10 +160,10 @@ argc:
 read_again:
 	.byte 0
 bytes_read:
-	.byte 0
+	.word 0
 
 bytes_to_read:
-	.byte 0
+	.word 0
 
 error_msg_p1:
 	.asciiz "Error opening file '"
@@ -156,5 +171,7 @@ error_msg_p1:
 error_msg_p2:
 	.asciiz "', code #:"
 
+.SEGMENT "BSS"
+
 buff:
-	.res 128
+	.res DEFAULT_READ_LEN
