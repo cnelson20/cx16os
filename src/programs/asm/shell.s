@@ -180,14 +180,15 @@ new_line:
 	stz stay_alive_after_input_eof
 	
 	jsr try_open_shrc
-	bne :++ ; if was opened, branchtr
+	bne @no_exit_after_exec
 	:
 	
-	lda next_fd
-	cmp #$FF
-	beq :+
 	ldx #0
 	lda next_fd
+	cmp #$FF
+	bne :+
+	lda #2
+	:
 	jsr move_fd
 	lda next_running_script
 	sta curr_running_script
@@ -195,7 +196,6 @@ new_line:
 	lda next_stay_alive_after_eof
 	sta stay_alive_after_input_eof
 	stz next_stay_alive_after_eof
-	:
 @no_exit_after_exec:
 	lda last_background_alive ; if last_background_alive proc died, set var to 0
 	beq :+
