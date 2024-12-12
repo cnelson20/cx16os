@@ -34,6 +34,9 @@ CURSOR_RIGHT = $1D
 CURSOR_UP = $91
 CURSOR_DOWN = $11
 
+PLOT_X = $0B
+PLOT_Y = $0C	
+	
 CARRIAGE_RETURN = $0D
 LINE_FEED = $0A
 NEWLINE = LINE_FEED
@@ -63,17 +66,16 @@ init:
 	cmp #0
 	beq :+
 	lda #1
-	rts
 	:
 	
 	jsr get_console_info
 	pha
 	txa
-	jsr try_parse_color_cmd
+	jsr color_cmd
 	lda #SWAP_COLORS
-	jsr try_parse_color_cmd
+	jsr color_cmd
 	pla
-	jsr try_parse_color_cmd
+	jsr color_cmd
 	
 	lda r0
 	sta TERM_WIDTH
@@ -117,8 +119,6 @@ init:
 	stx vera_layerl_vscroll
 	lda #$80
 	sta vera_layer1_mapbase
-	
-	stp
 @loop:
 	ldx CHROUT_BUFF_READ_PTR
 	cpx CHROUT_BUFF_WRITE_PTR
@@ -128,13 +128,17 @@ init:
 	:
 	
 	phx
+	rep #$20
 	lda chrout_ringbuff, X
+	sta pid_printing - 1
+	sep #$20
 	beq @null_char
 	pha
 	jsr print_chr_to_screen
 	pla
 @null_char:
-	sta last_char_parsed
+	ldx pid_printing
+	sta last_char_parsed, X
 	
 	rep #$20
 	.a16
@@ -151,6 +155,19 @@ init:
 	bra @loop
 
 print_chr_to_screen:
+	pha
+	ldx pid_printing
+	lda last_char_parsed, X
+	cmp #PLOT_X
+	bcc :+
+	cmp #PLOT_Y + 1
+	bcs :+
+	tay
+	pla
+	jmp handle_plot
+	:	
+	pla
+	
 	pha
 	cmp #$7F
 	beq @non_printable_char
@@ -175,60 +192,110 @@ print_chr_to_screen:
 	
 	jmp inc_cursor_x
 @non_printable_char:
-	pla ; Try to order these compares by frequency to speed up checks
-	cmp #NEWLINE
-	bne :+
-	jmp handle_newline
-	:
-	cmp #CARRIAGE_RETURN
-	bne :+
-	stz cursor_x
-	rts
-	:
-	
-	pha ; Check all the color cmds
-	jsr try_parse_color_cmd
-	cmp #0
-	bne :+ ; didn't find a color cmd
+	lda #0 ; clear high byte of .C
+	xba
 	pla
-	rts
-	:
+	pha
+	asl A
+	tax
 	pla
+	bmi :+
+	jmp (ctrl_chars_table_0, X)
+	:
+	jmp (ctrl_chars_table_1, X)
+
+; takes either PLOT_X/PLOT_Y in .YL, and a position in .A
+handle_plot:
+	sep #$10
+	rep #$10 ; clear high byte of .Y
+	cpy #PLOT_X
+	bne @plot_y
+@plot_x:
+	cmp TERM_WIDTH
+	bcs :+
+	sta cursor_x
+	:	
+	rts
+@plot_y:
+	cmp TERM_HEIGHT
+	bcs :+
+	sta cursor_y
+	:	
+	rts
 	
-	cmp #$93 ; CLEAR
+ctrl_chars_table_0:
+	.word do_nothing, swap_colors, do_nothing, do_nothing
+	.word do_nothing, color_cmd, do_nothing, bell
+	.word do_nothing, tab, handle_newline, plot_x
+	.word plot_y, carriage_return, do_nothing, do_nothing
+	.word do_nothing, cursor_down, do_nothing, home
+	.word do_nothing, do_nothing, do_nothing, do_nothing
+	.word do_nothing, do_nothing, do_nothing, do_nothing
+	.word color_cmd, color_cmd, color_cmd, color_cmd
+.assert (* - ctrl_chars_table_0) = 64, error, "jump table is wrong size!"
+
+ctrl_chars_table_1:
+	.word do_nothing, color_cmd, do_nothing, do_nothing
+	.word do_nothing, do_nothing, do_nothing, do_nothing
+	.word do_nothing, do_nothing, do_nothing, do_nothing
+	.word do_nothing, do_nothing, do_nothing, do_nothing
+	.word color_cmd, cursor_up, do_nothing, clear_screen
+	.word do_nothing, color_cmd, color_cmd, color_cmd
+	.word color_cmd, color_cmd, color_cmd, color_cmd
+	.word color_cmd, cursor_left, color_cmd, color_cmd
+.assert (* - ctrl_chars_table_1) = 64, error, "jump table is wrong size!"
+	
+tab:
+	lda #0
+	xba
+	lda cursor_x
+	and #%11
 	bne :+
-	stz cursor_x
+	lda #4
+	:
+	tax
+@space_loop:	
+	phx
+	jsr print_chr_to_screen
+	plx
+	dex
+	bne @space_loop
+	rts
+	
+home:
 	stz cursor_y
-	jmp clear_screen
-	:
-	
-	cmp #CURSOR_LEFT
-	bne :+
-	lda cursor_x
-	beq @return
-	dec cursor_x
-	bra @return
-	:
-	
-	cmp #CURSOR_RIGHT
-	bne :+
-	jmp inc_cursor_x
-	:
-	
-	cmp #CURSOR_UP
-	bne :+
-	lda cursor_x
-	beq @return
-	dec cursor_x
-	bra @return
-	:
-	
-	cmp #CURSOR_DOWN
-	bne :+
-	jmp inc_cursor_y
-	:
-@return:
+carriage_return:
+	stz cursor_x
+plot_x:
+plot_y:
+do_nothing:
 	rts
+
+bell:
+	lda #3
+	jsr $FFD2
+	rts
+	
+cursor_left:
+	lda cursor_x
+	beq :+
+	dec cursor_x
+	:
+	rts
+	
+cursor_right:
+	jmp inc_cursor_x
+
+cursor_up:
+	lda cursor_x
+	beq :+
+	dec cursor_x
+	:
+	rts
+
+cursor_down:
+	jmp inc_cursor_y
+
 
 inc_cursor_x:
 	lda cursor_x
@@ -258,8 +325,12 @@ inc_cursor_y:
 	sta screen_scroll_offset
 	; clc
 	pha
+	sep #$20
+	.a8
 	lda cursor_y
 	jsr clear_term_row
+	rep #$20
+	.a16
 	pla
 	ldx character_height_shifts
 	:
@@ -271,9 +342,7 @@ inc_cursor_y:
 	.a8
 	rts
 
-try_parse_color_cmd:
-	cmp #1 ; SWAP_COLORS
-	bne :+
+swap_colors:
 	lda cursor_color
 	asl A
 	adc #$80
@@ -284,8 +353,8 @@ try_parse_color_cmd:
 	sta cursor_color
 	lda #0
 	rts
-	:
-	
+
+color_cmd:	
 	cmp #5 ; WHITE
 	bne :+
 	lda #VERA_COLOR_WHITE
@@ -362,7 +431,6 @@ try_parse_color_cmd:
 	jmp @set_term_color
 	:
 	
-	
 	lda #1
 	rts	
 @set_term_color:	
@@ -377,6 +445,10 @@ try_parse_color_cmd:
 	rts
 
 clear_screen:
+	ldx #0
+	stx cursor_x
+	stx cursor_y
+	
 	lda #0
 	:
 	pha
@@ -419,7 +491,7 @@ screen_scroll_offset:
 	.word 0
 
 last_char_parsed:
-	.byte 0
+	.res 256, 0
 
 .SEGMENT "BSS"	
 
@@ -431,6 +503,9 @@ TERM_HEIGHT:
 TERM_ROW_OFFSET:
 	.word 0
 
+pid_printing := * + 1
+	.res 2 + 1
+	
 character_height_shifts:
 	.word 0
 
@@ -441,5 +516,7 @@ CHROUT_BUFF_WRITE_PTR := chrout_buff_info + 2
 
 chrout_buff_size:
 	.word 0
+
+.assert * < $B000, error, "Out of memory!"
 	
 chrout_ringbuff := $B000
