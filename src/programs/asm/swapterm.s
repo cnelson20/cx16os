@@ -587,8 +587,8 @@ flush_char_actions:
 
 char_flush_buff_table0:
 	.byte 1, 0, 0, 0, 0, 0, 0, 0 ; 0 = flush buffer only
-	.byte 0, 0, 0, 0, 0, 0, 0, 0
-	.byte 0, 1, 0, 1, 0, 0, 0, 0 ; CURSOR_DOWN, HOME
+	.byte 0, 0, 0, 0, 0, 1, 0, 0 ; CARRIAGE_RETURN
+	.byte 0, 1, 0, 0, 0, 0, 0, 0 ; CURSOR_DOWN
 	.byte 0, 0, 0, 0, 0, 1, 0, 0 ; CURSOR_RIGHT
 char_flush_buff_table1:	
 	.byte 0, 0, 0, 0, 0, 0, 0, 0
