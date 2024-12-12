@@ -54,8 +54,6 @@ vera_data1 := $9F24
 vera_ctrl := $9F25
 vera_layer1_mapbase := $9F35
 
-REAL_CHROUT := $FFD2
-
 init:
 	jsr lock_vera_regs
 	cmp #0
