@@ -72,8 +72,7 @@ init:
 	pha
 	txa
 	jsr color_cmd
-	lda #SWAP_COLORS
-	jsr color_cmd
+	jsr swap_colors
 	pla
 	jsr color_cmd
 	
@@ -463,13 +462,14 @@ clear_term_row:
 	stz vera_addrl
 	clc
 	adc screen_scroll_offset
+	and TERM_ROW_OFFSET
 	sta vera_addrh
 	lda #$11
 	sta vera_addri
 	
 	lda #' '
 	xba
-	lda cursor_color	
+	lda cursor_color
 	ldx TERM_WIDTH
 @loop:
 	xba
