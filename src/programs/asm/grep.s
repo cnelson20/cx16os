@@ -266,7 +266,7 @@ activate_state_epsilon_transitions:
 	beq @end_loop
 	cmp #epsilon_transition
 	bne @not_epsilon
-	ldy #4
+	ldy #STATE_TGT_IND_OFFSET
 	lda (ptr2), Y
 	tax
 	sep #$20
@@ -310,7 +310,7 @@ activate_state_cons_transitions:
 	lda (ptr2)
 	beq @end_loop
 	sta ptr3
-	ldy #2
+	ldy #INDEX_ARG_OFFSET
 	lda (ptr2), Y
 	tax
 	sep #$20
@@ -323,7 +323,7 @@ activate_state_cons_transitions:
 	rep #$20
 	.a16
 	beq @not_match
-	ldy #4
+	ldy #STATE_TGT_IND_OFFSET
 	lda (ptr2), Y
 	tax
 	sep #$20
