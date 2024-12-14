@@ -1,5 +1,5 @@
 .include "routines.inc"
-.feature  c_comments
+.feature c_comments
 
 CARRIAGE_RETURN = $0D
 LINE_FEED = $0A
