@@ -1,5 +1,5 @@
-.feature c_comments
 .include "routines.inc"
+.feature c_comments
 
 /*
 scripter - cx16os v basic scripting language
