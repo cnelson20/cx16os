@@ -29,32 +29,58 @@ init:
 	.i16
 	
 	lda argc
-	cmp #2
-	bcs :+
-	lda #1
+	bne :+
+	lda #2
 	rts
 	:
 	
 	jsr get_next_arg
 	ldx args_pointer
+	jsr check_regex
 	jsr build_regex_from_str
 	cmp #0
 	beq :+
-	lda #1
+	lda #2 ; major error
 	rts
 	:
 	
+	stz exit_code
+	
+	lda argc
+	bne @file_loop
+	lda #<stdin_str
+	ldx #>stdin_str
+	bra :+
+@file_loop:
+	lda argc
+	beq @end_file_loop
 	jsr get_next_arg
-	ldx args_pointer
-	jsr match_str
+	lda args_pointer
+	ldx args_pointer + 1
+	:
+	jsr open_file
+	cmp #$FF
+	bne :+
+	lda #<file_err_str_p1
+	ldx #>file_err_str_p1
+	jsr print_str
+	lda args_pointer
+	ldx args_pointer + 1
+	jsr print_str
+	lda #<file_err_str_p2
+	ldx #>file_err_str_p2
+	jsr print_str
+	lda #1
+	sta exit_code
+	bra @file_loop
+	:
+	sta fd
 	
-	jsr GET_HEX_NUM
-	txa
-	jsr CHROUT
-	lda #NEWLINE
-	jsr CHROUT
+	jsr print_file_matches
+	bra @file_loop
+@end_file_loop:
 	
-	lda #0
+	lda exit_code
 	rts
 
 args_pointer:
@@ -62,7 +88,14 @@ args_pointer:
 argc:
 	.word 0
 
+fd:
+	.word 0
+exit_code:
+	.word 0
+
 get_next_arg:
+	dec argc
+	
 	ldx args_pointer
 	dex
 	:
@@ -73,6 +106,60 @@ get_next_arg:
 	stx args_pointer
 	rts
 
+stdin_str:
+	.asciiz "#stdin"
+
+print_file_matches:
+	lda #1
+	sta @still_read
+
+@read_file_loop:	
+	ldy #0
+	:
+	phy
+	ldx fd
+	jsr fgetc
+	ply
+	cpx #0
+	bne @out_bytes
+	cmp #NEWLINE
+	beq @newline
+	sta temp_buff, Y
+	iny
+	cpy #(temp_buff_end - temp_buff) - 1
+	bcc :-
+	bra @newline
+@out_bytes:
+	stz @still_read
+	cpy #temp_buff
+	beq @end_loop_iteration
+@newline:
+	lda #0
+	sta temp_buff, Y	
+	sty r1
+	
+	ldx #temp_buff
+	stx r0
+	jsr match_str
+	cmp #0
+	beq :+
+	lda #1
+	jsr write_file
+	lda #NEWLINE
+	jsr CHROUT
+	:
+
+@end_loop_iteration:	
+	lda @still_read ; should we loop back?
+	bne @read_file_loop
+	
+	lda fd
+	jsr close_file
+	rts
+	
+@still_read:
+	.byte 0
+
 TRANSITION_DATA_SIZE = STATE_TGT_IND_OFFSET + 2
 
 MATCH_FUNCTION_OFFSET = 0
@@ -80,7 +167,6 @@ INDEX_ARG_OFFSET = 2
 STATE_TGT_IND_OFFSET = 4
 
 match_str:
-	stp
 	stx ptr0
 	ldx #0
 	:
@@ -116,11 +202,8 @@ match_str:
 	bcc @follow_epsilons_loop
 	
 	; now check other rules that consume a char
-	lda @cons_char
-	sta r0
 	ldx #0
 	stx ptr1
-	stp
 @check_consumes_loop:
 	ldx ptr1
 	lda built_regex_activated, X
@@ -262,6 +345,72 @@ activate_state_cons_transitions:
 
 @cons_char:
 	.word 0
+
+check_regex:
+	ldy #temp_buff
+	lda $00, X
+	cmp #'^'
+	bne :+
+	inx
+	bra :++
+	:
+	lda #'.'
+	sta $00, Y
+	iny
+	lda #'*'
+	sta $00, Y
+	iny
+	:
+	sty ptr1
+	phx
+	jsr strlen
+	plx
+	rep #$20
+	mvn #$00, #$00
+	sep #$20
+	
+	dey
+	dey
+	sty ptr0
+	lda $00, Y
+	cmp #'$'
+	bne @not_dollar_term
+	ldx #0
+	bra :++
+	:
+	lda $00, Y
+	cmp #'\'
+	bne :++
+	inx
+	:
+	dey
+	cpy ptr1
+	bcs :--
+	:
+	txa
+	and #1
+	bne @not_dollar_term
+
+	; last char in str is a $
+	lda #0
+	ldy ptr0
+	sta $00, Y
+	bra @return
+@not_dollar_term:
+	ldy ptr0
+	iny
+	lda #'.'
+	sta $00, Y
+	iny
+	lda #'*'
+	sta $00, Y
+	iny
+	lda #0
+	sta $00, Y
+
+@return:
+	ldx #temp_buff
+	rts
 	
 build_regex_from_str:	
 	stx ptr0 ; store string
@@ -285,7 +434,6 @@ build_regex_from_str:
 @loop:
 	ldx @forward_index_ptr
 	beq :+
-	stp
 	lda ptr3
 	sta $00, X
 	:
@@ -318,7 +466,6 @@ build_regex_from_str:
 	:
 	cmp #'('
 	bne @not_open_paren
-	stp
 	ldx ptr2
 	lda ptr3
 	jsr add_epsilon_transition
@@ -403,9 +550,10 @@ build_regex_from_str:
 	pha ; push qualifier character
 	cmp #'+'
 	bne :+
+	ldx @forward_index_ptr
+	beq :++ ; if not set, don't add the epsilon transition
 	ldx #0
 	stx @forward_index_ptr
-	bra :++
 	:
 	; add epsilon transition
 	lda ptr3
@@ -575,6 +723,22 @@ normal_char_match_mapping:
 	:
 	rts
 
+; takes string in .X, returns strlen in .C
+strlen:
+	phy
+	ldy #$FFFF
+	dex
+	:
+	iny
+	inx
+	lda $00, X
+	bne :-
+	rep #$20
+	tya
+	sep #$20
+	ply
+	rts
+
 ;
 ; Different transition functions
 ;
@@ -590,14 +754,15 @@ match_single_char:
 
 match_dot:
 	cmp #CARRIAGE_RETURN
-	bne :+
+	bne :++
+	:
+	lda #0
 	rts
 	:
 	cmp #LINE_FEED
-	bne :+
-	rts
-	:
-	lda #0
+	beq :--
+	
+	lda #1
 	rts
 
 match_whitespace:
@@ -662,6 +827,10 @@ match_not_digit:
 	jsr match_digit
 	jmp invert_match
 
+match_any:
+	lda #1
+	rts
+
 ;
 ; epsilon_transition
 ; this is hardcoded, you need to use this epsilon
@@ -670,8 +839,22 @@ epsilon_transition:
 	lda #0
 	rts
 
+;
+; Error message
+;
+file_err_str_p1:
+	.asciiz "grep: "
+file_err_str_p2:
+	.byte ": No such file or directory", NEWLINE, 0
+
 	
 .SEGMENT "BSS"
+
+TEMP_BUFF_SIZE = 512
+
+temp_buff:
+	.res TEMP_BUFF_SIZE
+temp_buff_end:
 
 built_regex_activated:
 	.res 256
