@@ -38,6 +38,11 @@ init:
 	jsr get_next_arg
 	ldx args_pointer
 	jsr build_regex_from_str
+	cmp #0
+	beq :+
+	lda #1
+	rts
+	:
 	
 	jsr get_next_arg
 	ldx args_pointer
@@ -75,8 +80,9 @@ INDEX_ARG_OFFSET = 2
 STATE_TGT_IND_OFFSET = 4
 
 match_str:
+	stp
 	stx ptr0
-	ldx #1
+	ldx #0
 	:
 	stz built_regex_activated, X
 	stz built_regex_activated_next, X
@@ -110,8 +116,11 @@ match_str:
 	bcc @follow_epsilons_loop
 	
 	; now check other rules that consume a char
+	lda @cons_char
+	sta r0
 	ldx #0
 	stx ptr1
+	stp
 @check_consumes_loop:
 	ldx ptr1
 	lda built_regex_activated, X
@@ -137,6 +146,21 @@ match_str:
 	
 	jmp @match_str_outer_loop
 @end_loop:
+	; do epsilon loop one last time
+	ldx #0
+	stx ptr1
+	:
+	lda built_regex_activated, X
+	beq :+
+	jsr activate_state_epsilon_transitions
+	ldx ptr1
+	:
+	inx
+	stx ptr1
+	cpx built_regex_ptrs_list_size
+	bcc :--
+	
+	; if last state is activated, there is a match
 	ldx built_regex_ptrs_list_size
 	dex
 	lda built_regex_activated, X
@@ -239,22 +263,33 @@ activate_state_cons_transitions:
 @cons_char:
 	.word 0
 	
-build_regex_from_str:
+build_regex_from_str:	
 	stx ptr0 ; store string
 	ldx #built_regex_ptrs_list
 	stx ptr1 ; current state
-	ldx #0
-	stx ptr3 ; state index
 	ldx #built_regex_data
 	stx ptr2 ; current transition
 	stx built_regex_ptrs_list + 0
+	ldx #0
+	stx ptr3 ; state index
 	
-	stz built_regex_ptrs_list_size
-	stz built_regex_ptrs_list_size + 1
+	tsx
+	stx @store_stack_ptr
+	
+	ldx #0
+	stx built_regex_ptrs_list_size
+	stx @forward_index_ptr		
 	
 	stz @last_char_was_backslash
 	
 @loop:
+	ldx @forward_index_ptr
+	beq :+
+	stp
+	lda ptr3
+	sta $00, X
+	:
+	
 	ldx ptr0
 	lda $00, X
 	bne :+
@@ -263,18 +298,58 @@ build_regex_from_str:
 	inx
 	stx ptr0
 	
+	ldx ptr3
+	stx @backwards_reference_index
+	ldx #0
+	stx @forward_index_ptr
+	
 	ldx @last_char_was_backslash
 	beq :+
 	ldy #0
 	jsr backslash_char_mapping
 	bra @set_match_fxn
 	:
+@not_escaped_char:
 	cmp #'\'
 	bne :+
 	lda #1
 	sta @last_char_was_backslash
 	bra @loop
 	:
+	cmp #'('
+	bne @not_open_paren
+	stp
+	ldx ptr2
+	lda ptr3
+	jsr add_epsilon_transition
+	ldx ptr2
+	dex
+	dex
+	phx
+	ldx ptr3 ; transition index
+	phx
+	bra @loop
+@not_open_paren:
+	cmp #')'
+	bne @not_close_paren
+	ldx ptr0
+	lda $FFFE, X
+	cmp #'('
+	bne :++
+	:
+	lda #1 ; error
+	jmp @return
+	:
+	tsx
+	cpx @store_stack_ptr ; more )'s than ('s
+	beq :--
+	plx
+	stx @backwards_reference_index
+	plx
+	stx @forward_index_ptr
+	; check next quantifier
+	jmp @check_next_char
+@not_close_paren:
 	ldy #0
 	jsr normal_char_match_mapping
 	bra @set_match_fxn
@@ -315,6 +390,7 @@ build_regex_from_str:
 	ldx ptr0
 	lda $00, X
 	bne :+
+	jsr add_end_list_transition
 	bra @end_str
 	:
 	jsr is_quantifier_char
@@ -323,21 +399,29 @@ build_regex_from_str:
 	jmp @loop
 	:
 	inx
-	stx ptr0
+	stx ptr0	
 	pha ; push qualifier character
+	cmp #'+'
+	bne :+
+	ldx #0
+	stx @forward_index_ptr
+	bra :++
+	:
 	; add epsilon transition
 	lda ptr3
 	inc A
 	jsr add_epsilon_transition
+	:
 	; end of this state's transition list
 	jsr add_end_list_transition
 	pla
 	cmp #'*'
-	beq @star_qualifier
+	beq @star_or_plus_qualifier
+	cmp #'+'
+	beq @star_or_plus_qualifier	
 	jmp @loop
-@star_qualifier:
-	lda ptr3
-	dec A
+@star_or_plus_qualifier:
+	lda @backwards_reference_index
 	jsr add_epsilon_transition
 	jmp @loop
 	
@@ -345,14 +429,8 @@ build_regex_from_str:
 	ldx ptr2
 	stz $00, X
 	stz $01, X
-	inx
-	inx
-	stx ptr2
-	stz $00, X
-	stz $01, X
 	
-	lda ptr3
-	inc A
+	lda ptr3 ; off by one depending on whether the last character was followed by a qualifier
 	inc A
 	sta built_regex_ptrs_list_size
 	
@@ -365,9 +443,21 @@ build_regex_from_str:
 	sta $01, X
 	stz $02, X
 	stz $03, X
+	
+	lda #0
+@return:	
+	ldx @store_stack_ptr
+	txs
 	rts
 
 @last_char_was_backslash:
+	.word 0
+
+@store_stack_ptr:
+	.word 0
+@backwards_reference_index:
+	.word 0
+@forward_index_ptr:
 	.word 0
 
 add_epsilon_transition:
@@ -380,9 +470,10 @@ add_epsilon_transition:
 	sta $00, X
 	inx
 	
-	stz $00, X
+	lda #$EE ; dummy value to stand out when debugging
+	sta $00, X
 	inx
-	stz $00, X
+	sta $00, X
 	inx
 	
 	pla
@@ -417,6 +508,8 @@ is_quantifier_char:
 	cmp #'?'
 	beq @yes
 	cmp #'*'
+	beq @yes
+	cmp #'+'
 	beq @yes
 @no:	
 	lda #0
@@ -577,11 +670,6 @@ epsilon_transition:
 	lda #0
 	rts
 
-testing_regex:
-	.asciiz "a*b"
-
-testing_match_str:
-	.asciiz "aaaab"
 	
 .SEGMENT "BSS"
 
