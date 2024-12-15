@@ -354,7 +354,10 @@ check_regex:
 	inx
 	bra :++
 	:
-	lda #'.'
+	lda #'\'
+	sta $00, Y
+	iny
+	lda #'@'
 	sta $00, Y
 	iny
 	lda #'*'
@@ -399,7 +402,10 @@ check_regex:
 @not_dollar_term:
 	ldy ptr0
 	iny
-	lda #'.'
+	lda #'\'
+	sta $00, Y
+	iny
+	lda #'@'
 	sta $00, Y
 	iny
 	lda #'*'
@@ -709,6 +715,11 @@ backslash_char_mapping:
 	cmp #'W' ; \W
 	bne :+
 	ldy #match_not_word
+	rts
+	:
+	cmp #'@' ; \@
+	bne :+
+	ldy #match_any
 	rts
 	:
 	
