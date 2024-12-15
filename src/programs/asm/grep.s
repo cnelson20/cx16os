@@ -135,7 +135,16 @@ print_file_matches:
 	beq @end_loop_iteration
 @newline:
 	lda #0
-	sta temp_buff, Y	
+	sta temp_buff, Y
+	cpy #temp_buff
+	beq :+
+	dey
+	lda temp_buff, Y
+	cmp #CARRIAGE_RETURN
+	bne :+
+	lda #0
+	sta temp_buff, Y
+	:
 	sty r1
 	
 	ldx #temp_buff
