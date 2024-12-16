@@ -883,7 +883,6 @@ pass_pipe_other_process:
 	pla
 	sta pipe_table_write_end_pid, X
 	rts
-	:
 
 ;
 ; TODO for read and write: don't block forever if other end of pipe closes
