@@ -58,9 +58,12 @@ reset_display:
 	;ora #$20
 	;sta VERA::VIDEO
 
-	; reset mapbase for layer1
+	; reset config, vscroll, mapbase for layer1
+	lda #96
+	sta VERA::L1::CONFIG
 	lda #$D8 ; mapbase is at $1B000
 	sta VERA::L1::MAP_BASE
+	stz VERA::L1::VSCROLL
 
 	lda default_screen_mode
 	clc
