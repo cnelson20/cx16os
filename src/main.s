@@ -73,6 +73,20 @@ init:
 	jsr setup_kernal
 	jsr setup_interrupts
 	
+	; sync internal jiffy clock with i2c rtc
+	; rtc seconds are at device $6F, addr $00
+	ldx #$6F
+	ldy #$00
+	jsr clock_get_date_time
+	sta r0
+	:
+	ldx #$6F
+	ldy #$00
+	jsr clock_get_date_time
+	cmp r0
+	beq :-
+	stz internal_jiffy_counter
+	
 	lda #<shell_name ; load shell as first program
 	ldx #>shell_name
 	ldy #1
@@ -223,9 +237,15 @@ custom_irq_816_handler:
 	lda VERA::IRQ_FLAGS
 	and #$01
 	beq jump_default_handler
-
-	;lda current_program_id
-	;beq jump_default_handler
+	
+	; 1 vera frame has passed so increment int. jiffy timer
+	lda internal_jiffy_counter
+	inc A
+	cmp #60 ; jiffies in 1 second
+	bcc :+
+	lda #0
+	:
+	sta internal_jiffy_counter
 	
 	; Decrement time process has left to run
 	jsr dec_process_time
@@ -1588,6 +1608,11 @@ run_first_prog:
 ;
 ; some register stuff
 ;
+
+; global jiffy counter for get_time
+.export internal_jiffy_counter
+internal_jiffy_counter:
+	.word 0
 
 ; info about current process ;
 .export current_program_id
