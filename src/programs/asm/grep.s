@@ -140,10 +140,12 @@ print_file_matches:
 	beq :+
 	dey
 	lda temp_buff, Y
+	iny
 	cmp #CARRIAGE_RETURN
 	bne :+
 	lda #0
 	sta temp_buff, Y
+	dey
 	:
 	sty r1
 	
