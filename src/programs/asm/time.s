@@ -89,7 +89,6 @@ init:
 	jsr get_time
 	
 	; subtract jiffies
-	; jiffy counter is unique
 	sec
 	lda r0 + JIFFY_OFFSET
 	sbc start_time + JIFFY_OFFSET
