@@ -4,10 +4,10 @@
 
 | Address | Function name | Argument Registers | Return Registers | Registers trampled | C Wrapper Implemented? |
 |---------|---------------|--------------------|------------------|--------------------|:----------------------:|
-| $9D00 | [`getc / GETIN`](#9d00-getc) | | .A | .Y | &check; |
-| $9D03 | [`putc / CHROUT`](#9d03-putc) | .A | | | &check; |
+| $9D00 | [`getc / GETIN`](#9d00-getc) | | .A | .Y, r0, r1, r2 | &check; |
+| $9D03 | [`putc / CHROUT`](#9d03-putc) | .A | | r0, r1 | &check; |
 | $9D06 | [`exec`](#9d09-exec) | .AX, .Y, r0, r2 | .A | r1 | &cross; |
-| $9D09 | [`print_str`](#9d06-print_str) | .AX | | .Y | &check; |
+| $9D09 | [`print_str`](#9d06-print_str) | .AX | | .Y, r0, r1 | &check; |
 | $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .Y, r0 | .X | &cross; |
 | $9D0F | [`get_args`](#9d0f-get_args) | | .AX, .Y | | &mdash; |
 | $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | | | &cross; |
@@ -23,8 +23,8 @@
 | $9D30 | [`chdir`](#9d30-chdir) | .AX | .A | .Y | &check; |
 | $9D33-$9D5A | [`Extmem routines`](extmem.md) | | | | &mdash; |
 | $9D5D | [`wait_process`](#9d5d-wait_process) | .A | .A | .XY | &check; |
-| $9D60 | [`fgetc`](#9d60-fgetc) | .X | .A, .X | .Y | &cross; |
-| $9D63 | [`fputc`](#9d63-fputc) | .A, .X | .Y | .X | &cross; |
+| $9D60 | [`fgetc`](#9d60-fgetc) | .X | .A, .X | .Y, r0, r1, r2 | &cross; |
+| $9D63 | [`fputc`](#9d63-fputc) | .A, .X | .Y | .X, r0, r1, r2 | &cross; |
 | $9D66 | [`unlink`](#9d66-unlink) | .AX | .A | .Y | &mdash; |
 | $9D69 | [`rename`](#9d69-rename) | r0, r1 | .A | .XY | &check; |
 | $9D6C | [`copy_file`](#9d6c-copy_file) | r0, r1 | .A | .XY | &cross; |
