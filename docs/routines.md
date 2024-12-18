@@ -6,7 +6,7 @@
 |---------|---------------|--------------------|------------------|--------------------|:----------------------:|
 | $9D00 | [`getc / GETIN`](#9d00-getc) | | .A | .Y, r0, r1, r2 | &check; |
 | $9D03 | [`putc / CHROUT`](#9d03-putc) | .A | | r0, r1 | &check; |
-| $9D06 | [`exec`](#9d09-exec) | .AX, .Y, r0, r2 | .A | r1 | &cross; |
+| $9D06 | [`exec`](#9d09-exec) | .AX, .Y, r0, r2 | .A, .X | r1 | &cross; |
 | $9D09 | [`print_str`](#9d06-print_str) | .AX | | .Y, r0, r1 | &check; |
 | $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .Y, r0 | .X | &cross; |
 | $9D0F | [`get_args`](#9d0f-get_args) | | .AX, .Y | | &mdash; |
