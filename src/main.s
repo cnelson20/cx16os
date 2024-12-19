@@ -1044,10 +1044,10 @@ is_extended_bank:
 	dec $C000
 	cmp $C000
 	beq :+
-	lda #1
+	lda #0
 	bra @return
 	:
-	lda #0
+	lda #1
 @return:
 	sty ROM_BANK
 	ldy #1
