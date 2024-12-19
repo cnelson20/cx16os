@@ -1770,11 +1770,13 @@ CALL_copy_fd:
 	ldx #1
 	bra @exit
 
-;
-; returns a fd to the dir listing
-;
-.export load_dir_listing_extmem_ext
-load_dir_listing_extmem_ext:
+
+.export CALL_load_dir_listing_extmem
+CALL_load_dir_listing_extmem:
+	preserve_rom_run_routine_8bit load_dir_listing_extmem
+	rts
+
+load_dir_listing_extmem:
 	sta KZE1
 
 	jsr check_process_owns_bank

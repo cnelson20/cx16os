@@ -84,7 +84,11 @@ reset_display:
 	sta VERA::VSCALE
 	
 	lda #CLEAR
+	ldx ROM_BANK
+	stz ROM_BANK
 	jmp CHROUT
+	stx ROM_BANK
+	rts
 
 
 .export prog_using_vera_regs

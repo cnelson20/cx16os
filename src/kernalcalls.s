@@ -15,9 +15,8 @@
 .import kill_process_kernal
 .import is_valid_process
 
-.import load_dir_listing_extmem_ext
 .import CALL_open_file, CALL_close_file, CALL_read_file, CALL_write_file
-.import CALL_move_fd, CALL_copy_fd
+.import CALL_move_fd, CALL_copy_fd, CALL_load_dir_listing_extmem
 .import CALL_get_pwd, CALL_chdir, CALL_unlink, CALL_rename, CALL_copy_file, CALL_mkdir, CALL_rmdir
 
 .import PV_OPEN_TABLE
@@ -62,7 +61,7 @@ call_table:
 	jmp CALL_close_file ; $9D21
 	jmp CALL_read_file ; $9D24
 	jmp CALL_write_file ; $9D27
-	jmp load_dir_listing_extmem ; $9D2A
+	jmp CALL_load_dir_listing_extmem ; $9D2A
 	jmp CALL_get_pwd ; $9D2D
 	jmp CALL_chdir ; $9D30
 	jmp res_extmem_bank ; $9D33
@@ -427,17 +426,7 @@ hex_num_to_string:
 ; return val: .AX = 0 -> no process to kill, .X = 1 -> process .A killed
 ;	
 kill_process:
-	save_p_816_8bitmode
-	jsr kill_process_kernal
-	restore_p_816
-	rts
-
-;
-; File I/O routines
-;
-
-load_dir_listing_extmem:
-	run_routine_8bit load_dir_listing_extmem_ext
+	preserve_rom_run_routine_8bit kill_process_kernal
 	rts
 
 
