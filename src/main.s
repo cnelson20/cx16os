@@ -1102,7 +1102,10 @@ load_new_process:
 	sty KZES5
 	lda r0 + 0
 	sta KZES6
-	cnsta_word r2, KZES7
+	lda r2
+	sta KZES7
+	lda r2 + 1
+	sta KZES7 + 1
 
 	ldy #0
 	:
@@ -1322,9 +1325,12 @@ load_first_process_int:
 	
 	lda #1
 	sta r1
+	sta r0
 	ldy @new_bank
 	lda #<new_prog_args
 	ldx #>new_prog_args
+	stz r2
+	stz r2 + 1
 	jsr setup_process_info
 	
 	ldy @new_bank
