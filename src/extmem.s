@@ -35,12 +35,16 @@ setup_process_extmem_table:
 ; Zeros out those banks
 ; Returns 0 on error
 ;
-.export res_extmem_bank
+.export res_extmem_bank, res_bank_load_proc_entry_pt
+res_bank_load_proc_entry_pt:
+	save_p_816_8bitmode
+	bra :+
 res_extmem_bank:
 	save_p_816_8bitmode
-	set_atomic_st
 
 	lda #0
+	:	
+	set_atomic_st
 	jsr find_new_process_bank
 	cmp #0
 	beq :+
@@ -111,6 +115,11 @@ check_process_owns_bank:
 ;
 ; preserves .XY
 ;
+.export CALL_free_extmem_bank
+CALL_free_extmem_bank:
+	run_routine_8bit free_extmem_bank
+	rts
+
 free_extmem_bank:
 	jsr check_process_owns_bank
 	bne :+
@@ -124,21 +133,6 @@ free_extmem_bank:
 
 	plx
 	:
-	rts
-
-;
-; Release a process' extmem bank in .A
-;
-; preserves .XL, .YL
-;
-.export free_extmem_bank_extwrapper
-free_extmem_bank_extwrapper:
-	save_p_816_8bitmode
-	jsr free_extmem_bank
-	xba
-	lda #0
-	xba
-	restore_p_816
 	rts
 
 ;

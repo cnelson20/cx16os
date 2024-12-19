@@ -8,10 +8,12 @@
 .import strlen, strncpy_int
 .import setup_kernal_file_table, setup_process_file_table_int, close_process_files_int
 .import get_dir_filename_int
-.import clear_process_extmem_banks, setup_process_extmem_table, check_process_owns_bank
+.import clear_process_extmem_banks, setup_process_extmem_table, check_process_owns_bank, CALL_free_extmem_bank
 .import hex_num_to_string_kernal
 .import setup_system_hooks, release_all_process_hooks
 
+.import res_bank_load_proc_entry_pt
+.import CALL_close_file, CALL_read_file, CALL_open_file
 .import programs_last_printed_special_char, setup_process_display_vars, close_active_proc_stdin
 
 .import check_channel_status, load_process_entry_pt
@@ -92,14 +94,14 @@ init:
 	ldy #1
 	sty r0
 	sty r1
-	jsr load_new_process
+	jsr load_first_process_int
 	cmp #0 ; 0 = failure
 	bne @could_load_first_process
 	lda #$8F ; petscii
 	jsr CHROUT
 	ldx #0
 	:
-	lda incorrect_cpu_msg, X
+	lda load_error_msg, X
 	beq :+
 	jsr CHROUT
 	inx
@@ -417,7 +419,8 @@ custom_brk_handler:
 	rti
 
 brk_re_caller:
-	; sep #$30
+	accum_index_8_bit
+	stz ROM_BANK
 	lda current_program_id
 	ldx #RETURN_BRK
 	jmp program_exit
@@ -471,6 +474,7 @@ custom_nmi_handler:
 
 nmi_re_caller:
 	accum_index_8_bit
+	stz ROM_BANK
 	cli
 nmi_kill_proc:
 	stz nmi_queued
@@ -585,6 +589,7 @@ program_return_handler:
 	clc
 	xce
 	accum_index_8_bit
+	stz ROM_BANK
 	and #$7F ; zero high bit of return value
 	tax ; process return value in .A
 	lda #1
@@ -1088,19 +1093,166 @@ process_val_to_store:
 ;
 .export load_new_process
 load_new_process:
-	sty @arg_count
-	ldy RAM_BANK
-	sty @old_bank
+	push_zp_word KZES4
+	push_zp_word KZES5
+	push_zp_word KZES6
+	push_zp_word KZES7
+	sta KZES4
+	stx KZES4 + 1
+	sty KZES5
+	lda r0 + 0
+	sta KZES6
+	cnsta_word r2, KZES7
+
+	ldy #0
+	:
+	lda (KZES4), Y
+	sta new_prog_args, Y
+	beq :+
+	iny
+	bpl :-
+	:
+
+	lda #<new_prog_args
+	ldx #>new_prog_args
+	ldy #1
+	sei
+	jsr get_dir_filename_int
+	cli
+	lda #<new_prog_args
+	ldx #>new_prog_args
+	ldy #0
+	jsr CALL_open_file
+	cmp #NO_FILE
+	bne :+
+	lda #0
+	ldx #NO_SUCH_FILE
+	jmp @return
+	:
+	ldx current_program_id
+	stx RAM_BANK
+	stz STORE_PROG_IO_SCRATCH
+	stz STORE_PROG_IO_SCRATCH + 1
+	ldx #<STORE_PROG_IO_SCRATCH
+	stx r0
+	ldx #>STORE_PROG_IO_SCRATCH
+	stx r0 + 1
+	ldx #2
+	stx r1 ; read 2 bytes
+	stz r1 + 1
+	stz r2
+	pha
+	jsr CALL_read_file
+	pla
+	jsr CALL_close_file
+	lda #0
+	index_16_bit
+	.i16
+	ldx STORE_PROG_IO_SCRATCH
+	cpx #$EAEA
+	index_8_bit
+	.i8
+	bne :+
+	lda #1
+	:
+	jsr res_bank_load_proc_entry_pt
+	cmp #0
+	bne :+
+	lda #0
+	ldx #NO_EXT_BANKS
+	jmp @return
+	:
+	sta @new_bank
+	lda #<new_prog_args ; reopen file
+	ldx #>new_prog_args
+	ldy #0
+	jsr CALL_open_file
+	ldx @new_bank
+	stx r2
+	ldx #<PROG_LOAD_ADDRESS
+	stx r0
+	ldx #>PROG_LOAD_ADDRESS
+	stx r0 + 1
+	ldx #<($10000 - PROG_LOAD_ADDRESS)
+	stx r1
+	ldx #>($10000 - PROG_LOAD_ADDRESS)
+	stx r1 + 1
+	pha
+	jsr CALL_read_file
+	pla
+	jsr CALL_close_file
 	
-	sta KZP0
-	sta user_prog_args_addr
-	stx KZP0 + 1
-	stx user_prog_args_addr + 1
+	lda current_program_id
+	sta RAM_BANK
+	sta ROM_BANK
+	ldy #0
+	ldx KZES5
+	:
+	lda (KZES4), Y
+	iny
+	cpy #127
+	bcs :+
+	cmp #0
+	bne :-
+	dex
+	bne :-
+	:
+	lda #0
+	sta (KZES4), Y
+	sty r1 + 1
+
+	:
+	lda (KZES4), Y
+	sta new_prog_args, Y
+	dey
+	bpl :-
+	
+	lda @new_bank
+	jsr CALL_free_extmem_bank
+	stz ROM_BANK
+	
+	lda KZES5
+	sta r1
+	lda KZES6
+	sta r0 + 0
+	stz r0 + 1
+	lda KZES7
+	sta r2 + 0
+	lda KZES7 + 1
+	sta r2 + 1
+	lda #<new_prog_args
+	ldx #>new_prog_args
+	ldy @new_bank
+	jsr setup_process_info
+	
+	ldy @new_bank
+	lda process_table, Y
+	tax
+	tya ; pid in .A
+	bra @return
+@return:
+	accum_index_8_bit
+	.a8
+	.i8
+	ply_word KZES7
+	ply_word KZES6
+	ply_word KZES5
+	ply_word KZES4
+	ldy current_program_id
+	sty RAM_BANK
+	sty ROM_BANK
+	rts
+@new_bank:
+	.byte 0
+
+load_first_process_int:
+	sta KZPS4
+	stx KZPS4 + 1
 	
 	; fill new_prog_args with name of prg
 	ldy #0
 	:
-	lda (KZP0), Y
+	lda (KZPS4), Y
 	sta new_prog_args, Y
 	beq :+
 	iny
@@ -1146,17 +1298,10 @@ load_new_process:
 	:
 	
 	; rewrite prog_args with args, not just name
-	lda @old_bank
-	sta RAM_BANK
-	lda user_prog_args_addr
-	sta KZP0 
-	lda user_prog_args_addr + 1
-	sta KZP0 + 1
-	
 	ldy #0
-	ldx @arg_count
+	ldx #1
 	:
-	lda (KZP0), Y
+	lda (KZPS4), Y
 	iny
 	cpy #127
 	bcs :+
@@ -1166,20 +1311,17 @@ load_new_process:
 	bne :-
 	:
 	lda #0
-	sta (KZP0), Y
-	
-	sty @total_args_length
+	sta (KZPS4), Y
+	sty r1 + 1
+
 	:
-	lda (KZP0), Y
+	lda (KZPS4), Y
 	sta new_prog_args, Y
 	dey
 	bpl :-
 	
-	
-	lda @arg_count
+	lda #1
 	sta r1
-	lda @total_args_length
-	sta r1 + 1
 	ldy @new_bank
 	lda #<new_prog_args
 	ldx #>new_prog_args
@@ -1190,16 +1332,9 @@ load_new_process:
 	tax
 	tya ; pid in .A
 	rts
-@arg_count:
-	.byte 0
-@total_args_length:
-	.byte 0
-@old_bank:
-	.byte 0
 @new_bank:
 	.byte 0
-user_prog_args_addr:
-	.word 0
+
 new_prog_args:
 	.res MAX_FILELEN, 0
 

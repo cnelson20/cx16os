@@ -23,7 +23,7 @@
 
 .import res_extmem_bank, set_extmem_rbank, set_extmem_wbank, set_extmem_rptr, set_extmem_wptr
 .import readf_byte_extmem_y, vread_byte_extmem_y, writef_byte_extmem_y, vwrite_byte_extmem_y
-.import free_extmem_bank_extwrapper, share_extmem_bank, memmove_extmem, fill_extmem
+.import CALL_free_extmem_bank, share_extmem_bank, memmove_extmem, fill_extmem
 .import pread_extmem_xy, pwrite_extmem_xy
 .import open_pipe_ext, write_pipe_ext
 
@@ -69,7 +69,7 @@ call_table:
 	jmp set_extmem_rptr ; $9D39
 	jmp set_extmem_wptr ; $9D3C
 	jmp readf_byte_extmem_y ; $9D3F
-	jmp free_extmem_bank_extwrapper ; $9D42
+	jmp CALL_free_extmem_bank ; $9D42
 	jmp vread_byte_extmem_y ; $9D45
 	jmp writef_byte_extmem_y ; $9D48
 	jmp share_extmem_bank ; $9D4B
