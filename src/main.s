@@ -337,10 +337,13 @@ irq_re_caller:
 	lda current_program_id
 	sta RAM_BANK
 	lda STORE_PROG_RAMBANK
+	ldy STORE_PROG_ROMBANK
 	plx
 	stx RAM_BANK
+	cpy #FIRST_CART_BANK
+	bcc :+
 	cmp #FIRST_PROGRAM_BANK
-	bcc :+ ; branch if = 0 or 1
+	bcc :+
 	tax
 	and #%11111110
 	cmp current_program_id
@@ -359,8 +362,6 @@ irq_re_caller:
 	lda STORE_PROG_ADDR + 1
 	cmp #$A0 ; process running in code space 
 	bcc :+
-	cmp #$C0
-	bcs :+
 	; process trampled into another bank, need to kill
 	txa ; STORE_PROG_RAMBANK
 	ldx #RETURN_PAGE_ENTERED
@@ -1209,7 +1210,7 @@ setup_process_info:
 	ply
 	sty RAM_BANK
 	sty STORE_PROG_RAMBANK
-	stz STORE_PROG_ROMBANK
+	sty STORE_PROG_ROMBANK
 	
 	push_ax
 	jsr strlen
@@ -1581,7 +1582,8 @@ switch_control_bank:
 ; transfer control to first program in process table (when starting up)
 ;
 run_first_prog:
-	lda #FIRST_PROGRAM_BANK
+	stp
+	lda active_process
 	sta RAM_BANK
 	sta current_program_id
 	
@@ -1589,12 +1591,12 @@ run_first_prog:
 	lda process_priority_table, X
 	sta schedule_timer
 	
-	lda STORE_PROG_STACK + $FE
-	sta $0100 + $FE
-	lda STORE_PROG_STACK + $FF
-	sta $0100 + $FF
+	lda STORE_PROG_ROMBANK
+	sta ROM_BANK
 	
 	rep #$10 ; make X 16 bits
+	ldx STORE_PROG_STACK + $FE
+	stx $0100 + $FE
 	ldx STORE_PROG_SP
 	txs
 	sep #$10 ; make X 8 bits

@@ -68,6 +68,7 @@ call_table_mem_start := $9D00
 
 KERNAL_FILENUM = 2
 
+FIRST_CART_BANK = $20
 FIRST_PROGRAM_BANK = $10
 MAX_ALIVE_PROCESSES = (($100 - $10) / 2)
 
