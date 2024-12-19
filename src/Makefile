@@ -6,6 +6,10 @@ SOURCES = main.s kernalcalls.s helpers.s helpers_int.s fileops.s extmem.s ipc.s 
 INCS = prog.inc cx16.inc macs.inc
 FLAGS = -t cx16 -m os.map -Ln os.lbl
 
+ifneq (, $(shell which mcopy))
+USE_MTOOLS=t
+endif
+
 all: build
 
 os.prg: $(SOURCES) $(INCS)
@@ -48,9 +52,16 @@ ifeq ($(OS),Windows_NT)
 	diskpart < scripts/diskpart_detach.in
 	qemu-img convert -f vhdx "C:\x16image.vhdx" -O raw cx16os.img
 else
+ifeq ($(USE_MTOOLS),"")
 	sh ./scripts/mount_sd.sh cx16os.img mnt_dir/
 	-sudo mkdir mnt_dir/OS/
 	sudo cp mnt/* -r mnt_dir/OS/
 	sh ./scripts/close_sd.sh mnt_dir/
+else
+	-mkdir mnt_dir/
+	-mkdir mnt_dir/OS/
+	cp mnt/* -r mnt_dir/OS/
+	mcopy -i cx16os.img@@1M -smno mnt_dir/* ::
+endif
 endif
 
