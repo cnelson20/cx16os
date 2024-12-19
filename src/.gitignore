@@ -29,3 +29,4 @@ mnt_dir/
 # x16 program files
 *.prg
 cx16os.img
+*.nvram
