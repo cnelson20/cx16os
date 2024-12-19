@@ -265,12 +265,12 @@ parse_num_kernal_ext:
 	
 	ldy #0
 	lda (KZE0), Y
-    cmp #'$' ; '$'
-    beq @base_16
+	cmp #'$' ; '$'
+	beq @base_16
     
 	; check for 0x ;
 	cmp #'0' ; '0' 
-    bne @base_10	
+	bne @base_10
 	iny
 	lda (KZE0), Y
 	cmp #'x'
@@ -522,6 +522,7 @@ memcpy_banks_ext:
 	cpx #0
 	beq @end
 	:
+	phy_byte ROM_BANK
 
 	ldy KZE3
 	sty KZE2 + 1
@@ -536,11 +537,13 @@ memcpy_banks_ext:
 @loop:
 	lda KZE2 + 1
 	sta RAM_BANK
+	sta ROM_BANK
 	lda $00, X
-	pha ; save
+	xba  ; save
 	lda KZE2
 	sta RAM_BANK
-	pla
+	sta ROM_BANK
+	xba
 	sta $00, Y ; store back in new loc in other bank
 	
 	inx
@@ -549,6 +552,7 @@ memcpy_banks_ext:
 	dec KZE3 ; bytes to copy
 	accum_8_bit
 	bne @loop
+	pla_byte ROM_BANK
 @end:
 	restore_p_816
 	rts
@@ -599,24 +603,27 @@ rev_str:
 ;
 .export strcmp_banks_ext
 strcmp_banks_ext:
+	phy_byte ROM_BANK
 	ldy #0
 @comp_loop:
 	ldx KZE2
 	stx RAM_BANK
+	stx ROM_BANK
 	lda (KZE0), Y
 	ldx KZE3
 	stx RAM_BANK
+	stx ROM_BANK
 	sec
 	sbc (KZE1), Y
-	bne @not_eq
+	bne @ret
 	
 	lda (KZE1), Y
-	beq @eq
+	beq @ret
 	
 	iny
 	bra @comp_loop
-@eq:
-	rts
-@not_eq:
+@ret:
+	ply_byte ROM_BANK
 	; .A already holds different b/w chars
+	ora #$00
 	rts
