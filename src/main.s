@@ -1007,12 +1007,17 @@ find_next_process:
 ;
 .export find_new_process_bank
 find_new_process_bank:
+	tay
 	lda #FIRST_PROGRAM_BANK
 	tax
 @loop:
 	lda process_table, X
 	bne @id_taken
-
+	cpy #0
+	beq @found
+	jsr is_extended_bank
+	cmp #0
+	beq @id_taken ; not extended bank, need to keep going
 @found:
 	txa
 	rts
@@ -1024,6 +1029,23 @@ find_new_process_bank:
 	bra @loop
 @not_found:
 	lda #0
+	rts
+
+is_extended_bank:
+	ldy ROM_BANK
+	stx ROM_BANK
+	lda $C000
+	dec A
+	dec $C000
+	cmp $C000
+	beq :+
+	lda #1
+	bra @return
+	:
+	lda #0
+@return:
+	sty ROM_BANK
+	ldy #1
 	rts
 
 ;
@@ -1105,7 +1127,8 @@ load_new_process:
 	ldx #8 ; device 8 (sd card / floppy)
 	ldy #2 ; load without two-byte header
 	jsr SETLFS
-	
+
+	lda #0
 	jsr find_new_process_bank
 	sta @new_bank
 	sta RAM_BANK

@@ -39,7 +39,8 @@ setup_process_extmem_table:
 res_extmem_bank:
 	save_p_816_8bitmode
 	set_atomic_st
-	
+
+	lda #0
 	jsr find_new_process_bank
 	cmp #0
 	beq :+
@@ -56,7 +57,10 @@ res_extmem_bank:
 	dec RAM_BANK
 
 	txa
-
+	:
+	ldx current_program_id
+	stx ROM_BANK
+	
 	clear_atomic_st
 	restore_p_816
 	rts
