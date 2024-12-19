@@ -1,0 +1,18 @@
+ROM-TODO
+
+shouldn't be affected:
+----------------------
+
+CALL_get_sys_info
+CALL_detach_self
+CALL_set_stdin_read_mode
+
+fully fixed:
+------------
+
+need to test:
+------------
+
+CALL_get_console_info
+CALL_set_console_mode
+CALL_get_time

@@ -40,8 +40,9 @@
 .import current_program_id
 .import file_table_count
 
+.import screen_mode_wrapper
 .import programs_fore_color_table, programs_back_color_table
-.import getchar_from_keyboard, set_stdin_read_mode
+.import CALL_set_stdin_read_mode
 
 .export call_table
 call_table:
@@ -98,26 +99,20 @@ call_table:
 	jmp unlock_vera_regs ; $9D96
 	jmp bin_bcd16_ext ; $9D99
 	jmp move_fd ; $9D9C
-	jmp get_time ; $9D9F
-	jmp detach_self ; $9DA2
+	jmp CALL_get_time ; $9D9F
+	jmp CALL_detach_self ; $9DA2
 	jmp active_table_lookup ; $9DA5
 	jmp copy_fd ; $9DA8
-	jmp get_sys_info ; $9DAB
+	jmp CALL_get_sys_info ; $9DAB
 	jmp pread_extmem_xy ; $9DAE
 	jmp pwrite_extmem_xy ; $9DB1
-	jmp get_console_info ; $9DB4
-	jmp set_console_mode ; $9DB7
-	jmp set_stdin_read_mode ; $9DBA
-	jmp pipe_call ; $9DBD
+	jmp CALL_get_console_info ; $9DB4
+	jmp CALL_set_console_mode ; $9DB7
+	jmp CALL_set_stdin_read_mode ; $9DBA
+	jmp CALL_pipe ; $9DBD
 	.res 3, $FF
 .export call_table_end
 call_table_end:
-
-.macro run_routine_8bit addr
-	save_p_816_8bitmode
-	jsr addr
-	restore_p_816
-.endmacro
 
 ;
 ; setup_call_table
@@ -588,9 +583,12 @@ surrender_process_time_extwrapper:
 ;
 ; get_time: wrapper for kernal routine
 ;
-get_time:
+CALL_get_time:
 	save_p_816_8bitmode
+	pha_byte ROM_BANK
+	stz ROM_BANK
 	jsr clock_get_date_time
+	pla_byte ROM_BANK
 	lda r3 + 1
 	cmp #7
 	bne :+
@@ -602,7 +600,7 @@ get_time:
 	restore_p_816
 	rts
 
-detach_self:
+CALL_detach_self:
 	save_p_816_8bitmode
 
 	pha
@@ -628,9 +626,9 @@ detach_self:
 	rts
 
 ;
-; get_sys_info
+; CALL_get_sys_info
 ;
-get_sys_info:
+CALL_get_sys_info:
 	save_p_816_8bitmode
 	
 	ldx vera_version_number
@@ -654,13 +652,12 @@ get_sys_info:
 	rts
 
 ;
-; get_console_info
+; CALL_get_console_info
 ;
-.export get_console_info
-get_console_info:
+CALL_get_console_info:
 	save_p_816_8bitmode
 	sec
-	jsr screen_mode
+	jsr screen_mode_wrapper
 	stx r0
 	sty r0 + 1
 	
@@ -673,8 +670,10 @@ get_console_info:
 	restore_p_816
 	rts
 
-.export set_console_mode
-set_console_mode:
+;
+; CALL_set_console_mode
+;
+CALL_set_console_mode:
 	save_p_816_8bitmode
 	ldy prog_using_vera_regs
 	beq :+
@@ -686,10 +685,10 @@ set_console_mode:
 	sta KZE0
 	stx KZE1
 	clc
-	jsr screen_mode
+	jsr screen_mode_wrapper
 	set_atomic_st
 	sec
-	jsr screen_mode
+	jsr screen_mode_wrapper
 	clear_atomic_st
 	cmp KZE0
 	beq @screen_mode_changed
@@ -723,7 +722,10 @@ set_console_mode:
 	restore_p_816
 	rts
 
-pipe_call:
+;
+; CALL_pipe
+;
+CALL_pipe:
 	run_routine_8bit open_pipe_ext
 	rts
 

@@ -27,13 +27,24 @@ default_screen_mode:
 default_vscale:
 	.byte 0
 
+.export screen_mode_wrapper
+screen_mode_wrapper:
+	phx_byte ROM_BANK
+	stx ROM_BANK
+	stz ROM_BANK
+	jsr screen_mode
+	xba
+	pla_byte ROM_BANK
+	xba
+	rts
+
 ;
 ; sets up some display vars
 ;
 .export setup_display
 setup_display:
 	sec
-	jsr screen_mode
+	jsr screen_mode_wrapper
 	sta default_screen_mode
 	stz VERA::CTRL
 	lda VERA::VSCALE
@@ -67,7 +78,7 @@ reset_display:
 
 	lda default_screen_mode
 	clc
-	jsr screen_mode
+	jsr screen_mode_wrapper
 	stz VERA::CTRL
 	lda default_vscale
 	sta VERA::VSCALE
@@ -597,10 +608,10 @@ close_active_proc_stdin:
 	bra @return
 	
 ;
-; set_stdin_read_mode
+; CALL_set_stdin_read_mode
 ;
-.export set_stdin_read_mode
-set_stdin_read_mode:
+.export CALL_set_stdin_read_mode
+CALL_set_stdin_read_mode:
 	save_p_816_8bitmode
 	cmp #0
 	bne :+

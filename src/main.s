@@ -1582,7 +1582,6 @@ switch_control_bank:
 ; transfer control to first program in process table (when starting up)
 ;
 run_first_prog:
-	stp
 	lda active_process
 	sta RAM_BANK
 	sta current_program_id
@@ -1594,17 +1593,18 @@ run_first_prog:
 	lda STORE_PROG_ROMBANK
 	sta ROM_BANK
 	
-	rep #$10 ; make X 16 bits
+	index_16_bit ; make X 16 bits
 	ldx STORE_PROG_STACK + $FE
 	stx $0100 + $FE
 	ldx STORE_PROG_SP
 	txs
-	sep #$10 ; make X 8 bits
+	index_8_bit ; make X 8 bits
 	
 	lda STORE_REG_STATUS
 	pha
 	plp
 	
+	stp
 	stz irq_already_triggered
 	jmp (STORE_PROG_ADDR)
 

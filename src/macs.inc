@@ -108,14 +108,26 @@
 	.endif
 .endmacro
 
+.macro phx_byte addr
+	.assert .isize = 8, error, "Y register 8 bits"
+	ldx addr
+	phx
+.endmacro
+
+.macro plx_byte addr
+	.assert .isize = 8, error, "Y register not 8 bits"
+	plx
+	stx addr
+.endmacro
+
 .macro phy_byte addr
-	.assert .asize = 8, error, "Accumulator not 8 bits"
+	.assert .isize = 8, error, "Y register 8 bits"
 	ldy addr
 	phy
 .endmacro
 
 .macro ply_byte addr
-	.assert .asize = 8, error, "Accumulator not 8 bits"
+	.assert .isize = 8, error, "Y register not 8 bits"
 	ply
 	sty addr
 .endmacro
@@ -279,4 +291,26 @@
 .macro mv_y_16bit_ax
 	tyx
 	mv_x_16bit_ax
+.endmacro
+
+;
+; Macros to run a routine with different flags/registers set
+;
+.macro run_routine_8bit addr
+	save_p_816_8bitmode
+	jsr addr
+	restore_p_816
+.endmacro
+
+.macro preserve_rom_run_routine_8bit addr
+	save_p_816_8bitmode
+	xba
+	pha_byte ROM_BANK
+	stz ROM_BANK
+	xba
+	jsr addr
+	xba
+	pla_byte ROM_BANK
+	xba
+	restore_p_816
 .endmacro
