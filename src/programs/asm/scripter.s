@@ -188,6 +188,13 @@ preparse_loop:
 	ldx #1
 	stx curr_line_num
 parse_file_loop:
+	lda input_eof_interactive_mode
+	beq :+
+	stz interactive_mode
+	lda #0
+	jmp terminate
+	:
+
 	jsr get_next_line ; either from the file in mem or from the user in interactive_mode
 	
 	lda echo_commands
@@ -1468,9 +1475,15 @@ get_line_from_user:
 	jsr fgetc
 	cpx #0
 	beq :+
+	lda #1
+	sta input_eof_interactive_mode
+	plx
+	cpx #0
+	bne @newline
 	lda #NEWLINE
 	jsr CHROUT
 	stz interactive_mode
+	lda #0
 	jmp terminate
 	:
 	cmp #0
@@ -3044,6 +3057,8 @@ total_num_lines:
 echo_commands:
 	.byte 0
 interactive_mode:
+	.byte 0
+input_eof_interactive_mode:
 	.byte 0
 interactive_mode_escaped_line:
 	.byte 0
