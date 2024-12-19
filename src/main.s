@@ -95,7 +95,7 @@ init:
 	jsr load_new_process
 	cmp #0 ; 0 = failure
 	bne :+
-	lda #$8F
+	lda #$8F ; petscii
 	jsr CHROUT
 	ldax_addr load_error_msg
 	jsr print_str_ext
@@ -107,9 +107,11 @@ init:
 	rts
 
 return_to_basic:
+	jsr reset_interrupts
 	sec
 	xce
 	clc
+	stz ROM_BANK
 	jmp enter_basic
 
 incorrect_cpu_msg:
@@ -272,11 +274,6 @@ custom_irq_816_handler:
 	sta STORE_PROG_RAMBANK
 	sta @curr_ram_bank_in_use
 	
-	lda ROM_BANK
-	sta STORE_PROG_ROMBANK
-	
-	stz ROM_BANK
-	
 	tsc
 	sec 
 	adc #$14
@@ -316,6 +313,9 @@ custom_irq_816_handler:
 	lda $102, X
 	sta STORE_REG_Y + 1
 	
+	lda $105, X
+	sta STORE_PROG_ROMBANK
+
 	lda @curr_ram_bank_in_use
 	sta RAM_BANK
 	
@@ -324,6 +324,7 @@ custom_irq_816_handler:
 	.byte 0
 
 irq_re_caller:
+	stz ROM_BANK
 	accum_index_8_bit
 	
 	lda nmi_queued
