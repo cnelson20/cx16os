@@ -901,7 +901,7 @@ check_channel_status:
 	rts
 
 ;
-; open_special_stream
+; open_stream
 ; filename in KZE1
 ; open_mode in .Y
 ;
@@ -926,6 +926,10 @@ open_stream:
 	jsr find_proc_fd
 	cmp #NO_FILE
 	beq @return_err
+	ldx STORE_PROG_CHRIN_MODE
+	beq @return_success
+	ldx #1
+	stx STORE_PROG_CHRIN_MODE
 	bra @return_success
 	:
 	

@@ -144,6 +144,8 @@ setup_process_display_vars:
 	; RAM_BANK = pid
 	stz STORE_PROG_CHRIN_BUFF_IND
 	stz STORE_PROG_CHRIN_BUFF_LEN
+	ldy #1
+	sta STORE_PROG_CHRIN_MODE
 	
 	lsr A
 	tay
@@ -157,9 +159,6 @@ setup_process_display_vars:
 	sta programs_back_color_table, Y
 	lda programs_fore_color_table, X
 	sta programs_fore_color_table, Y
-	
-	lda #1
-	sta programs_stdin_mode_table, Y
 	rts
 
 ;
@@ -368,29 +367,29 @@ programs_back_color_table:
 programs_fore_color_table:
 	.res 128, 0
 
-.export programs_stdin_mode_table
-programs_stdin_mode_table:
-	.res 128,0 
 
 ;
 ; getchar_from_keyboard
 ;
 .export getchar_from_keyboard
 getchar_from_keyboard:
+	push_zp_word RAM_BANK
 	jsr @main_function
 	cmp #CARRIAGE_RETURN
 	bne :+
 	lda #LINE_FEED
 	:
+	ply
+	sty RAM_BANK
+	ply
+	sty ROM_BANK
 	rts
 @main_function:
 	
-	lda current_program_id
-	tay
-	lsr A
+	ldy current_program_id
+	sty RAM_BANK
 	
-	tax
-	lda programs_stdin_mode_table, X
+	lda STORE_PROG_CHRIN_MODE
 	bne @echo_input
 	
 @raw_getin:
@@ -411,9 +410,7 @@ getchar_from_keyboard:
 	beq get_line_from_user
 	jmp return_chrin_buff
 	; mode = 1 means we need to fill a line with input
-get_line_from_user:
-	phx ; preserve pid >> 1
-	
+get_line_from_user:	
 	jsr lda_underscore_putc
 	jsr lda_left_crsr_putc
 
@@ -429,7 +426,7 @@ get_line_from_user:
 	plx
 	phx
 	phy
-	lda programs_stdin_mode_table, X
+	lda STORE_PROG_CHRIN_MODE
 	cmp #1
 	beq @still_read_chars
 	jsr lda_space_putc
@@ -521,12 +518,11 @@ get_line_from_user:
 @end_loop:
 	stx STORE_PROG_CHRIN_BUFF_LEN
 	
-	plx ; pull pid >> 1
-	lda programs_stdin_mode_table, X
+	lda STORE_PROG_CHRIN_MODE
 	cmp #1
 	bne :+
 	lda #2
-	sta programs_stdin_mode_table, X
+	sta STORE_PROG_CHRIN_MODE
 	:
 	bra return_chrin_buff
 	
@@ -549,11 +545,11 @@ return_chrin_buff:
 	cmp STORE_PROG_CHRIN_BUFF_LEN
 	bcc @not_out_bytes
 	
-	lda programs_stdin_mode_table, X
+	lda STORE_PROG_CHRIN_MODE
 	cmp #3
 	bne :+
 	inc RAM_BANK
-	lda #$FF
+	lda #NO_FILE
 	sta PV_OPEN_TABLE + 0
 	dec RAM_BANK
 	lda #0
@@ -561,7 +557,7 @@ return_chrin_buff:
 	rts
 	:
 	lda #1
-	sta programs_stdin_mode_table, X
+	sta STORE_PROG_CHRIN_MODE
 	jmp getchar_from_keyboard
 @not_out_bytes:
 	tax
@@ -581,31 +577,24 @@ close_active_proc_stdin:
 	inc A
 	sta RAM_BANK
 	lda PV_OPEN_TABLE + 0
-	stx RAM_BANK
 	cmp #0
-	beq :+
-	rts
-	:
+	bne @return
+	dec RAM_BANK
 	
-	lda active_process
-	lsr A
-	tax
-	lda programs_stdin_mode_table, X
+	lda STORE_PROG_CHRIN_MODE
 	beq @no_bytes_in_chrin_buff
 	
 	lda #3
-	sta	programs_stdin_mode_table, X
+	sta	STORE_PROG_CHRIN_MODE
+@return:
+	stx RAM_BANK
 	rts
 	
 @no_bytes_in_chrin_buff:
-	ldx RAM_BANK
-	lda active_process
-	inc A
-	sta RAM_BANK
+	inc RAM_BANK
 	lda #NO_FILE
 	sta PV_OPEN_TABLE + 0
-	stx RAM_BANK
-	rts
+	bra @return
 	
 ;
 ; set_stdin_read_mode
@@ -613,23 +602,19 @@ close_active_proc_stdin:
 .export set_stdin_read_mode
 set_stdin_read_mode:
 	save_p_816_8bitmode
-	pha
-	lda current_program_id
-	lsr A
-	tax
-	pla
+	cmp #0
 	bne :+
 	; if .A = 0
-	lda programs_stdin_mode_table, X
+	lda STORE_PROG_CHRIN_MODE
 	bne @return
 	lda #2
-	sta programs_stdin_mode_table, X
+	sta STORE_PROG_CHRIN_MODE
 	stz STORE_PROG_CHRIN_BUFF_IND
 	stz STORE_PROG_CHRIN_BUFF_LEN
 	bra @return
 	:
 	; if .A <> 0
-	stz programs_stdin_mode_table, X
+	stz STORE_PROG_CHRIN_MODE
 @return:	
 	restore_p_816
 	rts
