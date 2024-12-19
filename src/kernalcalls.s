@@ -15,8 +15,10 @@
 .import kill_process_kernal
 .import is_valid_process
 
-.import open_file_kernal_ext, close_file_kernal, read_file_ext, write_file_ext, load_dir_listing_extmem_ext, move_fd, copy_fd
-.import get_pwd_ext, chdir_ext, unlink_ext, rename_ext, copy_file_ext, mkdir_ext, rmdir_ext
+.import load_dir_listing_extmem_ext
+.import CALL_open_file, CALL_close_file, CALL_read_file, CALL_write_file
+.import CALL_move_fd, CALL_copy_fd
+.import CALL_get_pwd, CALL_chdir, CALL_unlink, CALL_rename, CALL_copy_file, CALL_mkdir, CALL_rmdir
 
 .import PV_OPEN_TABLE
 
@@ -46,23 +48,23 @@
 
 .export call_table
 call_table:
-	jmp getc ; $9D00
-	jmp putc ; $9D03
+	jmp CALL_getc ; $9D00
+	jmp CALL_putc ; $9D03
 	jmp exec ; $9D06
-	jmp print_str_ext ; $9D09
-	jmp get_process_info ; $9D0C
-	jmp get_args ; $9D0F
+	jmp CALL_print_str ; $9D09
+	jmp CALL_get_process_info ; $9D0C
+	jmp CALL_get_args ; $9D0F
 	jmp get_process_name ; $9D12
 	jmp parse_num ; $9D15
 	jmp hex_num_to_string ; $9D18
 	jmp kill_process ; $9D1B
-	jmp open_file ; $9D1E
-	jmp close_file ; $9D21
-	jmp read_file ; $9D24
-	jmp write_file ; $9D27
+	jmp CALL_open_file ; $9D1E
+	jmp CALL_close_file ; $9D21
+	jmp CALL_read_file ; $9D24
+	jmp CALL_write_file ; $9D27
 	jmp load_dir_listing_extmem ; $9D2A
-	jmp get_pwd ; $9D2D
-	jmp chdir ; $9D30
+	jmp CALL_get_pwd ; $9D2D
+	jmp CALL_chdir ; $9D30
 	jmp res_extmem_bank ; $9D33
 	jmp set_extmem_rbank ; $9D36
 	jmp set_extmem_rptr ; $9D39
@@ -78,13 +80,13 @@ call_table:
 	jmp set_extmem_wbank ; $9D57
 	jmp $FFFF ; $9D5A
 	jmp wait_process ; $9D5D
-	jmp fgetc ; $9D60
-	jmp fputc ; $9D63
-	jmp unlink ; $9D66
-	jmp rename ; $9D69
-	jmp copy_file ; $9D6C
-	jmp mkdir ; $9D6F
-	jmp rmdir ; $9D72
+	jmp CALL_fgetc ; $9D60
+	jmp CALL_fputc ; $9D63
+	jmp CALL_unlink ; $9D66
+	jmp CALL_rename ; $9D69
+	jmp CALL_copy_file ; $9D6C
+	jmp CALL_mkdir ; $9D6F
+	jmp CALL_rmdir ; $9D72
 	jmp setup_chrout_hook ; $9D75
 	jmp release_chrout_hook ; $9D78
 	jmp setup_general_hook ; $9D7B
@@ -98,11 +100,11 @@ call_table:
 	jmp lock_vera_regs ; $9D93
 	jmp unlock_vera_regs ; $9D96
 	jmp bin_bcd16_ext ; $9D99
-	jmp move_fd ; $9D9C
+	jmp CALL_move_fd ; $9D9C
 	jmp CALL_get_time ; $9D9F
 	jmp CALL_detach_self ; $9DA2
-	jmp active_table_lookup ; $9DA5
-	jmp copy_fd ; $9DA8
+	jmp CALL_active_table_lookup ; $9DA5
+	jmp CALL_copy_fd ; $9DA8
 	jmp CALL_get_sys_info ; $9DAB
 	jmp pread_extmem_xy ; $9DAE
 	jmp pwrite_extmem_xy ; $9DB1
@@ -150,6 +152,7 @@ exec:
 	lda #1
 	sta irq_already_triggered
 	
+	stz ROM_BANK
 	lda RAM_BANK
 	pha
 	lda $02 + 1
@@ -157,8 +160,9 @@ exec:
 	; arguments in .AXY, r0.L
 	jsr load_new_process ; return val in .A
 	
-	plx
-	stx RAM_BANK
+	ply_byte RAM_BANK
+	ldy current_program_id
+	sty ROM_BANK
 	
 	stz irq_already_triggered
 	restore_p_816
@@ -168,15 +172,16 @@ exec:
 ;
 ; calls fputc with stdout (#1)
 ;
-.export putc
-putc:
+.export CALL_putc
+CALL_putc:
 	phy
 	phx
 	pha
 	save_p_816_8bitmode
 	
 	ldx #1
-	jsr fputc
+	nop
+	jsr CALL_fputc
 	
 	restore_p_816
 	pla
@@ -187,8 +192,7 @@ putc:
 ;
 ; CHKOUT's a certain file, then calls CHROUT
 ;
-.export fputc
-fputc:
+CALL_fputc:
 	save_p_816_8bitmode
 	sta STORE_PROG_IO_SCRATCH
 	txa ; file num in .A
@@ -200,7 +204,7 @@ fputc:
 	stx r0
 	ldx #1
 	stx r1
-	run_routine_8bit write_file_ext
+	jsr CALL_write_file
 	cpy #0
 	bne :+
 	cmp #1
@@ -219,17 +223,13 @@ fputc:
 ; Returns char from stdin in .A
 ; preserves .X
 ;
-.export getc	
-getc:
-	save_p_816_8bitmode
+CALL_getc:
 	phx
-	
 	ldx #0
-	jsr fgetc
-	phx
-	ply ; move possible error code from .X to .Y
+	nop
+	jsr CALL_fgetc
+	txy ; move possible error code from .X to .Y
 	; CHRIN doesn't preserve .Y so this is fine
-	
 	plx
 	restore_p_816
 	rts
@@ -237,8 +237,7 @@ getc:
 ;
 ; Returns a byte in .A from fd .X
 ;	
-.export fgetc
-fgetc:
+CALL_fgetc:
 	save_p_816_8bitmode
 	txa ; file num in .A
 	push_zp_word r0
@@ -251,7 +250,7 @@ fgetc:
 	ldx #1
 	stx r1
 	stz r2
-	run_routine_8bit read_file_ext
+	jsr CALL_read_file
 	cpy #0
 	bne :+
 	cmp #1
@@ -270,8 +269,7 @@ fgetc:
 ;
 ; prints a null terminated string pointed to by .AX
 ;
-.export print_str_ext
-print_str_ext:
+CALL_print_str:
 	save_p_816_8bitmode
 	xba
 	txa
@@ -289,7 +287,7 @@ print_str_ext:
 	.i8
 	.a8
 	lda #1
-	jsr write_file_ext
+	jsr CALL_write_file
 	pla_word r1
 	pla_word r0
 	restore_p_816
@@ -305,7 +303,7 @@ print_str_ext:
 ; r0.L = active process or not
 ; r0.H = parent id
 ;
-get_process_info:
+CALL_get_process_info:
 	save_p_816_8bitmode
 	cmp #0
 	beq @get_return_val
@@ -363,7 +361,7 @@ get_process_info:
 ; .X -> index of active process within active_processes_table
 ; .Y -> currently active process
 ;
-active_table_lookup:
+CALL_active_table_lookup:
 	save_p_816_8bitmode
 	and #$7F
 	tax
@@ -378,7 +376,7 @@ active_table_lookup:
 ;
 ; Return pointer to args in .AX and argc in .Y
 ;
-get_args:
+CALL_get_args:
 	save_p_816_8bitmode
 	lda #<STORE_PROG_ARGS
 	ldx #>STORE_PROG_ARGS
@@ -437,53 +435,11 @@ kill_process:
 ;
 ; File I/O routines
 ;
-open_file:
-	run_routine_8bit open_file_kernal_ext
-	rts
-
-close_file:
-	run_routine_8bit close_file_kernal
-	rts
-
-read_file:
-	run_routine_8bit read_file_ext
-	rts
-
-write_file:
-	run_routine_8bit write_file_ext
-	rts
 
 load_dir_listing_extmem:
 	run_routine_8bit load_dir_listing_extmem_ext
 	rts
 
-get_pwd:
-	run_routine_8bit get_pwd_ext
-	rts
-
-chdir:
-	run_routine_8bit chdir_ext
-	rts
-
-unlink:
-	run_routine_8bit unlink_ext
-	rts
-
-rename:
-	run_routine_8bit rename_ext
-	rts
-
-copy_file:
-	run_routine_8bit copy_file_ext
-	rts
-
-mkdir:
-	run_routine_8bit mkdir_ext
-	rts
-
-rmdir:
-	run_routine_8bit rmdir_ext
-	rts
 
 ; 
 ; waits until process in .A is completed
@@ -492,7 +448,7 @@ wait_process:
 	save_p_816_8bitmode
 	sta KZE0
 	
-	jsr get_process_info
+	jsr CALL_get_process_info
 	cmp #0
 	bne :+
 	
@@ -519,7 +475,7 @@ wait_process:
 	jsr surrender_process_time
 	
 	lda KZE0
-	jsr get_process_info
+	jsr CALL_get_process_info
 	cmp #0
 	beq @end
 	
@@ -533,7 +489,7 @@ wait_process:
 	
 	lda #$00
 	ldx KZE2
-	jsr get_process_info
+	jsr CALL_get_process_info
 	
 	txa
 	ldx #$00

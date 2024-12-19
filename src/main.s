@@ -94,15 +94,20 @@ init:
 	sty r1
 	jsr load_new_process
 	cmp #0 ; 0 = failure
-	bne :+
+	bne @could_load_first_process
 	lda #$8F ; petscii
 	jsr CHROUT
-	ldax_addr load_error_msg
-	jsr print_str_ext
-	
+	ldx #0
+	:
+	lda incorrect_cpu_msg, X
+	beq :+
+	jsr CHROUT
+	inx
+	bne :-
+	:
 	jmp return_to_basic
 	
-	:
+@could_load_first_process:
 	jmp run_first_prog
 	rts
 

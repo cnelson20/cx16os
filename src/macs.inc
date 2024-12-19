@@ -304,13 +304,11 @@
 
 .macro preserve_rom_run_routine_8bit addr
 	save_p_816_8bitmode
-	xba
-	pha_byte ROM_BANK
 	stz ROM_BANK
-	xba
 	jsr addr
 	xba
-	pla_byte ROM_BANK
+	lda current_program_id
+	sta ROM_BANK
 	xba
 	restore_p_816
 .endmacro

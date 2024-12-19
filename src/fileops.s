@@ -711,17 +711,21 @@ pass_fd_other_process:
 	; dont worry about files on disk
 	rts
 
+.export CALL_open_file
+CALL_open_file:
+	preserve_rom_run_routine_8bit open_file
+	rts
+
 ;
-; open_file_kernal_ext
+; open_file
 ; 
 ; .A = $FF on failure, or a fd on success
 ; .X = error code on failure, else 0
 ; $FF --> no open file descriptor (table full)
 ;
 ; filename in .AX, .Y = open_mode (r, w, etc.)
-;
-.export open_file_kernal_ext
-open_file_kernal_ext:
+;	
+open_file:
 	stax_word KZE1
 	tya
 	bne :+
@@ -1122,8 +1126,12 @@ close_file_int:
 ;
 ; closes process fd in .A
 ;
-.export close_file_kernal
-close_file_kernal:
+.export CALL_close_file
+CALL_close_file:
+	preserve_rom_run_routine_8bit close_file
+	rts
+
+close_file:
 	inc RAM_BANK
 	
 	tay
@@ -1188,8 +1196,13 @@ close_file_int_entry:
 @close_file_exit:
 	rts	
 
+.export CALL_read_file
+CALL_read_file:
+	preserve_rom_run_routine_8bit read_file
+	rts
+
 ;
-; read_file_ext
+; read_file
 ;
 ; read bytes from file
 ; .A = fd
@@ -1197,8 +1210,7 @@ close_file_int_entry:
 ; r1 = num of bytes to read
 ; r2.L = bank to read to (0 means own bank)
 ;
-.export read_file_ext
-read_file_ext:
+read_file:
 	inc RAM_BANK
 	tay
 	lda PV_OPEN_TABLE, Y
@@ -1491,16 +1503,20 @@ read_stdin:
 	xba
 	rts
 
+.export CALL_write_file
+CALL_write_file:
+	preserve_rom_run_routine_8bit write_file
+	rts
+	
 ;
-; write_file_ext
+; write_file
 ;
 ; write bytes from file
 ; .A = fd
 ; r0 = buffer to read bytes from
 ; r1 = num of bytes to write
 ;
-.export write_file_ext
-write_file_ext:
+write_file:
 	tay
 	inc RAM_BANK
 	
@@ -1642,8 +1658,8 @@ write_stdout:
 ;
 ; returns 0 on success, non-zero on failure
 ;
-.export move_fd
-move_fd:
+.export CALL_move_fd
+CALL_move_fd:
 	save_p_816_8bitmode
 
 	cmp #PV_OPEN_TABLE_SIZE
@@ -1677,7 +1693,7 @@ move_fd:
 	lda KZE1
 	pha
 
-	jsr close_file_kernal
+	jsr CALL_close_file
 
 	ply
 	pla
@@ -1714,12 +1730,12 @@ move_fd:
 ;
 ; copy_fd
 ;
-; copy a file directory to a new fd
-; marks the original fd as closed
+; copy a fd to a new fd
+; marks the original fd as not referring to any file
 ; argument and return value in .A
 ;
-.export copy_fd
-copy_fd:
+.export CALL_copy_fd
+CALL_copy_fd:
 	save_p_816_8bitmode
 	inc RAM_BANK
 
@@ -1869,12 +1885,16 @@ load_dir_listing_extmem_ext:
 	.asciiz "$=L"
 
 ;
-; get_pwd_ext
+; get_pwd
 ;
 ; copies up to r1 bytes of the cwd into memory pointed to by r0
 ;
-.export get_pwd_ext
-get_pwd_ext:
+.export CALL_get_pwd
+CALL_get_pwd:
+	run_routine_8bit get_pwd
+	rts
+	
+get_pwd:
 	inc RAM_BANK
 	
 	lda #<PV_PWD
@@ -1975,12 +1995,39 @@ cd_process_pwd:
 dos_cmds_tmp_filename:
 	.res MAX_FILELEN, 0
 
+
+.export CALL_chdir, CALL_unlink
+.export CALL_rename, CALL_copy_file
+.export CALL_mkdir, CALL_rmdir
+CALL_chdir:
+	preserve_rom_run_routine_8bit chdir
+	rts
+
+CALL_unlink:
+	preserve_rom_run_routine_8bit unlink
+	rts
+
+CALL_rename:
+	preserve_rom_run_routine_8bit rename
+	rts
+
+CALL_copy_file:
+	preserve_rom_run_routine_8bit copy_file
+	rts
+
+CALL_mkdir:
+	preserve_rom_run_routine_8bit mkdir
+	rts
+
+CALL_rmdir:
+	preserve_rom_run_routine_8bit rmdir
+	rts
+
 ;
 ; changes process' pwd
 ; dir to cd to in .AX
 ;
-.export chdir_ext
-chdir_ext:
+chdir:
 	push_zp_word KZES4
 	push_zp_word KZES5
 	stz KZES5
@@ -2228,8 +2275,7 @@ dos_cmd_open_error:
 ;
 ; deletes file with filename in .AX
 ;
-.export unlink_ext
-unlink_ext:
+unlink:
 	ldy #'S'
 	sty KZE0
 	stz KZE0 + 1
@@ -2238,16 +2284,14 @@ unlink_ext:
 ;
 ; creates a directory with name pointed to by .AX
 ;
-.export mkdir_ext
-mkdir_ext:
+mkdir:
 	ldy #'M'
 	sty KZE0
 	bra mkdir_rmdir_ld
 ;
 ; removed the directory with name pointed to by .AX
 ;
-.export rmdir_ext
-rmdir_ext:
+rmdir:
 	ldy #'R'
 	sty KZE0
 mkdir_rmdir_ld:
@@ -2321,13 +2365,11 @@ single_arg_dos_cmd:
 ;
 ; renames file with filename r1 to r0
 ;
-.export rename_ext
-rename_ext:
+rename:
 	ldy #'R'
 	bra copy_rename_file
 
-.export copy_file_ext
-copy_file_ext:
+copy_file:
 	ldy #'C'
 	bra copy_rename_file
 
@@ -2342,9 +2384,9 @@ copy_rename_file:
 	lda r1
 	ldx r1 + 1
 	ldy #0
-	jsr open_file_kernal_ext
+	jsr open_file
 	pha
-	jsr close_file_kernal
+	jsr close_file
 	pla
 	cmp #NO_FILE
 	bne :+
@@ -2358,7 +2400,7 @@ copy_rename_file:
 	
 	lda r0
 	ldx r0 + 1
-	jsr unlink_ext
+	jsr unlink
 	
 	set_atomic_st
 	
