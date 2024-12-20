@@ -538,7 +538,6 @@ memcpy_banks_ext:
 	index_16_bit
 
 	ldx KZE1
-	beq @end
 	ldy KZE0
 @loop:
 	lda KZE2 + 1
