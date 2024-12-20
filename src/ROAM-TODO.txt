@@ -19,6 +19,9 @@ chdir
 copy_file
 rename
 
+setup_chrout_hook
+setup_general_hook
+
 routines that dont write/read from prog memory
 ----------------------
 
@@ -78,10 +81,7 @@ vwrite_byte_extmem_y
 memmove_extmem
 fill_extmem
 
-setup_chrout_hook
 send_byte_chrout_hook
-
 send_message_general_hook
-setup_general_hook
 
 mark_last_hook_message_received

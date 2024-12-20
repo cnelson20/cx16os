@@ -73,15 +73,22 @@ release_all_process_hooks:
 ; r0 = addr of data buffer
 ; r1 = addr of buffer info (4 bytes)
 ;
-.export setup_chrout_hook
-setup_chrout_hook:
+.export CALL_setup_chrout_hook
+CALL_setup_chrout_hook:
 	save_p_816_8bitmode
 	ldy chrout_prog_bank
-	bne @hook_already_set ; hook already set
+	bne @return_failure ; hook already set
 
 	cmp #0 ; if extmem bank is 0, use program's bank
 	bne :+
 	lda current_program_id
+	bra :++
+	:
+	sta KZE0
+	jsr check_process_owns_bank
+	cmp #0
+	bne @return_failure
+	lda KZE0
 	:
 	sta chrout_extmem_bank
 
@@ -90,6 +97,7 @@ setup_chrout_hook:
 
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	lda #0
 	ldy #3
 	:
@@ -104,15 +112,19 @@ setup_chrout_hook:
 	ldx #>CHROUT_BUFF_SIZE
 
 	bra @end
-@hook_already_set:
+@return_failure:
 	lda #00
 	tax
 @end:
+	xba
+	lda current_program_id
+	sta ROM_BANK
+	xba
 	restore_p_816
 	rts
 
-.export release_chrout_hook
-release_chrout_hook:
+.export CALL_release_chrout_hook
+CALL_release_chrout_hook:
 	save_p_816_8bitmode
 	lda current_program_id
 	jsr try_release_chrout_hook
@@ -286,9 +298,10 @@ reset_other_hooks:
 ; r0 = addr of data buffer
 ; r1 = addr of buffer info (4 bytes)
 ;
-.export setup_general_hook
-setup_general_hook:
+.export CALL_setup_general_hook
+CALL_setup_general_hook:
 	save_p_816_8bitmode
+
 	cmp #NUM_OTHER_HOOKS
 	bcs @return_failure
 	sta KZE0

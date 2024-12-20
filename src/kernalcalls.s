@@ -27,8 +27,10 @@
 .import pread_extmem_xy, pwrite_extmem_xy
 
 .import CALL_pipe
-.import setup_chrout_hook, release_chrout_hook, CHROUT_screen, send_byte_chrout_hook
-.import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook, mark_last_hook_message_received
+.import CALL_setup_chrout_hook, CALL_release_chrout_hook
+.import CHROUT_screen, send_byte_chrout_hook
+.import CALL_setup_general_hook
+.import release_general_hook, get_general_hook_info, send_message_general_hook, mark_last_hook_message_received
 
 .import lock_vera_regs, unlock_vera_regs, prog_using_vera_regs, default_screen_mode, default_vscale
 
@@ -88,9 +90,9 @@ call_table:
 	jmp CALL_copy_file ; $9D6C
 	jmp CALL_mkdir ; $9D6F
 	jmp CALL_rmdir ; $9D72
-	jmp setup_chrout_hook ; $9D75
-	jmp release_chrout_hook ; $9D78
-	jmp setup_general_hook ; $9D7B
+	jmp CALL_setup_chrout_hook ; $9D75
+	jmp CALL_release_chrout_hook ; $9D78
+	jmp CALL_setup_general_hook ; $9D7B
 	jmp release_general_hook ; $9D7E
 	jmp get_general_hook_info ; $9D81
 	jmp send_message_general_hook ; $9D84
