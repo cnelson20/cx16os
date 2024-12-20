@@ -984,6 +984,7 @@ read_pipe_ext:
 	xba
 	lda KZE3
 	sta RAM_BANK
+	sta ROM_BANK
 	xba
 	sta (KZE1)
 	lda KZE0
@@ -1007,6 +1008,7 @@ read_pipe_ext:
 @done:
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	sep #$10
 	.i8
@@ -1020,6 +1022,7 @@ read_pipe_ext:
 	.i16 ; X is clear when branch occurs
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	rep #$20
 	.a16
 	lda r1
@@ -1102,6 +1105,7 @@ write_pipe_ext:
 @can_write_byte:
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	lda (KZE1)
 	xba
 	lda KZE0
@@ -1122,6 +1126,7 @@ write_pipe_ext:
 @done:
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	sep #$10
 	.i8
@@ -1134,6 +1139,7 @@ write_pipe_ext:
 	.i16 ; X is clear when branch occurs
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	rep #$20
 	.a16
 	lda r1
