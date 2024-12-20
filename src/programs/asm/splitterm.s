@@ -31,8 +31,6 @@ vera_addrh := $9F21
 vera_addri := $9F22
 vera_data0 := $9F23
 
-REAL_CHROUT := $FFD2
-
 init:
     lda #$93
     jsr REAL_CHROUT ; clear screen

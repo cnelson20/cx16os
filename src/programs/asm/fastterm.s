@@ -272,7 +272,7 @@ do_nothing:
 
 bell:
 	lda #3
-	jsr $FFD2
+	; jsr $FFD2
 	rts
 	
 cursor_left:

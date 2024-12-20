@@ -20,7 +20,6 @@ ptr0 := $30
 ptr1 := $32
 ptr2 := $34
 
-REAL_CHROUT := $FFD2
 GUI_HOOK = 0
 
 COMMAND_DISPLAY_CHARS = 0
