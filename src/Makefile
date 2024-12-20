@@ -52,7 +52,7 @@ ifeq ($(OS),Windows_NT)
 	diskpart < scripts/diskpart_detach.in
 	qemu-img convert -f vhdx "C:\x16image.vhdx" -O raw cx16os.img
 else
-ifeq ($(USE_MTOOLS),"")
+ifeq ($(USE_MTOOLS),)
 	sh ./scripts/mount_sd.sh cx16os.img mnt_dir/
 	-sudo mkdir mnt_dir/OS/
 	sudo cp mnt/* -r mnt_dir/OS/
