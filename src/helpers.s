@@ -479,7 +479,10 @@ memcpy_ext:
 	.a16
 	.i16
 
-	dec KZE2 ; 16-bit decrement, MVN & MVP use bytes to move - 1
+	lda KZE2
+	beq @exit
+	dec A ; 16-bit decrement, MVN & MVP use bytes to move - 1
+	sta KZE2
 
 	ldx KZE1
 	ldy KZE0
@@ -535,6 +538,7 @@ memcpy_banks_ext:
 	index_16_bit
 
 	ldx KZE1
+	beq @end
 	ldy KZE0
 @loop:
 	lda KZE2 + 1
