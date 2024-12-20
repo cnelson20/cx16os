@@ -1291,6 +1291,7 @@ read_file:
 	bcc :+
 	jmp read_error_chkin
 	:
+	bra @check_bytes_remaining
 @read_loop:
 	lda KZE1 + 1 ; is bytes remaining > 255
 	beq :+
@@ -1309,7 +1310,12 @@ read_file:
 	bcc :+
 	jmp try_read_slow ; if MACPTR returns with carry set, try read_slow
 	:
-	
+	cpx #0
+	bne :+
+	cpy #0
+	bne :+
+	jmp @out_bytes
+	:
 	lda KZE2
 	sta RAM_BANK
 	sta ROM_BANK
@@ -1335,16 +1341,6 @@ read_file:
 	sta RAM_BANK
 	stz ROM_BANK
 	
-	txa
-	sty KZE2 + 1
-	ora KZE2 + 1; if no bytes were read, we are at eof
-	bne :+
-	lda KZE0
-	ora KZE1
-	beq :+ ; if no bytes were requested anyways, not actually out
-	jmp @out_bytes
-	:
-	
 	sec ; subtract bytes remaining from bytes left
 	lda KZE1
 	stx KZE1
@@ -1358,7 +1354,8 @@ read_file:
 	jsr READST
 	and #$40
 	bne @out_bytes
-	
+
+@check_bytes_remaining:	
 	lda KZE1
 	ora KZE1 + 1
 	beq @end_read_loop
