@@ -19,8 +19,6 @@ chdir
 copy_file
 rename
 
-read_file
-
 routines that dont write/read from prog memory
 ----------------------
 
@@ -61,11 +59,12 @@ set_extmem_wbank
 set_extmem_wptr
 share_extmem_bank
 
-uncategorized:
+not fixed:
 --------------
 
 exec
 
+read_file
 open_file
 write_file
 print_str
