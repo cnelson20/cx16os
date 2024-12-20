@@ -38,11 +38,8 @@
 .import vera_version_number, rom_vers, max_ram_bank, smc_version_number, internal_jiffy_counter
 
 .import surrender_process_time, schedule_timer
-.import irq_already_triggered
-.import atomic_action_st, process_using_kernal
 .import process_table, return_table, process_parents_table, process_priority_table
 .import active_process
-.import current_program_id
 .import file_table_count
 
 .import screen_mode_wrapper
@@ -180,13 +177,9 @@ CALL_putc:
 	phy
 	phx
 	pha
-	save_p_816_8bitmode
-	
 	ldx #1
 	nop
 	jsr CALL_fputc
-	
-	restore_p_816
 	pla
 	plx
 	ply
@@ -234,7 +227,6 @@ CALL_getc:
 	txy ; move possible error code from .X to .Y
 	; CHRIN doesn't preserve .Y so this is fine
 	plx
-	restore_p_816
 	rts
 
 ;
@@ -246,7 +238,7 @@ CALL_fgetc:
 	push_zp_word r0
 	push_zp_word r1
 	push_zp_word r2
-	rep #$10
+	index_16_bit
 	.i16
 	ldx #STORE_PROG_IO_SCRATCH
 	stx r0

@@ -6,7 +6,6 @@
 
 .SEGMENT "CODE"
 
-.import atomic_action_st, current_program_id
 .import surrender_process_time, surrender_to_process
 .import memcpy_banks_ext
 .import check_process_owns_bank

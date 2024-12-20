@@ -6,8 +6,7 @@
 
 .SEGMENT "CODE"
 
-.import current_program_id, active_process
-.import surrender_process_time, atomic_action_st
+.import active_process, surrender_process_time
 
 .import PV_OPEN_TABLE
 .import putc, CHROUT_screen, send_byte_chrout_hook

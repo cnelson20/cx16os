@@ -5,7 +5,7 @@
 
 .SEGMENT "CODE"
 
-.import process_table, current_program_id, atomic_action_st
+.import process_table
 .import memcpy_ext, memcpy_banks_ext
 .import find_new_process_bank, is_valid_process
 

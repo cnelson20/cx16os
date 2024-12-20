@@ -5,7 +5,6 @@
 
 .SEGMENT "CODE"
 
-.import atomic_action_st
 .import is_valid_process
 .import tmp_filename
 

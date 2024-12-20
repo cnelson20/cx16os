@@ -98,6 +98,10 @@ KZES5 := $5A
 KZES6 := $5C
 KZES7 := $5E
 
+current_program_id := $70
+atomic_action_st := $72
+irq_already_triggered := $73
+
 PID_IN_USE = $FE
 
 DEFAULT_PRIORITY = 2

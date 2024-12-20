@@ -72,6 +72,7 @@ init:
 	lda #$0f
 	jsr CHROUT ; turn on ascii mode
 	
+	stz current_program_id	
 	jsr setup_kernal
 	jsr setup_interrupts
 	
@@ -79,12 +80,12 @@ init:
 	; rtc seconds are at device $6F, addr $00
 	ldx #$6F
 	ldy #$00
-	jsr clock_get_date_time
+	jsr i2c_read_byte
 	sta r0
 	:
 	ldx #$6F
 	ldy #$00
-	jsr clock_get_date_time
+	jsr i2c_read_byte
 	cmp r0
 	beq :-
 	stz internal_jiffy_counter
@@ -217,12 +218,9 @@ reset_interrupts:
 .export default_816_irq_handler
 default_816_irq_handler:
 	.word 0
-.export irq_already_triggered
-irq_already_triggered:
-	.byte 0
-.export atomic_action_st
-atomic_action_st:
-	.byte 0
+
+; irq_already_triggered := $72
+; atomic_action_st := $73
 
 default_keyinput_handler:
 	.word 0
@@ -1784,13 +1782,11 @@ internal_jiffy_counter:
 	.word 0
 
 ; info about current process ;
-.export current_program_id
-current_program_id:
-	.word 0
+; current_process := $70
 	
 .export schedule_timer
 schedule_timer:
-	.byte 0
+	.word 0
 
 .export vera_status
 vera_status:

@@ -6,12 +6,10 @@
 
 .SEGMENT "CODE"
 
-.import atomic_action_st
 .import file_table
 .import strlen, memcpy_ext, memcpy_banks_ext, strcmp_banks_ext
 .import strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str, toupper, tolower
 .import check_process_owns_bank, getchar_from_keyboard
-.import current_program_id
 .import open_pipe_ext, close_pipe_ext, close_pipe_int, read_pipe_ext, write_pipe_ext, pass_pipe_other_process
 
 .import CHROUT_screen
@@ -1250,7 +1248,8 @@ read_file:
 	tax
 	rts
 	
-@file_is_open:	
+@file_is_open:
+	; this is a file we can read from disk ;
 	tax
 	lda RAM_BANK
 	pha
@@ -1264,15 +1263,16 @@ read_file:
 	beq @exit_eof ; don't think this can happen, but account for it anyway
 	cmp #1
 	bne @exit_eof ; already reached eof
-	stx KZE2
-
+	stx KZE3
+	
 	lda r2
+	sta KZE2
 	bne :+
 	lda current_program_id
-	sta r2 ; if r2 = 0, set it to current_program_id
+	sta KZE2 ; if r2 = 0, set it to current_program_id
 	bra :++
 	:
-	lda r2
+	lda KZE2
 	cmp current_program_id
 	beq :+
 	jsr check_process_owns_bank
@@ -1283,8 +1283,6 @@ read_file:
 
 	ldstx_word r0, KZE0
 	ldstx_word r1, KZE1
-	lda KZE2
-	sta KZE3 ; this is a file we can read from disk ;
 	
 	set_atomic_st_disc_a
 	
@@ -1300,7 +1298,7 @@ read_file:
 	bra :++
 	:
 	lda KZE1
-	:	
+	:
 	;ldx KZE0
 	;ldy KZE0 + 1
 	ldx #<file_read_write_buff
@@ -1312,7 +1310,7 @@ read_file:
 	jmp try_read_slow ; if MACPTR returns with carry set, try read_slow
 	:
 	
-	lda r2
+	lda KZE2
 	sta RAM_BANK
 	sta ROM_BANK
 	phy
@@ -1338,8 +1336,8 @@ read_file:
 	stz ROM_BANK
 	
 	txa
-	sty KZE2
-	ora KZE2 ; if no bytes were read, we are at eof
+	sty KZE2 + 1
+	ora KZE2 + 1; if no bytes were read, we are at eof
 	bne :+
 	lda KZE0
 	ora KZE1
