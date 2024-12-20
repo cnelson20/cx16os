@@ -22,6 +22,19 @@ rename
 setup_chrout_hook
 setup_general_hook
 
+open_file
+read_file
+
+pread_extmem_xy
+pwrite_extmem_xy
+readf_byte_extmem_y
+writef_byte_extmem_y
+vread_byte_extmem_y
+vwrite_byte_extmem_y
+
+memmove_extmem
+fill_extmem
+
 routines that dont write/read from prog memory
 ----------------------
 
@@ -67,19 +80,8 @@ not fixed:
 
 exec
 
-read_file
-open_file
 write_file
 print_str
-
-pread_extmem_xy
-pwrite_extmem_xy
-readf_byte_extmem_y
-writef_byte_extmem_y
-vread_byte_extmem_y
-vwrite_byte_extmem_y
-memmove_extmem
-fill_extmem
 
 send_byte_chrout_hook
 send_message_general_hook
