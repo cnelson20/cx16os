@@ -734,9 +734,13 @@ open_file:
 	jsr toupper
 	tay
 	
+	lda current_program_id
+	sta ROM_BANK
+
 	lda (KZE1)
 	cmp #'#'
 	bne :+
+	stz ROM_BANK
 	jmp open_stream
 	:
 	
@@ -760,6 +764,7 @@ open_file:
 	plx
 	jsr memcpy_banks_ext
 	
+	stz ROM_BANK
 	lda current_program_id
 	inc A
 	sta RAM_BANK
@@ -913,7 +918,7 @@ check_channel_status:
 open_stream:
 	sty KZE3 + 1
 	stz KZE2
-	lda RAM_BANK
+	lda current_program_id
 	sta KZE3
 	
 	ldax_addr @stdin_name
@@ -2144,6 +2149,7 @@ do_dos_cmd:
 	; need to calc number of bytes to copy ;
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	lda KZES4
 	ldx KZES4 + 1
@@ -2158,6 +2164,7 @@ do_dos_cmd:
 	accum_index_8_bit
 	.a8
 	.i8
+	stz ROM_BANK
 	
 	lda #<dos_cmds_tmp_filename
 	ldx #>dos_cmds_tmp_filename
@@ -2211,6 +2218,7 @@ do_dos_cmd:
 	
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	lda KZES5
 	ldx KZES5 + 1
@@ -2225,6 +2233,7 @@ do_dos_cmd:
 	accum_index_8_bit
 	.a8
 	.i8
+	stz ROM_BANK
 	
 	lda #<dos_cmds_tmp_filename
 	ldx #>dos_cmds_tmp_filename

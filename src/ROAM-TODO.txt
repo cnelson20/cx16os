@@ -3,8 +3,6 @@ ROM-TODO
 fully fixed:
 ------------
 
-read_file
-
 need to test:
 -------------
 
@@ -13,6 +11,15 @@ copy_fd
 parse_num
 get_process_name
 get_pwd
+
+unlink
+rmdir
+mkdir
+chdir
+copy_file
+rename
+
+read_file
 
 routines that dont write/read from prog memory
 ----------------------
@@ -62,13 +69,6 @@ exec
 open_file
 write_file
 print_str
-
-unlink
-rmdir
-mkdir
-chdir
-copy_file
-rename
 
 pread_extmem_xy
 pwrite_extmem_xy
