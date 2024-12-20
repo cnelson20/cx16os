@@ -388,6 +388,7 @@ programs_fore_color_table:
 .export getchar_from_keyboard
 getchar_from_keyboard:
 	push_zp_word RAM_BANK
+	stz ROM_BANK
 	jsr @main_function
 	cmp #CARRIAGE_RETURN
 	bne :+

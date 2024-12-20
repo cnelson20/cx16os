@@ -1462,6 +1462,7 @@ read_stdin:
 	bne @return_failure
 	:
 	sta RAM_BANK
+	sta ROM_BANK
 @loop:
 	lda KZES5
 	ora KZES5 + 1
@@ -1470,6 +1471,7 @@ read_stdin:
 	;no more bytes to copy, return
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 
 	lda r1
 	ldx r1 + 1
