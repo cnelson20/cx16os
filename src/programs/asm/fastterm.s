@@ -384,6 +384,11 @@ color_cmd:
 	lda #VERA_COLOR_ORANGE
 	jmp @set_term_color
 	:
+	cmp #$95 ; BROWN
+	bne :+
+	lda #VERA_COLOR_BROWN
+	jmp @set_term_color
+	:
 	cmp #$96 ; PINK
 	bne :+
 	lda #VERA_COLOR_PINK
