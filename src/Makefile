@@ -44,6 +44,12 @@ build: os.prg programs
 	-mkdir mnt/tmp/ mnt/etc/
 
 sd: copy build
+ifneq ($(USE_MTOOLS),)
+	-mkdir mnt_dir/
+	-mkdir mnt_dir/OS/
+	cp mnt/* -r mnt_dir/OS/
+	mcopy -i cx16os.img@@1M -smno mnt_dir/* ::
+else
 ifeq ($(OS),Windows_NT)
 	-rm /cygdrive/c/x16image.vhdx
 	diskpart < scripts/diskpart_mount.in
@@ -52,16 +58,10 @@ ifeq ($(OS),Windows_NT)
 	diskpart < scripts/diskpart_detach.in
 	qemu-img convert -f vhdx "C:\x16image.vhdx" -O raw cx16os.img
 else
-ifeq ($(USE_MTOOLS),)
 	sh ./scripts/mount_sd.sh cx16os.img mnt_dir/
 	-sudo mkdir mnt_dir/OS/
 	sudo cp mnt/* -r mnt_dir/OS/
 	sh ./scripts/close_sd.sh mnt_dir/
-else
-	-mkdir mnt_dir/
-	-mkdir mnt_dir/OS/
-	cp mnt/* -r mnt_dir/OS/
-	mcopy -i cx16os.img@@1M -smno mnt_dir/* ::
 endif
 endif
 
