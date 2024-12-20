@@ -94,7 +94,7 @@ static size_t LongestLineLength(int argc, char** argv) {
 		// we return the maximum width.
 		if (word_len >= MAX_WIDTH)
 			return MAX_WIDTH;
-		if ((print_lines_sep) || (cur_line + word_len >= MAX_WIDTH)) {
+		if ((print_lines_sep) || (cur_line + word_len > MAX_WIDTH)) {
 			cur_line = word_len;
 		} else {
 			cur_line += word_len;
@@ -105,7 +105,7 @@ static size_t LongestLineLength(int argc, char** argv) {
 }
 static void PrintPaddedBreak(size_t pad) {
 	size_t i;
-	for (i = 0; i < pad; i++) {
+	if (pad < 0x8000) for (i = 0; i < pad; i++) {
 		printf(" ");
 	}
 	printf(" |\n");
