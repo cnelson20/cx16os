@@ -160,8 +160,7 @@ CHROUT_screen:
 
 .export send_byte_chrout_hook
 send_byte_chrout_hook:
-	save_p_816
-	accum_index_8_bit
+	save_p_816_8bitmode
 	jsr write_char_chrout_hook_buff
 	restore_p_816
 	txa
@@ -174,6 +173,7 @@ write_char_chrout_hook_buff:
 	rts
 	:
 	save_p_816
+	push_zp_word RAM_BANK
 	index_16_bit
 	accum_8_bit
 	.i16
@@ -182,27 +182,27 @@ write_char_chrout_hook_buff:
 
 	set_atomic_st_disc_a
 
-	pha_byte RAM_BANK
-
 	bra @check_offsets
 @buffer_full:
 	plx
-	pla_byte RAM_BANK
+	lda current_program_id
+	sta RAM_BANK
+	sta ROM_BANK
 	clear_atomic_st
 	jsr surrender_process_time
 	lda chrout_prog_bank ; check if hook is still in place
 	bne :+
+	pla_byte RAM_BANK
+	pla_byte ROM_BANK
 	restore_p_816
 	lda KZE0
 	rts
 	:
 	set_atomic_st_disc_a
-	pha_byte RAM_BANK
-
 @check_offsets:
-
 	lda chrout_prog_bank
 	sta RAM_BANK
+	sta ROM_BANK
 
 	ldy chrout_info_addr
 	lda $00, Y
@@ -243,6 +243,7 @@ write_char_chrout_hook_buff:
 
 	lda chrout_extmem_bank
 	sta RAM_BANK
+	sta ROM_BANK
 	lda KZE0
 	sta (KZE2), Y
 	lda current_program_id
@@ -256,10 +257,11 @@ write_char_chrout_hook_buff:
 	bra @exit
 @exit:
 	pla_byte RAM_BANK
+	pla_byte ROM_BANK
 	clear_atomic_st
+	ldx #0
 	restore_p_816
 	.i8
-	ldx #0
 	rts
 
 ;
