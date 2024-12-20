@@ -359,8 +359,8 @@ CALL_setup_general_hook:
 ;
 ; returns 0 on success, 1 on failure
 ;
-.export release_general_hook
-release_general_hook:
+.export CALL_release_general_hook
+CALL_release_general_hook:
 	save_p_816_8bitmode
 	ldx current_program_id
 	jsr try_release_general_hook
