@@ -7,7 +7,7 @@
 .import print_str_ext, setup_call_table
 .import strlen, strncpy_int
 .import setup_kernal_file_table, setup_process_file_table_int, close_process_files_int
-.import get_dir_filename_int
+.import get_dir_filename_int, get_dir_filename_ext
 .import clear_process_extmem_banks, setup_process_extmem_table, check_process_owns_bank, CALL_free_extmem_bank
 .import hex_num_to_string_kernal
 .import setup_system_hooks, release_all_process_hooks
@@ -1119,9 +1119,7 @@ load_new_process:
 	lda #<new_prog_args
 	ldx #>new_prog_args
 	ldy #1
-	sei
-	jsr get_dir_filename_int
-	cli
+	jsr get_dir_filename_ext
 	lda #<new_prog_args
 	ldx #>new_prog_args
 	ldy #0
@@ -1773,7 +1771,6 @@ run_first_prog:
 	pha
 	plp
 	
-	stp
 	stz irq_already_triggered
 	jmp (STORE_PROG_ADDR)
 

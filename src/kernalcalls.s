@@ -6,7 +6,7 @@
 
 .SEGMENT "CODE"
 
-.import parse_num_kernal_ext, bin_bcd16_ext, strlen, strlen_16bit
+.import parse_num_kernal, bin_bcd16, strlen, strlen_16bit
 .import hex_num_to_string_kernal
 
 .import get_process_name_kernal_ext
@@ -25,11 +25,13 @@
 .import readf_byte_extmem_y, vread_byte_extmem_y, writef_byte_extmem_y, vwrite_byte_extmem_y
 .import CALL_free_extmem_bank, share_extmem_bank, memmove_extmem, fill_extmem
 .import pread_extmem_xy, pwrite_extmem_xy
-.import open_pipe_ext, write_pipe_ext
 
+.import CALL_pipe
 .import setup_chrout_hook, release_chrout_hook, CHROUT_screen, send_byte_chrout_hook
 .import setup_general_hook, release_general_hook, get_general_hook_info, send_message_general_hook, mark_last_hook_message_received
+
 .import lock_vera_regs, unlock_vera_regs, prog_using_vera_regs, default_screen_mode, default_vscale
+
 .import in_active_processes_table, add_active_processes_table, active_processes_table_index, active_processes_table, replace_active_processes_table
 .import vera_version_number, rom_vers, max_ram_bank, smc_version_number, internal_jiffy_counter
 
@@ -49,13 +51,13 @@
 call_table:
 	jmp CALL_getc ; $9D00
 	jmp CALL_putc ; $9D03
-	jmp exec ; $9D06
+	jmp CALL_exec ; $9D06
 	jmp CALL_print_str ; $9D09
 	jmp CALL_get_process_info ; $9D0C
 	jmp CALL_get_args ; $9D0F
-	jmp get_process_name ; $9D12
-	jmp parse_num ; $9D15
-	jmp hex_num_to_string ; $9D18
+	jmp CALL_get_process_name ; $9D12
+	jmp CALL_parse_num ; $9D15
+	jmp CALL_hex_num_to_string ; $9D18
 	jmp kill_process ; $9D1B
 	jmp CALL_open_file ; $9D1E
 	jmp CALL_close_file ; $9D21
@@ -98,7 +100,7 @@ call_table:
 	jmp mark_last_hook_message_received ; $9D90
 	jmp lock_vera_regs ; $9D93
 	jmp unlock_vera_regs ; $9D96
-	jmp bin_bcd16_ext ; $9D99
+	jmp CALL_bin_bcd16 ; $9D99
 	jmp CALL_move_fd ; $9D9C
 	jmp CALL_get_time ; $9D9F
 	jmp CALL_detach_self ; $9DA2
@@ -144,7 +146,7 @@ setup_call_table:
 ;
 ; return value: 0 on failure, otherwise return bank of new process
 ;
-exec:
+CALL_exec:
 	save_p_816_8bitmode
 	sta $02 + 1
 	
@@ -389,34 +391,28 @@ CALL_get_args:
 ;
 ; no return value
 ;
-get_process_name:
-	save_p_816_8bitmode
-	set_atomic_st
-	
-	jsr get_process_name_kernal_ext
-	
-	clear_atomic_st
-	restore_p_816
+CALL_get_process_name:
+	run_routine_8bit get_process_name_kernal_ext
 	rts
 
 ;
 ; Parse a number in the string pointed to by .AX
 ; if leading $ or 0x, treat as hex number 
 ;
-parse_num:
-	save_p_816_8bitmode
-	jsr parse_num_kernal_ext
-	restore_p_816
+CALL_parse_num:
+	run_routine_8bit parse_num_kernal
+	rts
+
+CALL_bin_bcd16:
+	run_routine_8bit bin_bcd16
 	rts
 	
 ;
 ; returns base-16 representation of byte in .A in .X & .A
 ; returns low nibble in .X, high nibble in .A, preserves .Y
 ;
-hex_num_to_string:
-	save_p_816_8bitmode
-	jsr hex_num_to_string_kernal
-	restore_p_816
+CALL_hex_num_to_string:
+	run_routine_8bit hex_num_to_string_kernal
 	rts
 
 ;
@@ -665,12 +661,5 @@ CALL_set_console_mode:
 	lda #0
 	xba
 	restore_p_816
-	rts
-
-;
-; CALL_pipe
-;
-CALL_pipe:
-	run_routine_8bit open_pipe_ext
 	rts
 

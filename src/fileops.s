@@ -1196,6 +1196,9 @@ close_file_int_entry:
 @close_file_exit:
 	rts	
 
+file_read_write_buff:
+	.res 255
+
 .export CALL_read_file
 CALL_read_file:
 	preserve_rom_run_routine_8bit read_file
@@ -1276,20 +1279,16 @@ read_file:
 	ldstx_word r0, KZE0
 	ldstx_word r1, KZE1
 	lda KZE2
-.export load_process_entry_pt	
-load_process_entry_pt:
-	; this is a file we can read from disk ;
-	sta KZE3
+	sta KZE3 ; this is a file we can read from disk ;
 	
 	set_atomic_st_disc_a
 	
 	ldx KZE3
 	jsr CHKIN
-	bcs read_error_chkin
-@read_loop:	
-	lda r2
-	sta RAM_BANK
-	
+	bcc :+
+	jmp read_error_chkin
+	:
+@read_loop:
 	lda KZE1 + 1 ; is bytes remaining > 255
 	beq :+
 	lda #255 ; load up to 255 bytes
@@ -1297,16 +1296,41 @@ load_process_entry_pt:
 	:
 	lda KZE1
 	:	
-	ldx KZE0
-	ldy KZE0 + 1
+	;ldx KZE0
+	;ldy KZE0 + 1
+	ldx #<file_read_write_buff
+	ldy #>file_read_write_buff
 	clc
 	jsr MACPTR
+	; bytes read in .XY, carry = !success
+	bcc :+
+	jmp try_read_slow ; if MACPTR returns with carry set, try read_slow
+	:
+	
+	lda r2
+	sta RAM_BANK
+	sta ROM_BANK
+	phy
+	phx
+	accum_index_16_bit
+	.a16
+	.i16
+	pla
+	pha
+	dec A
+	ldx #file_read_write_buff
+	ldy KZE0
+	mvn #$00, #$00
+	sty KZE0
+	accum_index_8_bit
+	.a8
+	.i8
+	plx
+	ply
 	
 	lda current_program_id
 	sta RAM_BANK
-	
-	; bytes read in .XY, carry = !success
-	bcs try_read_slow ; if MACPTR returns with carry set, try read_slow
+	stz ROM_BANK
 	
 	txa
 	sty KZE2
@@ -1317,14 +1341,6 @@ load_process_entry_pt:
 	beq :+ ; if no bytes were requested anyways, not actually out
 	jmp @out_bytes
 	:
-	
-	clc ; add bytes_read to ptr
-	txa
-	adc KZE0
-	sta KZE0
-	tya
-	adc KZE0 + 1
-	sta KZE0 + 1
 	
 	sec ; subtract bytes remaining from bytes left
 	lda KZE1
@@ -1935,6 +1951,7 @@ get_pwd:
 	
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	ply
 	lda #0

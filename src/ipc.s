@@ -750,14 +750,22 @@ init_pipe:
 	clear_atomic_st
 	rts
 
+
+;
+; CALL_pipe
+;
+.export CALL_pipe
+CALL_pipe:
+	run_routine_8bit open_pipe
+	rts
+
 ;
 ; open_pipe
 ;
 ; returns a read fd in .A and a write fd in .X
 ; if an error occurred, .Y will return a non-zero value
 ;
-.export open_pipe_ext
-open_pipe_ext:
+open_pipe:
 	jsr get_unused_pipe
 	cmp #NO_FILE
 	bne :+

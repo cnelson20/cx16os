@@ -85,8 +85,7 @@ strncpy_ext:
 ; Parse a byte number from a string in .AX with radix in .Y
 ; Allowed options: .Y = 10, .Y = 16
 ;
-.export parse_num_radix_kernal_ext
-parse_num_radix_kernal_ext:	
+parse_num_radix_kernal:	
 	sta KZE0
 	stx KZE0 + 1
 	
@@ -258,8 +257,8 @@ fail_not_digit:
 ; Parse a number in the string pointed to by .AX
 ; if leading $ or 0x, treat as hex number 
 ;
-.export parse_num_kernal_ext
-parse_num_kernal_ext:
+.export parse_num_kernal
+parse_num_kernal:
 	sta KZE0
 	stx KZE0 + 1
 	
@@ -296,7 +295,7 @@ parse_num_kernal_ext:
 	tax
 	lda KZE0
 	ply
-	jmp parse_num_radix_kernal_ext
+	jmp parse_num_radix_kernal
 
 ;
 ; returns base-16 representation of byte in .A in .X & .A
@@ -335,14 +334,14 @@ hex_num_to_string_kernal:
 	rts
 
 ;
-; bin_bcd16_ext
+; bin_bcd16
 ;
 ; converts the 16-bit binary number in .AX to a 24-bit BCD value returned in .AXY
 ;
 ; convert 16bit binary num to 24 bit BCD value
-.export bin_bcd16_ext
-bin_bcd16_ext:
-	php
+.export bin_bcd16
+bin_bcd16:
+	save_p_816
 	accum_index_8_bit
 	.a8
 	.i8
@@ -350,8 +349,8 @@ bin_bcd16_ext:
 	stx @BIN + 1
 	
 	sed ; Switch to decimal mode
-	rep #$20
-	.a8
+	accum_16_bit
+	.a16
 	stz @BCD + 0
 	stz @BCD + 2
 	ldx #16		; The number of source bits
@@ -370,7 +369,8 @@ bin_bcd16_ext:
 	ldx @BCD + 1
 	ldy @BCD + 2
 	
-	plp	; Back to binary mode
+	restore_p_816	; Back to binary mode
+	.a8
 	rts
 @BIN:
 	.res 2
@@ -415,6 +415,7 @@ tolower:
 ;
 .export get_process_name_kernal_ext
 get_process_name_kernal_ext:
+	set_atomic_st
 	sta KZE1
 	stx KZE1 + 1
 	
@@ -424,6 +425,7 @@ get_process_name_kernal_ext:
 	jsr is_valid_process
 	cmp #0
 	bne :+
+	clear_atomic_st
 	lda #0 ; no such process
 	tax
 	ldy #1
@@ -460,6 +462,7 @@ get_process_name_kernal_ext:
 	pla
 	plx ; pull again to return number of bytes copied	
 	ldy #0
+	clear_atomic_st
 	rts
 
 ;
