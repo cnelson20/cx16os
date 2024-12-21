@@ -500,6 +500,7 @@ send_message_general_hook:
 	accum_index_8_bit
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	clear_atomic_st
 	jsr surrender_process_time
 	ldx KZE1
@@ -513,6 +514,7 @@ send_message_general_hook:
 	ldx KZE1
 	lda hook_prog_banks, X
 	sta RAM_BANK
+	sta ROM_BANK
 
 	accum_index_16_bit
 	.i16
@@ -552,7 +554,8 @@ send_message_general_hook:
 	ldx KZE1
 	lda hook_extmem_banks, X
 	sta RAM_BANK
-	
+	sta ROM_BANK
+
 	push_zp_word KZES4
 	push_zp_word KZES5
 	lda hook_data_addrs_lo, X
@@ -587,6 +590,7 @@ send_message_general_hook:
 @copy_loop:
 	lda r1 ; bank of message
 	sta RAM_BANK
+	sta ROM_BANK
 	phy
 	txy
 	lda (r0), Y
@@ -594,6 +598,7 @@ send_message_general_hook:
 	pha
 	lda KZES5 ; hook extmem bank
 	sta RAM_BANK
+	sta ROM_BANK
 	pla
 	sta (KZES4), Y
 
@@ -611,6 +616,7 @@ send_message_general_hook:
 	ldx KZE1 ; hook #
 	lda hook_prog_banks, X
 	sta RAM_BANK ; write back new end_offset into prog_bank
+	sta ROM_BANK
 	accum_16_bit
 	.a16
 	lda KZE3 ; end_offset
@@ -629,6 +635,7 @@ send_message_general_hook:
 
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	clear_atomic_st
 
 @return_success:
@@ -687,10 +694,12 @@ mark_last_hook_message_received:
 	.a8
 	txa
 	sta RAM_BANK
+	sta ROM_BANK
 	lda (KZE1), Y ; load [message body length] [sender id]
 	pha
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	pla
 	accum_16_bit
 	.a16

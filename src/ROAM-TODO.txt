@@ -20,7 +20,11 @@ copy_file
 rename
 
 setup_chrout_hook
+send_byte_chrout_hook
+
 setup_general_hook
+send_message_general_hook
+mark_last_hook_message_received
 
 open_file
 read_file
@@ -83,7 +87,3 @@ exec
 write_file
 print_str
 
-send_byte_chrout_hook
-send_message_general_hook
-
-mark_last_hook_message_received
