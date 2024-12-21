@@ -1559,10 +1559,12 @@ write_file:
 	ldstx_word r1, KZE1
 	
 	cmp #1
-	beq write_stdout
+	beq :+ ; write_stdout
 	cmp #2
-	beq write_stdout
-	
+	bne :++
+	:
+	jmp write_stdout
+	:
 @write_to_file:
 	set_atomic_st ; needs to be uninterrupted
 
@@ -1575,11 +1577,13 @@ write_file:
 @write_file_loop:
 	lda current_program_id ; restore RAM bank every loop
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	lda KZE1 + 1
 	ora KZE1
 	bne :+ ; there are more bytes to read
 	; return ;
+	stz ROM_BANK
 	jsr CLRCHN
 	clear_atomic_st
 	lda r1
@@ -1588,6 +1592,8 @@ write_file:
 	rts
 	:
 	
+	lda #0
+	xba
 	lda KZE1 + 1 ; is bytes remaining > 255
 	beq :+
 	lda #255 ; load up to 255 bytes
@@ -1595,10 +1601,22 @@ write_file:
 	:
 	lda KZE1
 	:
-	
+	pha
+	accum_index_16_bit
+	.a16
+	.i16
+	dec A
 	ldx KZE0
-	ldy KZE0 + 1	
+	ldy #file_read_write_buff
+	mvn #$00, #$00
+	accum_index_8_bit
+	.a8
+	.i8
+	pla
+	ldx #<file_read_write_buff
+	ldy #>file_read_write_buff
 	clc
+	stz ROM_BANK
 	jsr MCIOUT
 	bcs @file_doesnt_exist
 	
@@ -1627,6 +1645,7 @@ write_file:
 	bra @write_file_exit
 
 @write_file_exit:
+	stz ROM_BANK
 	phy
 	jsr CLRCHN
 	ply
@@ -1634,6 +1653,7 @@ write_file:
 	
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	lda #0
 	tax
@@ -1648,10 +1668,13 @@ write_stdout:
 	cpy #0
 	beq :++
 	:
+	lda current_program_id
+	sta ROM_BANK
 	lda $00, X
 	phx
 	phy
 	index_8_bit
+	stz ROM_BANK
 	jsr CHROUT_screen
 	index_16_bit
 	ply
