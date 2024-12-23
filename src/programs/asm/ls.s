@@ -72,7 +72,18 @@ parse_flag:
 	inc ptr1 + 1
 	:
 	lda (ptr1)
+
 	cmp #'a'
+	bne :+
+
+	lda #1
+	sta print_dotfiles_flag
+	sta print_this_dir_parent_dir_flag
+	bra args_loop
+
+	:
+
+	cmp #'A'
 	bne :+
 
 	lda #1
@@ -80,6 +91,7 @@ parse_flag:
 	bra args_loop
 
 	:
+
 	cmp #'b'
 	bne :+
 
@@ -283,14 +295,32 @@ print_dir_loop:
 	inx
 	stx file_name_ptr
 
+	lda print_this_dir_parent_dir_flag
+	bne @not_dotfile
+
 	lda $00, X
 	cmp #'.'
-	bne :+
+	bne @not_dotfile
 	lda print_dotfiles_flag
 	bne :+
 	jmp end_print_dir_loop
 	:
+	txy
+	iny
+	lda $00, Y
+	cmp #'"'
+	beq :+
+	cmp #'.'
+	bne @not_dotfile
+	iny
+	lda $00, Y
+	cmp #'"'
+	bne @not_dotfile
+	:
+	jmp end_print_dir_loop
+@not_dotfile:
 
+@print_file:
 	lda #'"'
 	jsr strchr
 	stz $00, X
@@ -535,11 +565,13 @@ flag_error:
 ; ls option flags
 ;
 print_dotfiles_flag:
-	.byte 0
+	.word 0
+print_this_dir_parent_dir_flag:
+	.word 0
 disable_color_flag:
-	.byte 0
+	.word 0
 list_details_flag:
-	.byte 0
+	.word 0
 	
 end_listing_addr:
 	.word 0
