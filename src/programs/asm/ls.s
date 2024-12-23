@@ -108,7 +108,10 @@ parse_flag:
 	sta list_details_flag
 	bra args_loop
 	:
-	
+
+	cmp #'h'
+	beq print_usage
+
 	jmp flag_error
 
 add_dir_list:
@@ -154,6 +157,30 @@ print_dirs_list:
 	.byte 0
 @this_dir:
 	.asciiz "."
+
+print_usage:
+	lda #<@str
+	ldx #>@str
+	jsr print_str
+	
+	lda #0
+	rts
+@str:
+	.byte "Usage: ls [OPTION]... [FILE]...", NEWLINE
+	.byte "List information about the FILEs (the current directory by default)", NEWLINE
+	.byte NEWLINE
+	.byte "Options:", NEWLINE
+	.byte "  -a:     do not ignore entries starting with with .", NEWLINE
+	.byte "  -A:     print all files except implied . and ..", NEWLINE
+	.byte "  -b:     do not print entries in color", NEWLINE
+	.byte "  -h:     print this message and exit", NEWLINE
+	.byte "  -l:     use a long listing format", NEWLINE
+	.byte NEWLINE
+	.byte "Exit status:", NEWLINE
+	.byte " 0  if OK,", NEWLINE
+	.byte " 1  if minor problems (e.g., cannot access subdirectory),", NEWLINE
+	.byte " 2  if serious trouble (e.g., cannot access command-line argument).", NEWLINE
+	.byte NEWLINE, 0
 
 print_dir:
 	lda ptr1
