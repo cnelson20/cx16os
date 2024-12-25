@@ -6,7 +6,7 @@ SOURCES = main.s kernalcalls.s helpers.s helpers_int.s fileops.s extmem.s ipc.s 
 INCS = prog.inc cx16.inc macs.inc
 FLAGS = -t cx16 -m os.map -Ln os.lbl
 
-ifneq (, $(shell which mcopy))
+ifneq (, $(shell which mcopy 2> /dev/null))
 USE_MTOOLS=t
 endif
 
