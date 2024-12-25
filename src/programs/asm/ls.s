@@ -80,7 +80,6 @@ parse_flag:
 	sta print_dotfiles_flag
 	sta print_this_dir_parent_dir_flag
 	bra args_loop
-
 	:
 
 	cmp #'A'
@@ -89,7 +88,6 @@ parse_flag:
 	lda #1
 	sta print_dotfiles_flag
 	bra args_loop
-
 	:
 
 	cmp #'b'
@@ -98,9 +96,16 @@ parse_flag:
 	lda #1
 	sta disable_color_flag
 	bra args_loop
-
 	:
 	
+	cmp #'c'
+	bne :+
+
+	lda #1
+	sta force_color_flag
+	bra args_loop
+	:
+
 	cmp #'l'
 	bne :+
 	
@@ -126,7 +131,16 @@ add_dir_list:
 
 print_dirs_list:
 	stz @dir_names_index
-
+	
+	lda force_color_flag
+	bne :+
+	lda #0
+	ldx disable_color_flag
+	bne :+
+	lda #1
+	:
+	sta use_colors_flag
+	
 	lda dir_names_size
 	bne :+
 
@@ -394,15 +408,14 @@ print_dir_loop:
 	jsr CHROUT
 @done_print_file_details:	
 	
-	lda disable_color_flag
-	bne :+++
+	lda use_colors_flag
+	beq :++
+	ldx #COLOR_BLUE
 	lda file_is_dir
-	beq :+
-	lda #COLOR_BLUE
-	bra :++
+	bne :+
+	ldx #COLOR_GREEN
 	:
-	lda #COLOR_GREEN
-	:
+	txa
 	jsr CHROUT
 	:
 
@@ -410,19 +423,18 @@ print_dir_loop:
 	ldx file_name_ptr + 1
 	jsr print_str
 
-	lda disable_color_flag
-	bne :+
+	lda use_colors_flag
+	beq :+
 	lda foreground_color
 	jsr CHROUT
 	:
-
+	
+	ldx #'/'
 	lda file_is_dir
-	beq :+
-	lda #'/'
-	bra :++
+	bne :+
+	ldx #'*'
 	:
-	lda #'*'
-	:
+	txa
 	jsr CHROUT
 	
 	sep #$10
@@ -596,6 +608,10 @@ print_dotfiles_flag:
 print_this_dir_parent_dir_flag:
 	.word 0
 disable_color_flag:
+	.word 0
+force_color_flag:
+	.word 0
+use_colors_flag:
 	.word 0
 list_details_flag:
 	.word 0
