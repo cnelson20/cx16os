@@ -187,6 +187,7 @@ print_usage:
 	.byte "  -a:     do not ignore entries starting with with .", NEWLINE
 	.byte "  -A:     print all files except implied . and ..", NEWLINE
 	.byte "  -b:     do not print entries in color", NEWLINE
+	.byte "  -c:     print entries in color", NEWLINE
 	.byte "  -h:     print this message and exit", NEWLINE
 	.byte "  -l:     use a long listing format", NEWLINE
 	.byte NEWLINE
