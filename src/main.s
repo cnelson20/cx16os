@@ -1865,7 +1865,6 @@ rom_vers:
 ; initialize process_table & related tables
 ;
 setup_kernal_processes:
-	stp
 	accum_index_16_bit
 	.a16
 	.i16
