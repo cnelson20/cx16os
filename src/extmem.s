@@ -620,28 +620,57 @@ fill_extmem:
 	
 	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
-	
-	index_16_bit
-	ldx r0
-	ldy r1
-	beq @end
-	.i16
-	cpy #$2000
-	bcc :+
-	ldy #$2000
+	sta ROM_BANK
+
+	accum_16_bit
+	.a16
+	lda r0
+	cmp #$A000
+	bcc @return_failure
+	lda r1
+	beq @return_success
+	sta KZE1
+
+	sec
+	lda #$0000
+	sbc r0
+	cmp r1
+	bcs :+
+	sta KZE1
 	:
-	.i8
-	
-	lda KZE0	
-@loop:
+
+	accum_8_bit
+	index_16_bit
+	.a8
+	.i16
+	ldx r0
+	lda KZE0
 	sta $00, X
-	
-	inx
-	dey
-	bne @loop
-@end:	
+	accum_16_bit
+	.a16
+	dec KZE1
+	beq @return_success
+
+	txy
+	iny
+	lda KZE1
+	dec A
+	mvn #$00, #$00
+@return_success:
+	accum_index_8_bit
+	.a8
+	.i8
+	lda #0
+	bra @return
+@return_failure:
+	accum_index_8_bit
+	.a8
+	.i8
+	lda #1
+@return:
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 
 	restore_p_816
 	rts
