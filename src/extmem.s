@@ -668,9 +668,9 @@ fill_extmem:
 	.i8
 	lda #1
 @return:
-	lda current_program_id
-	sta RAM_BANK
-	sta ROM_BANK
+	ldx current_program_id
+	stx RAM_BANK
+	stx ROM_BANK
 
 	restore_p_816
 	rts
