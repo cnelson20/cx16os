@@ -833,7 +833,7 @@ parse_env_var:
 	ldx curr_arg
 	lda args_offset_arr, X
 	
-	sec ; + 1 to skip the $
+	clc
 	adc #<output
 	sta ptr2
 	lda #>output
@@ -969,7 +969,6 @@ search_env_vars:
 
 	ldy curr_arg
 	lda args_offset_arr, Y
-	inc A
 	tax
 	ldy #0
 	:
@@ -1039,11 +1038,11 @@ search_env_vars:
 	rts
 	
 question_str:
-	.asciiz "?"
+	.asciiz "$?"
 excl_str:
-	.asciiz "!"
+	.asciiz "$!"
 dollar_str:
-	.asciiz "$"
+	.asciiz "$$"
 
 shift_output:
 	ldy curr_arg
@@ -1796,14 +1795,21 @@ set_env_var:
 	sta ptr3 + 1
 
 	ldy #0
+	lda #'$'
+	jsr writef_byte_extmem_y
+
+	inc ptr2
 	:
 	lda (ptr3), Y
-	jsr writef_byte_extmem_y
 	cmp #0
 	beq :+
+	jsr writef_byte_extmem_y
 	iny
-	bpl :-
+	cpy #126
+	bcc :-
 	:
+	lda #0
+	jsr writef_byte_extmem_y
 
 	; write value to extmem
 	lda #$80
