@@ -47,18 +47,18 @@ init:
 	stz ROM_BANK
 	stz current_program_id
 	
-	index_16_bit
+	stz $0100
+	accum_index_16_bit
 	.i16
-	ldx #$01FF
-	txs
+	.a16
+	lda #$FE - 2
 	ldx #$0100
-	stx r0
-	ldx #$00FE
-	stx r1
-	index_8_bit
+	txy
+	iny
+	mvn #$00, #$00
+	accum_index_8_bit
 	.i8
-	lda #0
-	jsr memory_fill
+	.a8
 	
 	lda #SWAP_COLORS
 	jsr CHROUT
@@ -397,8 +397,8 @@ default_brk_handler:
 
 .export custom_brk_handler
 custom_brk_handler:
-	rep #$20
-	sep #$10
+	accum_16_bit
+	index_8_bit
 	.a16
 	lda #$01FF
 	tcs
@@ -406,7 +406,7 @@ custom_brk_handler:
 	phx
 	lda #brk_re_caller
 	pha
-	sep #$30
+	accum_8_bit
 	.a8
 	php
 	
@@ -1356,21 +1356,23 @@ setup_process_info:
 	push_zp_word r0
 	push_zp_word r1
 	
-	stz r0
-	stz r1
-	lda #$A0
-	sta r0 + 1
-	lda #$03
-	sta r1 + 1
-	lda #0
-	jsr memory_fill
+	accum_index_16_bit
+	.a16
+	.i16
+	stz $A000
+	ldx #$A000
+	txy
+	iny
+	lda #$300 - 2
+	mvn #$00, #$00
 	
-	pull_ax
+	pla
 	sta r1
-	stx r1 + 1
-	pull_ax
+	pla
 	sta r0
-	stx r0 + 1
+	accum_index_8_bit
+	.a8
+	.i8
 	pull_ax
 	ply
 	sty RAM_BANK
@@ -1863,17 +1865,29 @@ rom_vers:
 ; initialize process_table & related tables
 ;
 setup_kernal_processes:
-	; zero out tables except process_table itself
-	cnsta_word (process_table + PROCESS_TABLE_SIZE), r0
-	cnsta_word (END_PROCESS_TABLES - other_process_tables), r1	
-	lda #0
-	jsr memory_fill
-	
+	stp
+	accum_index_16_bit
+	.a16
+	.i16
 	; fill process_table with $FF
-	cnsta_word process_table, r0
-	cnsta_word PROCESS_TABLE_SIZE, r1
+	ldx #process_table
 	lda #$FF
-	jsr memory_fill
+	sta $00, X
+	txy
+	iny
+	lda #PROCESS_TABLE_SIZE - 2
+	mvn #$00, #$00
+
+	; zero out tables except process_table itself
+	tyx
+	iny
+	stz $00, X
+	lda #(END_PROCESS_TABLES - other_process_tables) - 2
+	mvn #$00, #$00
+
+	accum_index_8_bit
+	.a8
+	.i8
 	
 	jsr MEMTOP
 	and #$FE ; $FF - 1
