@@ -45,11 +45,6 @@ init:
 	
 	jsr get_console_info
 	sta foreground_color
-	cmp #COLOR_WHITE
-	beq :+
-	lda #1
-	sta disable_color_flag
-	:
 
 	stz exit_code
 	stz dir_names_size
@@ -90,19 +85,11 @@ parse_flag:
 	bra args_loop
 	:
 
-	cmp #'b'
-	bne :+
-
-	lda #1
-	sta disable_color_flag
-	bra args_loop
-	:
-	
 	cmp #'c'
 	bne :+
 
 	lda #1
-	sta force_color_flag
+	sta use_colors_flag
 	bra args_loop
 	:
 
@@ -131,15 +118,6 @@ add_dir_list:
 
 print_dirs_list:
 	stz @dir_names_index
-	
-	lda force_color_flag
-	bne :+
-	lda #0
-	ldx disable_color_flag
-	bne :+
-	lda #1
-	:
-	sta use_colors_flag
 	
 	lda dir_names_size
 	bne :+
@@ -186,7 +164,6 @@ print_usage:
 	.byte "Options:", NEWLINE
 	.byte "  -a:     do not ignore entries starting with with .", NEWLINE
 	.byte "  -A:     print all files except implied . and ..", NEWLINE
-	.byte "  -b:     do not print entries in color", NEWLINE
 	.byte "  -c:     print entries in color", NEWLINE
 	.byte "  -h:     print this message and exit", NEWLINE
 	.byte "  -l:     use a long listing format", NEWLINE
@@ -607,10 +584,6 @@ flag_error:
 print_dotfiles_flag:
 	.word 0
 print_this_dir_parent_dir_flag:
-	.word 0
-disable_color_flag:
-	.word 0
-force_color_flag:
 	.word 0
 use_colors_flag:
 	.word 0
