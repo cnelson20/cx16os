@@ -1196,15 +1196,18 @@ load_new_process:
 	dex
 	bne :-
 	:
-	lda #0
-	sta (KZES4), Y
 	sty r1 + 1
 
+	lda #0
+	sta new_prog_args, Y
+	dey
+	bmi :++
 	:
 	lda (KZES4), Y
 	sta new_prog_args, Y
 	dey
 	bpl :-
+	:
 	
 	lda @new_bank
 	jsr CALL_free_extmem_bank
