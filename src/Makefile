@@ -29,11 +29,11 @@ clean:
 	-make -C programs/ clean
 	-rm *.lbl
 	-rm *.map
+	-rm *.nvram
 	-rm -r mnt/
 	-rm -r mnt_dir/
 
-clear:
-	-make clean
+clear: clean
 	-make clear -C programs/
 	-rm cx16os.img
 
