@@ -933,60 +933,78 @@ parse_env_var:
 	sta output, Y
 	rts
 @shift_val:
+	.byte 0
+
+check_aliases:
+	stz curr_arg
+	jsr find_var_ptr
+	cmp #0
+	beq :+
+	rts
+	:
 	
+	lda #$7F
+	sta ptr2
+	jsr readf_byte_extmem_y
+	pha
+	tax
+	lda #$80
+	sta ptr2
+
+	ldy #$FF
+	:
+	iny
+	jsr readf_byte_extmem_y
+	cmp #0
+	bne :-
+	dex
+	bne :-
+	iny
+
+	lda ptr2 + 1
+	pha
+	tya
+	jsr shift_output
+	lda #$80
+	sta ptr2
+	pla
+	sta ptr2 + 1
+	pla
+	tax
+	dec A
+	clc
+	adc num_args
+	sta num_args
+
+	ldy #$FF
+@copy_loop:
+	iny
+	jsr readf_byte_extmem_y
+	sta output, Y
+	cmp #0
+	bne @copy_loop
+	dex
+	bne @copy_loop
+
+	ldx #1
+	ldy #$FF
+	:
+	iny
+	lda output, Y
+	bne :-
+	iny
+	tya
+	sta args_offset_arr, X
+	inx
+	cpx num_args
+	bcc :-
+	rts
 
 search_env_vars:
-	lda env_extmem_bank ; is the bank initialized?
-	bne :+
-	jmp @out_slots
-	:
-
-	lda #<$A000
-	sta ptr2
-	lda #>$A000
-	sta ptr2 + 1
-
-	lda env_extmem_bank
-	jsr set_extmem_rbank
-	lda #<ptr2
-	jsr set_extmem_rptr
-
-	ldy #0
-	ldx #$20
-@search_loop:
-	jsr readf_byte_extmem_y
+	jsr find_var_ptr
 	cmp #0
-	bne @found
-
-@cont_search_loop:
-	inc ptr2 + 1
-	dex
-	bne @search_loop
-	jmp @out_slots
-
-@found:
-	phx
-
-	ldy curr_arg
-	lda args_offset_arr, Y
-	tax
-	ldy #0
-	:
-	jsr readf_byte_extmem_y
-	cmp output, X
-	bne :+
-	lda output, X
-	beq :+
-	iny
-	inx
-	bpl :-
-	lda #1 ; always unequal if > $7F (shouldn't happen)
-	:
-	plx
-	ldy #0
-	cmp #0
-	bne @cont_search_loop
-
+	bne @out_slots
+	
 	lda #$80
 	sta ptr2
 
@@ -1035,6 +1053,63 @@ search_env_vars:
 	tay
 	lda #0
 	sta output, Y
+	rts
+
+find_var_ptr:
+	lda env_extmem_bank ; is the bank initialized?
+	bne :+
+	lda #1
+	rts
+	:
+
+	lda #<$A000
+	sta ptr2
+	lda #>$A000
+	sta ptr2 + 1
+
+	lda env_extmem_bank
+	jsr set_extmem_rbank
+	lda #<ptr2
+	jsr set_extmem_rptr
+
+	ldy #0
+	ldx #$20
+@search_loop:
+	jsr readf_byte_extmem_y
+	cmp #0
+	bne @found
+
+@cont_search_loop:
+	inc ptr2 + 1
+	dex
+	bne @search_loop
+	lda #1
+	rts
+
+@found:
+	phx
+
+	ldy curr_arg
+	lda args_offset_arr, Y
+	tax
+	ldy #0
+	:
+	jsr readf_byte_extmem_y
+	cmp output, X
+	bne :+
+	lda output, X
+	beq :+
+	iny
+	inx
+	bpl :-
+	lda #1 ; always unequal if > $7F (shouldn't happen)
+	:
+	plx
+	ldy #0
+	cmp #0
+	bne @cont_search_loop
+
+	lda #0
 	rts
 	
 question_str:
@@ -1149,6 +1224,8 @@ shift_output:
 	
 	
 narg_not_0_amp:
+	jsr check_aliases
+
 	jsr check_special_cmds
 	beq :+
 	jmp new_line
@@ -1505,6 +1582,17 @@ check_special_cmds:
 	lda #1
 	rts	
 @not_color:
+	lda #<string_alias
+	ldx #>string_alias
+	jsr cmd_cmp
+	bne @not_alias
+	
+	jsr set_alias
+	
+	lda #1
+	rts
+@not_alias:
+	
 	lda #0
 	rts
 
@@ -1712,7 +1800,150 @@ set_env_var:
 	rts
 
 	:
+	jsr find_env_space
+	cmp #0
+	beq :+
+	lda #<set_env_out_space
+	ldx #>set_env_out_space
+	jsr print_str
+	rts
+	:
+	
+	lda ptr3 ; bank to write to returned in ptr3
+	jsr set_extmem_wbank
 
+	lda #<ptr2 ; ptr to write to returned in ptr2
+	jsr set_extmem_wptr
+
+	; write name to extmem
+	lda args_offset_arr + 1
+	clc
+	adc #<output
+	sta ptr3
+	lda #>output
+	adc #0
+	sta ptr3 + 1
+
+	ldy #0
+	lda #'$'
+	jsr writef_byte_extmem_y
+
+	inc ptr2
+	:
+	lda (ptr3), Y
+	cmp #0
+	beq :+
+	jsr writef_byte_extmem_y
+	iny
+	cpy #126
+	bcc :-
+	lda #0
+	:
+	jsr writef_byte_extmem_y
+
+	; write value to extmem
+	lda #$80
+	sta ptr2
+
+	lda args_offset_arr + 2
+	clc
+	adc #<output
+	sta ptr3
+	lda #>output
+	adc #0
+	sta ptr3 + 1
+
+	ldy #0
+	:
+	lda (ptr3), Y
+	jsr writef_byte_extmem_y
+	cmp #0
+	beq :+
+	iny
+	bpl :-
+	:
+
+	rts
+
+set_alias:
+	lda num_args
+	cmp #3
+	bcs :+
+	rts
+	:
+
+	jsr find_env_space
+	cmp #0
+	beq :+
+	rts
+	:
+	
+	lda ptr3 ; bank to write to returned in ptr3
+	jsr set_extmem_wbank
+	lda #<ptr2 ; ptr to write to returned in ptr2
+	jsr set_extmem_wptr
+	; write name to extmem
+	
+	ldx args_offset_arr + 1
+	ldy #0
+	:
+	lda output, X
+	cmp #0
+	beq :+
+	jsr writef_byte_extmem_y
+	inx
+	iny
+	cpy #126
+	bcc :-
+	lda #0
+	:
+	jsr writef_byte_extmem_y
+
+	; write value to extmem
+	lda num_args
+	dec A
+	dec A
+	ldy #$7F
+	jsr writef_byte_extmem_y
+	tax ; num of args to copy in X
+
+	lda $80
+	sta ptr2
+	
+	clc
+	lda args_offset_arr + 2
+	adc #<output
+	sta ptr3
+	lda #>output
+	adc #0
+	sta ptr3 + 1
+	
+	ldy #0
+@copy_val_loop:
+	lda (ptr3)
+	jsr writef_byte_extmem_y
+	inc ptr3
+	bne :+
+	inc ptr3 + 1
+	:
+	iny
+	beq @end_loop
+	cmp #0
+	bne @copy_val_loop
+	dex
+	bne @copy_val_loop
+@end_loop:
+	lda #0
+	jsr writef_byte_extmem_y
+	
+	rts
+
+;
+; takes second arg to cmd and compares to keys in extmem
+; on success, returns a ptr to free extmem in ptr2, a bank in ptr3, and 0 in .A
+; returns a non-zero val in .A on failure
+;
+find_env_space:
 	lda env_extmem_bank
 	bne @already_have_bank
 	jsr res_extmem_bank
@@ -1729,7 +1960,7 @@ set_env_var:
 	lda #>$A000
 	sta ptr2 + 1
 	lda #0
-	ldx #$20
+	ldx #$C0 - $A0
 	ldy #0
 	:
 	jsr writef_byte_extmem_y
@@ -1773,66 +2004,15 @@ set_env_var:
 	dex
 	bne @find_space_loop
 
-	lda #<set_env_out_space
-	ldx #>set_env_out_space
-	jsr print_str
+@out_space:
+	lda #1
 	rts
 
 @found_space:
 	lda env_extmem_bank
-	jsr set_extmem_wbank
-
-	lda #<ptr2
-	jsr set_extmem_wptr
-
-	; write name to extmem
-	lda args_offset_arr + 1
-	clc
-	adc #<output
 	sta ptr3
-	lda #>output
-	adc #0
-	sta ptr3 + 1
 
-	ldy #0
-	lda #'$'
-	jsr writef_byte_extmem_y
-
-	inc ptr2
-	:
-	lda (ptr3), Y
-	cmp #0
-	beq :+
-	jsr writef_byte_extmem_y
-	iny
-	cpy #126
-	bcc :-
-	:
 	lda #0
-	jsr writef_byte_extmem_y
-
-	; write value to extmem
-	lda #$80
-	sta ptr2
-
-	lda args_offset_arr + 2
-	clc
-	adc #<output
-	sta ptr3
-	lda #>output
-	adc #0
-	sta ptr3 + 1
-
-	ldy #0
-	:
-	lda (ptr3), Y
-	jsr writef_byte_extmem_y
-	cmp #0
-	beq :+
-	iny
-	bpl :-
-	:
-
 	rts
 
 open_shell_file:
@@ -2023,6 +2203,8 @@ string_bw:
 	.asciiz "bw"
 string_color:
 	.asciiz "color"
+string_alias:
+	.asciiz "alias"
 
 ; program vars 
 
