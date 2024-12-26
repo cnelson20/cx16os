@@ -1,0 +1,6 @@
+#
+# .shrc file for ~/bin/shell
+#
+alias ls ls -c
+alias ll ls -l
+alias la ls -A
