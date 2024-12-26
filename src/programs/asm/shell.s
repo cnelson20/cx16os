@@ -18,7 +18,10 @@ RIGHT_CURSOR = $1D
 BACKSPACE = $14
 DEL = $19
 
-NEWLINE = $a
+TAB = 9
+CARRIAGE_RETURN = $0D
+LINE_FEED = $0A
+NEWLINE = LINE_FEED
 
 SINGLE_QUOTE = 39
 
@@ -540,9 +543,15 @@ command_entered:
 	lda #NEWLINE
 	jsr CHROUT
 	:
-	
-	stz in_quotes
+
 	ldx #0
+	jsr find_non_space_char_input
+	lda input, X
+	cmp #'#'
+	bne :+
+	jmp new_line
+	:
+	stz in_quotes
 	:
 	lda input, X
 	beq :+
@@ -829,6 +838,39 @@ move_input_chars_forward:
 @print_count:
 	.byte 0
 
+is_space_char:
+	cmp #' '
+	bne :+
+	rts
+	:
+	cmp #TAB
+	bne :+
+	rts
+	:
+	cmp #CARRIAGE_RETURN
+	bne :+
+	rts
+	:
+	cmp #LINE_FEED
+	bne :+
+	rts
+	:
+	cmp #0
+	rts
+
+find_non_space_char_input:
+	; takes in offset to input in X
+	:
+	lda input, X
+	beq @return
+	jsr is_space_char
+	bne @return ; return if not whitespace char
+	inx
+	bne :-
+	dex
+@return:
+	rts
+
 parse_env_var:
 	ldx curr_arg
 	lda args_offset_arr, X
@@ -937,6 +979,17 @@ parse_env_var:
 
 check_aliases:
 	stz curr_arg
+	ldx #0
+	:
+	phx
+	jsr @check_alias_iter
+	plx
+	inx
+	cmp #0
+	beq :-
+	rts
+@check_alias_iter:
+	txa
 	jsr find_var_ptr
 	cmp #0
 	beq :+
@@ -998,9 +1051,11 @@ check_aliases:
 	inx
 	cpx num_args
 	bcc :-
+	lda #0
 	rts
 
 search_env_vars:
+	lda #0
 	jsr find_var_ptr
 	cmp #0
 	bne @out_slots
@@ -1056,33 +1111,39 @@ search_env_vars:
 	rts
 
 find_var_ptr:
+	tax
 	lda env_extmem_bank ; is the bank initialized?
 	bne :+
 	lda #1
 	rts
 	:
 
-	lda #<$A000
+	lda #<( $C000 - $100 )
 	sta ptr2
-	lda #>$A000
+	lda #>( $C000 - $100 )
 	sta ptr2 + 1
-
+	
+	phx
 	lda env_extmem_bank
 	jsr set_extmem_rbank
 	lda #<ptr2
 	jsr set_extmem_rptr
-
+	plx
 	ldy #0
-	ldx #$20
 @search_loop:
 	jsr readf_byte_extmem_y
 	cmp #0
-	bne @found
-
-@cont_search_loop:
-	inc ptr2 + 1
+	beq @cont_search_loop
+	cpx #0
+	beq @found
 	dex
-	bne @search_loop
+@cont_search_loop:
+	lda ptr2 + 1
+	dec A
+	sta ptr2 + 1
+	cmp #$A0
+	bcs @search_loop
+
 	lda #1
 	rts
 
@@ -1914,7 +1975,7 @@ set_alias:
 	lda #>output
 	adc #0
 	sta ptr3 + 1
-	
+
 	ldy #$80
 @copy_val_loop:
 	lda (ptr3)
@@ -1929,6 +1990,7 @@ set_alias:
 	bne @copy_val_loop
 	dex
 	bne @copy_val_loop
+	beq @end_loop
 	:
 	tya ; .Y = 0
 	dey
