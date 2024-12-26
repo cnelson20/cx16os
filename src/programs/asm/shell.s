@@ -1872,6 +1872,7 @@ set_alias:
 	rts
 	:
 
+	; breaks
 	jsr find_env_space
 	cmp #0
 	beq :+
@@ -1976,9 +1977,8 @@ find_env_space:
 	sta ptr2
 	lda #>$A000
 	sta ptr2 + 1
-	ldx #$20
-	ldy #0
 @find_space_loop:
+	ldy #0
 	jsr readf_byte_extmem_y
 	cmp #0
 	beq @found_space
@@ -1998,9 +1998,11 @@ find_env_space:
 	:
 	beq @found_space
 
-	inc ptr2 + 1
-	dex
-	bne @find_space_loop
+	lda ptr2 + 1
+	inc A
+	sta ptr2 + 1
+	cmp #$C0
+	bcc @find_space_loop
 
 @out_space:
 	lda #1
