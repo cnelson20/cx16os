@@ -1159,11 +1159,12 @@ find_var_ptr:
 	cmp output, X
 	bne :+
 	lda output, X
-	beq :+
+	beq :++
 	iny
 	inx
 	bpl :-
-	lda #1 ; always unequal if > $7F (shouldn't happen)
+	:
+	lda #1
 	:
 	plx
 	ldy #0
