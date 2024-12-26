@@ -1907,9 +1907,6 @@ set_alias:
 	jsr writef_byte_extmem_y
 	tax ; num of args to copy in X
 
-	lda $80
-	sta ptr2
-	
 	clc
 	lda args_offset_arr + 2
 	adc #<output
@@ -1918,7 +1915,7 @@ set_alias:
 	adc #0
 	sta ptr3 + 1
 	
-	ldy #0
+	ldy #$80
 @copy_val_loop:
 	lda (ptr3)
 	jsr writef_byte_extmem_y
@@ -1927,15 +1924,16 @@ set_alias:
 	inc ptr3 + 1
 	:
 	iny
-	beq @end_loop
+	beq :+
 	cmp #0
 	bne @copy_val_loop
 	dex
 	bne @copy_val_loop
-@end_loop:
-	lda #0
+	:
+	tya ; .Y = 0
+	dey
 	jsr writef_byte_extmem_y
-	
+@end_loop:
 	rts
 
 ;
