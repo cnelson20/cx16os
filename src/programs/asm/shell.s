@@ -1872,7 +1872,6 @@ set_alias:
 	rts
 	:
 
-	; breaks
 	jsr find_env_space
 	cmp #0
 	beq :+
