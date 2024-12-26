@@ -978,13 +978,9 @@ parse_env_var:
 	.byte 0
 
 check_aliases:
-	stz curr_arg
 	ldx #0
 	:
-	phx
 	jsr @check_alias_iter
-	plx
-	inx
 	cmp #0
 	beq :-
 	rts
@@ -995,6 +991,7 @@ check_aliases:
 	beq :+
 	rts
 	:
+	phx
 	
 	lda #$7F
 	sta ptr2
@@ -1029,11 +1026,22 @@ check_aliases:
 	adc num_args
 	sta num_args
 
+	ldy curr_arg
+	lda args_offset_arr, Y
+	adc #<( output - 1 )
+	sta ptr3
+	lda #>( output - 1 )
+	adc #0
+	sta ptr3 + 1
 	ldy #$FF
 @copy_loop:
+	inc ptr3
+	bne :+
+	inc ptr3 + 1
+	:
 	iny
 	jsr readf_byte_extmem_y
-	sta output, Y
+	sta (ptr3)
 	cmp #0
 	bne @copy_loop
 	dex
@@ -1052,6 +1060,7 @@ check_aliases:
 	cpx num_args
 	bcc :-
 	lda #0
+	plx
 	rts
 
 search_env_vars:
@@ -1118,6 +1127,7 @@ find_var_ptr:
 	rts
 	:
 
+	stz ptr3
 	lda #<( $C000 - $100 )
 	sta ptr2
 	lda #>( $C000 - $100 )
@@ -1134,6 +1144,7 @@ find_var_ptr:
 	jsr readf_byte_extmem_y
 	cmp #0
 	beq @cont_search_loop
+	inc ptr3
 	cpx #0
 	beq @found
 	dex
@@ -1170,6 +1181,10 @@ find_var_ptr:
 	ldy #0
 	cmp #0
 	bne @cont_search_loop
+
+	ldx ptr3
+	lda env_extmem_bank
+	sta ptr3
 
 	lda #0
 	rts
@@ -1286,6 +1301,7 @@ shift_output:
 	
 	
 narg_not_0_amp:
+	stz curr_arg
 	jsr check_aliases
 
 	jsr check_special_cmds
@@ -1300,6 +1316,11 @@ narg_not_0_amp:
 
 @pipe_loop:
 	lda starting_arg
+	beq :+
+	sta curr_arg
+	jsr check_aliases
+	lda starting_arg
+	:
 	inc A
 	jsr check_pipe
 	cmp #$FF
