@@ -430,7 +430,7 @@ wait_process:
 	jsr CALL_get_process_info
 	cmp #0
 	bne :+
-	
+@proc_not_alive:
 	lda #0
 	ldx #$FF ; process not alive
 	restore_p_816
@@ -438,10 +438,17 @@ wait_process:
 	
 	:
 	sta KZE2
-	
-	lda current_program_id
+
+	set_atomic_st_disc_a
 	ldy KZE0
+	lda process_table, Y
+	bne :+
+	clear_atomic_st
+	bra @proc_not_alive
+	:
+	lda current_program_id
 	jsr replace_active_processes_table
+	clear_atomic_st
 	
 	; save priority and set to zero ;
 	ldx current_program_id

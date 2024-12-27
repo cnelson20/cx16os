@@ -1640,6 +1640,19 @@ replace_active_processes_table:
 	plx
 	rts
 
+get_alive_proc:
+	tax
+	lda process_table, X
+	beq :+
+	txa
+	rts
+	:
+	; try again with current process's ppid
+	ldx current_program_id
+	lda process_parents_table, X
+	bra get_alive_proc
+	rts
+
 ;
 ; rest_active_process_table
 ;
@@ -1656,6 +1669,9 @@ rest_active_process_table:
 	
 	pha
 	lda active_processes_rest_table, X
+	phx
+	jsr get_alive_proc
+	plx
 	tay
 	pla
 	cpy #0
