@@ -85,14 +85,22 @@ parse_flag:
 	bra args_loop
 	:
 
-	cmp #'c'
+	cmp #'C'
 	bne :+
 
 	lda #1
 	sta use_colors_flag
 	bra args_loop
 	:
+	
+	cmp #'F'
+	bne :+
 
+	lda #1
+	sta classify_files_flag
+	bra args_loop
+	:
+	
 	cmp #'l'
 	bne :+
 	
@@ -164,7 +172,8 @@ print_usage:
 	.byte "Options:", NEWLINE
 	.byte "  -a:     do not ignore entries starting with with .", NEWLINE
 	.byte "  -A:     print all files except implied . and ..", NEWLINE
-	.byte "  -c:     print entries in color", NEWLINE
+	.byte "  -C:     print entries in color", NEWLINE
+	.byte "  -F:     append indicator (one of * or /) to entries", NEWLINE
 	.byte "  -h:     print this message and exit", NEWLINE
 	.byte "  -l:     use a long listing format", NEWLINE
 	.byte NEWLINE
@@ -407,6 +416,8 @@ print_dir_loop:
 	jsr CHROUT
 	:
 	
+	lda classify_files_flag
+	beq :++
 	ldx #'/'
 	lda file_is_dir
 	bne :+
@@ -414,6 +425,7 @@ print_dir_loop:
 	:
 	txa
 	jsr CHROUT
+	:
 	
 	sep #$10
 	.i8
@@ -586,6 +598,8 @@ print_dotfiles_flag:
 print_this_dir_parent_dir_flag:
 	.word 0
 use_colors_flag:
+	.word 0
+classify_files_flag:
 	.word 0
 list_details_flag:
 	.word 0
