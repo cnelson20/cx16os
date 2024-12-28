@@ -60,13 +60,18 @@ args_loop:
 	lda (ptr1)
 	cmp #'-'
 	bne add_dir_list
-
+	ldy #1
+	lda (ptr1), Y
+	bne :+
+	jmp flag_error
+	:
 parse_flag:
 	inc ptr1
 	bne :+
 	inc ptr1 + 1
 	:
 	lda (ptr1)
+	beq args_loop
 
 	cmp #'a'
 	bne :+
@@ -74,7 +79,7 @@ parse_flag:
 	lda #1
 	sta print_dotfiles_flag
 	sta print_this_dir_parent_dir_flag
-	bra args_loop
+	bra parse_flag
 	:
 
 	cmp #'A'
@@ -82,7 +87,7 @@ parse_flag:
 
 	lda #1
 	sta print_dotfiles_flag
-	bra args_loop
+	bra parse_flag
 	:
 
 	cmp #'C'
@@ -90,7 +95,7 @@ parse_flag:
 
 	lda #1
 	sta use_colors_flag
-	bra args_loop
+	bra parse_flag
 	:
 	
 	cmp #'F'
@@ -98,7 +103,7 @@ parse_flag:
 
 	lda #1
 	sta classify_files_flag
-	bra args_loop
+	bra parse_flag
 	:
 	
 	cmp #'l'
@@ -106,7 +111,7 @@ parse_flag:
 	
 	lda #1
 	sta list_details_flag
-	bra args_loop
+	bra parse_flag
 	:
 
 	cmp #'h'

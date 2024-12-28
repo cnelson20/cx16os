@@ -1,6 +1,6 @@
 #
 # .shrc file for ~/bin/shell
 #
-alias ls ls -C -F
+alias ls ls -CF
 alias ll ls -l
 alias la ls -A
