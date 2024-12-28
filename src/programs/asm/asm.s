@@ -87,6 +87,23 @@ parse_args:
 	jmp parse_args
 
 @not_output_flag:
+	ldx ptr0 ; --pc or -p
+	inx
+	lda $00, X
+	cmp #'-'
+	bne :+
+	inx
+	lda $00, X
+	cmp #'p'
+	bne :+
+	inx
+	lda $00, X
+	cmp #'c'
+	bne :+
+	inx
+	lda $00, X
+	beq @is_pc_flag
+	:
 	ldx ptr0
 	inx
 	lda $00, X
@@ -94,9 +111,8 @@ parse_args:
 	bne @not_set_pc_flag
 	inx
 	lda $00, X
-	cmp #'c'
 	bne @not_set_pc_flag
-	
+@is_pc_flag:
 	dec argc
 	bne :+
 	jmp flag_invalid_argument
@@ -115,7 +131,30 @@ parse_args:
 	jmp parse_args
 @not_set_pc_flag:
 	; invalid flag
-	brk
+	ldx ptr0
+	inx
+	lda $00, X
+	cmp #'h'
+	bne :+
+	inx
+	lda $00, X
+	bne :+
+	jmp print_usage
+	:
+
+@invalid_flag_error:
+	lda #<invalid_flag_err_str
+	ldx #>invalid_flag_err_str
+	jsr print_str
+	lda ptr0
+	ldx ptr0 + 1
+	jsr print_str
+	lda #SINGLE_QUOTE
+	jsr CHROUT
+	lda #NEWLINE
+	jsr CHROUT
+	lda #1
+	rts
 
 @file_input:
 	lda input_fd
@@ -2391,6 +2430,30 @@ is_branching_instruction:
 	rts
 
 ;
+; print_usage
+;
+print_usage:
+	lda #<@usage_str
+	ldx #>@usage_str
+	jsr print_str
+
+	lda #0
+	rts
+
+@usage_str:
+	.byte "Usage: asm [OPTIONS] FILE", NEWLINE
+	.byte "Options:", NEWLINE
+	.byte "  -h: Display this message", NEWLINE
+	.byte "  -o: Specify a filename for output. Default is a.out", NEWLINE
+	.byte "  -p, --pc: Specify an address to start assembling from. Default is 0xA300", NEWLINE
+	.byte NEWLINE
+	.byte "Assemble a 6502 program specified by FILE.", NEWLINE
+	.byte "If no FILE is provided, read from stdin", NEWLINE
+	.byte NEWLINE
+	.byte 0
+
+
+;
 ;
 ; Error functions
 ;
@@ -2703,6 +2766,7 @@ print_newline_exit:
 
 	lda #1   
 
+terminate:
 	ldx #$01FD
 	txs
 	rts
@@ -2718,6 +2782,8 @@ open_write_fail_str:
 	.asciiz "Couldn't open output file for writing"
 general_err_str:
 	.asciiz "Error: "
+invalid_flag_err_str:
+	.asciiz "Invalid command line option '"
 
 parse_strs:
 	.word 0, first_str, second_str, third_str
