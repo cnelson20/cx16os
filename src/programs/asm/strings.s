@@ -85,7 +85,7 @@ outer_file_open:
 	sta fd
 	cmp #$FF
 	bne :+
-	jmp file_error
+	jmp file_open_error
 	:
 
 	lda #1
@@ -105,7 +105,8 @@ outer_file_open:
 	phy
 	sep #$10
 	.i8
-	jsr get_next_char
+	ldx fd
+	jsr fgetc
 	cpx #0
 	beq :+
 	jmp file_out_bytes
@@ -191,84 +192,8 @@ file_out_bytes:
 	lda #0
 	rts ; exit successfully
 
-get_next_char:
-	; increment file_offset
-	inc file_offset
-	bne :+
-	inc file_offset + 1
-	:
-
-	ldx buff_offset
-	inx
-	cpx bytes_read
-	bcs :+
-	
-	stx buff_offset
-	dex
-	lda buff, X
-	ldx #0
-	rts	
-	:
-	
-	lda read_again
-	bne :+
-	
-	lda #0
-	ldx #$FF
-	rts
-	
-	:
-	; load more from file
-	lda #<buff
-	sta r0
-	lda #>buff
-	sta r0 + 1
-	
-	lda #128
-	sta r1
-	lda #0
-	sta r1 + 1
-	
-	stz r2
-
-	lda fd
-	jsr read_file
-	sta bytes_read
-	
-	cpy #0
-	bne file_error_read
-	
-	stz read_again
-	cmp #128
-	bcc @print_read_bytes
-	
-	ldx #1
-	stx read_again
-@print_read_bytes:
-	lda bytes_read
-	bne :+
-	
-	lda #0
-	ldx #$FF
-	rts
-	
-	:
-	stz buff_offset
-	lda buff
-	ldx #0
-	rts
-
-	
-file_error_read:
-	tya
-	tax
-file_error:
+file_open_error:
 	stx err_num
-	
-	lda fd
-	beq dont_need_close
-	jsr close_file
-dont_need_close:
 	
 	lda #<error_msg_p1
 	ldx #>error_msg_p1
@@ -517,22 +442,26 @@ radix_type:
 	.byte 0
 
 error_msg_p1:
-	.asciiz "Error opening file '"
+	.asciiz "strings: error opening file '"
 
 error_msg_p2:
 	.asciiz "', code #:"
 
 no_filename_err_str:
 	.byte "strings: missing file operand", NEWLINE, 0
+
 usage_str:
 	.byte "Usage: strings [option(s)] [file(s)]", NEWLINE
-	.byte " Display printable strings in [file(s)]", NEWLINE
+	.byte NEWLINE
+	.byte "Display printable strings in [file(s)]", NEWLINE
 	.byte " The options are:", NEWLINE
 
 	.byte "  -f          Print the name of the file before each string", NEWLINE
+	.byte "  -h          Display this information and exit", NEWLINE
 	.byte "  -n <number> Print any sequence of at least <number> chars", NEWLINE
-	.byte "  -t={d,x}  Print the location of the string in base 10 or 16", NEWLINE
-	.byte "  -h          Display this information", NEWLINE, 0
+	.byte "  -t={d,x}    Print the location of each string in base 10 or 16", NEWLINE
+	.byte NEWLINE
+	.byte 0
 
 buff_offset:
 	.byte 0
