@@ -3,30 +3,20 @@
 #include <string.h>
 #include <fcntl.h>
 
+#include <peekpoke.h>
+
 #include "cx16os.h"
 
-#pragma charmap (0xa, 0xd);
-
 char hello_str[] = "Hello, World!";
-
-unsigned char fd[2];
 
 char buff[256] = {'\0'};
 
 int main() {
-	__asm__ ("jsr %w", 0x9DBD);
-	__asm__ ("sta %v", fd);
-	__asm__ ("stx %v + 1", fd);
-	printf("%hu %hu\n", fd[0], fd[1]);
+	POKEW(0x02, 0x60DB);
+	__asm__ ("jsr %w", 0x0002);
 	
-	write(fd[1], hello_str, 8);
-	close(fd[1]);
-	
-	read(fd[0], buff, sizeof(hello_str));
-	
-	puts(buff);
-	
-	close(fd[0]);
+	printf("%s\n", hello_str);
+	printf("pid: %d\n", PEEK(0x00));
 	
 	return 0;
 }

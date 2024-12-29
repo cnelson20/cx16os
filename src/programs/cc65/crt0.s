@@ -22,6 +22,9 @@
 
 _init:
 	; set stack pointer
+	.ifdef __BONK_DEFINE__
+	.byte $EA, $EA
+	.endif
 	lda     #<(__RAM_START__ + __RAM_SIZE__)
     sta     sp
     lda     #>(__RAM_START__ + __RAM_SIZE__)
