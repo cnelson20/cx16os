@@ -131,9 +131,7 @@ print_file:
 	sta r0
 	lda #>buff
 	sta r0 + 1
-	
-	lda #$93 ; clear screen
-	jsr CHROUT
+
 	stz just_print_file
 	stz ptr0
 	stz ptr0 + 1
@@ -229,39 +227,6 @@ read_file_loop:
 	lda fd
 	jsr close_file
 	
-	jsr print_invert_colors
-	lda #<end_wait_str
-	ldx #>end_wait_str
-	jsr print_str
-	jsr print_starting_colors
-	
-	:
-	ldx keyboard_fd
-	jsr fgetc
-	cpx #0
-	bne @end
-	cmp #0
-	bne :-
-@wait_end_loop:
-	ldx keyboard_fd
-	jsr fgetc
-	cpx #0
-	bne @end
-	cmp #0
-	beq @wait_end_loop
-	
-	cmp #'q'
-	beq @end
-	cmp #'Q'
-	beq @end
-	
-	lda #7 ; bell
-	jsr CHROUT
-	bra @wait_end_loop
-@end:
-	lda #<end_done_wait_str
-	ldx #>end_done_wait_str
-	jsr print_str	
 	rts
 	
 	
@@ -350,11 +315,6 @@ more_wait_str:
 more_done_wait_str:
 	.byte "        ", $0D, 0
 
-end_wait_str:
-	.byte "(END)", $0D, 0
-end_done_wait_str:
-	.byte "     ", $0D, 0
-
 ; data
 
 keyboard_fd:
@@ -374,6 +334,9 @@ just_print_file:
 term_width:
 	.word 0
 term_height:
+	.word 0
+
+have_scrolled:
 	.word 0
 
 starting_colors:
