@@ -47,6 +47,10 @@ int main(int argc, char *argv[]) {
 	static unsigned char i;
 	
 	parse_options(argc, argv);
+	if (file_names_size == 0) {
+		file_names_size = 1;
+		file_names[0] = "#stdin";
+	}
 	
 	zero_wc_struct(&total);
 	for (i = 0; i < file_names_size; ++i) {
