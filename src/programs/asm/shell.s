@@ -261,6 +261,8 @@ new_line:
 	jsr CHROUT
 
 skip_print_prompt:
+	lda curr_running_script
+	bne @not_auto_command
 	lda first_command_addr + 1
 	beq @not_auto_command
 	
