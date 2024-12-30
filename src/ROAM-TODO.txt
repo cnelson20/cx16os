@@ -6,6 +6,8 @@ fully fixed:
 need to test:
 -------------
 
+exec
+
 bin_to_bcd16
 copy_fd
 parse_num
@@ -28,6 +30,8 @@ mark_last_hook_message_received
 
 open_file
 read_file
+write_file
+print_str
 
 pread_extmem_xy
 pwrite_extmem_xy
@@ -81,9 +85,3 @@ share_extmem_bank
 
 not fixed:
 --------------
-
-exec
-
-write_file
-print_str
-
