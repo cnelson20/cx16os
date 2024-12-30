@@ -78,6 +78,11 @@ parse_options:
 	bra parse_options
 	:
 
+	cmp #'h'
+	bne :+
+	jmp print_usage
+	:
+
 @invalid_option:	
 	; invalid option
 	lda #<invalid_option_err_str
@@ -109,6 +114,13 @@ get_next_arg:
 	:
 	inx
 	stx ptr0
+	rts
+
+print_usage:
+	lda #<usage_str
+	ldx #>usage_str
+	jsr print_str
+	lda #0
 	rts
 	
 end_parse_options:
@@ -1206,7 +1218,19 @@ default_config_file_text:
 	.byte "blank", NEWLINE
 	.byte "info colors", NEWLINE
 default_config_file_text_end:
-	
+
+usage_str:
+	.byte "neofetch: display system information", NEWLINE
+	.byte NEWLINE
+	.byte "Options:", NEWLINE
+	.byte "  -f: Specify a file to read config data from", NEWLINE
+	.byte "  -g [FILE]: Write the default config file to FILE. If FILE is not provided,", NEWLINE
+	.byte "write to ~/etc/neofetch.conf", NEWLINE
+	.byte "  -h: Display this message and exit", NEWLINE
+	.byte NEWLINE
+	.byte "By default, neofetch looks for ~/etc/neofetch.conf to read config data from", NEWLINE
+	.byte NEWLINE
+	.byte 0
 
 x16_ascii_art:
 	.byte COLOR_WHITE,	"                            ", NEWLINE
