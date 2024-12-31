@@ -25,6 +25,8 @@ FILE_TABLE_COUNT_SIZE = 14
 FILE_TABLE_COUNT_OFFSET = 16
 file_table_count_end := file_table_count + FILE_TABLE_COUNT_OFFSET
 
+FILE_EOF = $40
+
 ;
 ; Memory locations in program bank + 1
 ;
@@ -129,67 +131,13 @@ close_process_files_int:
 	sta KZP0
 	phy_byte RAM_BANK ; preserve RAM_BANK
 	sta RAM_BANK
-
-	lda STORE_PROG_STDIN_VAL
-	jsr close_file_int
-	lda STORE_PROG_STDOUT_VAL
-	jsr close_file_int
-	
-	lda RAM_BANK
-	inc A ; ram bank = pid + 1
-	sta RAM_BANK ; holds process file table
-	tax
-	
-	ldy #PV_OPEN_TABLE_SIZE - 1
+	lda #PV_OPEN_TABLE_SIZE - 1
 @close_loop:
-	lda PV_OPEN_TABLE, Y
-	cmp #$FF ; FF means entry is empty
-	beq @dont_need_close
-	cmp #2 + 1 ; <= 2 means stdin/out/err
-	bcc @dont_need_close
-
-	phx
-	pha ; preserve file num
-	phy ; preserve index in loop
-	
-	cmp #$10
-	bcc @close_file_disk
-	cmp #$30
-	bcs :+
-	jsr close_pipe_int
-	bra @mark_fd_free
-	:
-	
-	; shouldn't get here, fd points to val >= $30
-	
-@close_file_disk:
-	jsr CLOSE
-	bra @mark_fd_free
-
-@mark_fd_free:	
-	ply ; pull back off index
-	plx ; pull file num/SA from stack
-	lda #1 ; file_table_count is located in bank #1
-	sta RAM_BANK
-	stz file_table_count, X
-	
-	plx
-	stx RAM_BANK
-	
-@dont_need_close:
-	dey
+	pha
+	jsr close_file_int
+	pla
+	dec A
 	bpl @close_loop
-
-	lda #1
-	sta RAM_BANK
-	
-	lda KZP0
-	cmp file_table_count + 15
-	bne :+
-	lda #15
-	jsr CLOSE
-	stz file_table_count + 15
-	:
 	
 	pla_byte RAM_BANK ; restore RAM_BANK
 	rts
@@ -1116,8 +1064,7 @@ close_file_int:
 	push_zp_word KZE1
 	push_zp_word KZE2
 	push_zp_word KZE3
-	inc RAM_BANK
-	jsr close_file_int_entry
+	jsr close_file
 	ply_word KZE3
 	ply_word KZE2
 	ply_word KZE1
@@ -1139,7 +1086,6 @@ close_file:
 	
 	tay
 	lda PV_OPEN_TABLE, Y
-close_file_int_entry:	
 	tax
 	cpx #NO_FILE
 	bne :+
@@ -1185,14 +1131,18 @@ close_file_int_entry:
 	pha_byte RAM_BANK
 	lda #1
 	sta RAM_BANK
-	set_atomic_st_disc_a
 	
+	lda file_table_count, X
+	dec A
+	sta file_table_count, X
+	and #$3F
+	bne :+	
 	stz file_table_count, X
-	
-	pla_byte RAM_BANK
-	
+	set_atomic_st_disc_a
 	txa
 	jsr CLOSE
+	:
+	pla_byte RAM_BANK
 	clear_atomic_st
 	lda #0
 	
@@ -1366,6 +1316,7 @@ read_file:
 	sta RAM_BANK
 	lda #FILE_EOF
 	ldx KZE3
+	ora file_table_count, X
 	sta file_table_count, X	
 	lda current_program_id
 	sta RAM_BANK
@@ -1425,6 +1376,7 @@ try_read_slow:
 	sta RAM_BANK
 	ldx KZE3
 	lda #FILE_EOF
+	ora file_table_count, X
 	sta file_table_count, X
 	
 @no_more_bytes:

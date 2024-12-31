@@ -858,24 +858,27 @@ close_pipe_ext:
 	lda #NO_SUCH_FILE
 	rts ; return with error code
 	:
+	set_atomic_st_disc_a
 	lda KZE0
-	and #$10
-	cmp #$10 ; read end of the pipe
+	and #$F0 ; read ends are $10 - $1F
+	cmp #$10 ; write ends are $20 - $2F
 	bne @write_end
 @read_end:
 	; KZE1 in .X
 	lda pipe_table, X
-	and #$10
+	sec
+	sbc #$10
 	sta pipe_table, X
 	stz pipe_table_read_end_pid, X
 	bra @return_success
 @write_end:
 	; KZE1 in .X
 	lda pipe_table, X
-	and #$01
+	dec A
 	sta pipe_table, X
 	stz pipe_table_write_end_pid, X
 @return_success:
+	clear_atomic_st
 	lda #0
 	rts
 
@@ -1050,7 +1053,7 @@ read_pipe_ext:
 	rts
 @no_bytes_read:
 	tax
-	ldy #0
+	ldy #EOF
 	rts
 	
 .export write_pipe_ext
@@ -1167,5 +1170,5 @@ write_pipe_ext:
 	rts
 @no_bytes_written_err:
 	tax
-	ldy #FILE_EOF
+	ldy #EOF
 	rts

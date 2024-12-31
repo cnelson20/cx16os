@@ -250,7 +250,7 @@ CALL_fgetc:
 	bne :+
 	cmp #1
 	bcs :+
-	ldy #FILE_EOF
+	ldy #EOF
 	:
 	tyx ; error code in .Y, need to pass to .X
 	lda STORE_PROG_IO_SCRATCH
