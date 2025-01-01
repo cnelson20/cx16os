@@ -1211,7 +1211,7 @@ read_file:
 	
 	cmp #0
 	beq @exit_eof ; don't think this can happen, but account for it anyway
-	cmp #1
+	and #FILE_EOF
 	bne @exit_eof ; already reached eof
 	stx KZE3
 	
