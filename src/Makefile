@@ -41,7 +41,7 @@ build: os.prg programs
 	cp os.prg mnt/OS.PRG
 	
 	cp -r osfiles/* mnt/
-	-mkdir mnt/tmp/ mnt/etc/
+	-mkdir mnt/tmp/ mnt/etc/ mnt/usr/
 
 sd: copy build
 ifneq ($(USE_MTOOLS),)
