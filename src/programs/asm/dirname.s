@@ -100,10 +100,13 @@ step3:
 	; In this case, skip steps 5 to 8.
 step4:
 	ldx #copy_buff
+	:
 	lda $00, X
 	beq :+
 	cmp #'/'
 	beq step5
+	inx
+	bra :-
 	:
 	lda #'.'
 	sta copy_buff
