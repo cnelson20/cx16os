@@ -1,5 +1,5 @@
 /*
- * cx16os.h
+ * osext.h
 */
 
 int __fastcall__ dup(int oldfd);
