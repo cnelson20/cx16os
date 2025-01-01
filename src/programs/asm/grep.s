@@ -58,6 +58,7 @@ init:
 	lda args_pointer
 	ldx args_pointer + 1
 	:
+	ldy #0 ; reading
 	jsr open_file
 	cmp #$FF
 	bne :+
