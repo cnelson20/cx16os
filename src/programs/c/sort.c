@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <peekpoke.h>
 
@@ -18,6 +19,9 @@ int sort_file(FILE *);
 char *insert_line_buff_into_list();
 void display_output();
 void usage(int);
+
+int alphanum_strcmp(char *, char *);
+int printable_strcmp(char *, char *);
 
 // Modified by options
 char *output_filename = NULL;
@@ -63,8 +67,12 @@ int parse_options(int argc, char *argv[]) {
 			if (!strcmp(curr_arg,"-")) {
 				file_names_list[file_names_len] = "#stdin";
 				++file_names_len;
+			} else if (!strcmp(curr_arg,"-d")) {
+				strcmp_ptr = alphanum_strcmp;
 			} else if (!strcmp(curr_arg,"-f")) {
 				strcmp_ptr = stricmp;
+			} else if (!strcmp(curr_arg,"-i")) {
+				strcmp_ptr = printable_strcmp;
 			} else if (!strcmp(curr_arg,"-o")) {
 				char *next_arg = *(argv + 1);
 				if (next_arg) {
@@ -94,7 +102,9 @@ void usage(int status) {
 	fputs("Usage: sort [OPTIONS] [FILES]\n"
 		"\n"
 		"Options:\n"
+		"  -d: consider only blanks and alphanumeric chars\n"
 		"  -f: Use a case-insenstive comparison\n"
+		"  -i: consider only printable characters\n"
 		"  -o OUTPUT: Specify the an output file to be used instead of stdout\n"
 		"  -r: Reverse the sense of comparisons\n"
 		"  --help: Print this message and exit\n"
@@ -102,6 +112,33 @@ void usage(int status) {
 		"If no FILES are specified, read from stdin\n"
 		, stderr);
 	exit(status);
+}
+
+/*
+	Custom sort functions
+*/
+int printable_strcmp(char *s1, char *s2) {
+	while (*s1) {
+		while (*s1 && !isprint(*s1)) ++s1;
+		while (*s2 && !isprint(*s2)) ++s2;
+		if (*s1 - *s2) { return *s1 - *s2; }
+		++s1;
+		++s2;
+	}
+	while (*s2 && *s2 != ' ' && !isprint(*s2)) ++s2;
+	return 0 - *s2;
+}
+
+int alphanum_strcmp(char *s1, char *s2) {
+	while (*s1) {
+		while (*s1 && !isspace(*s1) && !isalnum(*s1)) ++s1;
+		while (*s2 && !isspace(*s2) && !isalnum(*s2)) ++s2;
+		if (*s1 - *s2) { return *s1 - *s2; }
+		++s1;
+		++s2;
+	}
+	while (*s2 && *s2 != ' ' && !isalnum(*s2)) ++s2;
+	return 0 - *s2;
 }
 
 char *new_str_node(char *s) {
