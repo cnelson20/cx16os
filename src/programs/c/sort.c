@@ -22,6 +22,7 @@ void usage(int);
 // Modified by options
 char *output_filename = NULL;
 int sort_mult = 1;
+int (*strcmp_ptr)(char *, char *) = strcmp;
 
 int main(int argc, char *argv[]) {
 	FILE *fp;
@@ -62,6 +63,8 @@ int parse_options(int argc, char *argv[]) {
 			if (!strcmp(curr_arg,"-")) {
 				file_names_list[file_names_len] = "#stdin";
 				++file_names_len;
+			} else if (!strcmp(curr_arg,"-f")) {
+				strcmp_ptr = stricmp;
 			} else if (!strcmp(curr_arg,"-o")) {
 				char *next_arg = *(argv + 1);
 				if (next_arg) {
@@ -91,6 +94,7 @@ void usage(int status) {
 	puts("Usage: sort [OPTIONS] [FILES]\n"
 		"\n"
 		"Options:\n"
+		"  -f: Use a case-insenstive comparison\n"
 		"  -o OUTPUT: Specify the an output file to be used instead of stdout\n"
 		"  -r: Reverse the sense of comparisons\n"
 		"  --help: Print this message and exit\n"
@@ -125,7 +129,7 @@ char *insert_line_buff_into_list() {
 	last_line_ptr = NULL;
 	curr_line_ptr = first_line_ptr;
 	while (curr_line_ptr) {
-		if (strcmp(line_buff, curr_line_ptr + 2) * sort_mult < 0) {
+		if (strcmp_ptr(line_buff, curr_line_ptr + 2) * sort_mult < 0) {
 			n = new_str_node(line_buff);
 			if (last_line_ptr != NULL) {
 				*((char **)last_line_ptr) = n;
