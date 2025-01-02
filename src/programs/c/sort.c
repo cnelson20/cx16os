@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 				sort_file(fp);
 				fclose(fp);
 			} else {
-				fprintf(stderr, "sort: unable to open file '%s'\n", file_names_list[i]);
+				printf("sort: unable to open file '%s'\n", file_names_list[i]);
 				exit(1);
 			}
 		}
@@ -86,7 +86,7 @@ int parse_options(int argc, char *argv[]) {
 			} else if (!strcmp(curr_arg,"--help")) {
 				usage(0);
 			} else {
-				fprintf(stderr, "sort: invalid option '%s'\n", curr_arg);
+				printf("sort: invalid option '%s'\n", curr_arg);
 				usage(1);
 			}
 		} else {
@@ -99,7 +99,7 @@ int parse_options(int argc, char *argv[]) {
 }
 
 void usage(int status) {
-	fputs("Usage: sort [OPTIONS] [FILES]\n"
+	puts("Usage: sort [OPTIONS] [FILES]\n"
 		"\n"
 		"Options:\n"
 		"  -d: consider only blanks and alphanumeric chars\n"
@@ -110,7 +110,7 @@ void usage(int status) {
 		"  --help: Print this message and exit\n"
 		"\n"
 		"If no FILES are specified, read from stdin\n"
-		, stderr);
+		);
 	exit(status);
 }
 
@@ -202,7 +202,7 @@ void display_output() {
 	if (output_filename) {
 		output_fp = fopen(output_filename, "w");
 		if (!output_fp) {
-			fprintf(stderr, "sort: unable to open file '%s' for writing\n", output_filename);
+			printf("sort: unable to open file '%s' for writing\n", output_filename);
 			exit(1);
 		}
 	} else {
