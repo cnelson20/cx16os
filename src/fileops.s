@@ -131,12 +131,18 @@ close_process_files_int:
 	sta KZP0
 	phy_byte RAM_BANK ; preserve RAM_BANK
 	sta RAM_BANK
-	lda #PV_OPEN_TABLE_SIZE - 1
+	ldy #PV_OPEN_TABLE_SIZE - 1
 @close_loop:
-	pha
+	inc RAM_BANK
+	lda PV_OPEN_TABLE, Y
+	dec RAM_BANK
+	cmp #NO_FILE
+	beq :+
+	phy
 	jsr close_file_int
-	pla
-	dec A
+	ply
+	:
+	dey
 	bpl @close_loop
 	
 	pla_byte RAM_BANK ; restore RAM_BANK
@@ -1064,7 +1070,8 @@ close_file_int:
 	push_zp_word KZE1
 	push_zp_word KZE2
 	push_zp_word KZE3
-	jsr close_file
+	inc RAM_BANK
+	jsr close_file_int_entry
 	ply_word KZE3
 	ply_word KZE2
 	ply_word KZE1
@@ -1086,6 +1093,7 @@ close_file:
 	
 	tay
 	lda PV_OPEN_TABLE, Y
+close_file_int_entry:
 	tax
 	cpx #NO_FILE
 	bne :+
