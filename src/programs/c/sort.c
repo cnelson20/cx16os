@@ -91,7 +91,7 @@ int parse_options(int argc, char *argv[]) {
 }
 
 void usage(int status) {
-	puts("Usage: sort [OPTIONS] [FILES]\n"
+	fputs("Usage: sort [OPTIONS] [FILES]\n"
 		"\n"
 		"Options:\n"
 		"  -f: Use a case-insenstive comparison\n"
@@ -100,7 +100,7 @@ void usage(int status) {
 		"  --help: Print this message and exit\n"
 		"\n"
 		"If no FILES are specified, read from stdin\n"
-		);
+		, stderr);
 	exit(status);
 }
 
