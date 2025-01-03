@@ -34,9 +34,8 @@
  */
 
 #include <sys/types.h>
-
+#include <limits.h>
 #include <ctype.h>
-#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -128,6 +127,22 @@ int julian;
 int mflag = 0;
 int wflag = 0;
 
+/* 
+	Functions added to make up for lesser lib support with cx16os
+*/
+
+#define errx(status, ...) { printf(__VA_ARGS__); exit(status); }
+
+long strtonum(const char *nptr, long minval, long maxval, const char **errstr) {
+	long convres = strtol(nptr, NULL, 10);
+	if ((minval <= convres) && (convres <= maxval)) {
+		*errstr = NULL;
+		return convres;
+	} else {
+		*errstr = "The given string was out of range";
+	}
+}
+
 void	ascii_day(char *, int);
 void	center(const char *, int, int);
 void	day_array(int, int, int *);
@@ -145,13 +160,9 @@ int	parsemonth(const char *);
 int
 main(int argc, char *argv[])
 {
-	struct tm *local_time;
-	time_t now;
-	int ch, month, year, yflag;
-	const char *errstr;
-
-	if (pledge("stdio", NULL) == -1)
-		err(1, "pledge");
+	static struct tm *local_time;
+	static int ch, month, year, yflag;
+	static const char *errstr;
 
 	yflag = year = 0;
 	while ((ch = getopt(argc, argv, "jmwy")) != -1)
@@ -202,8 +213,7 @@ main(int argc, char *argv[])
 			month = parsemonth(*argv);
 			if (!month)
 				errx(1, "illegal year value: use 1-9999");
-			(void)time(&now);
-			local_time = localtime(&now);
+			local_time = localtime(NULL);
 			year = local_time->tm_year + 1900;
 		} else {
 			year = strtonum(*argv, 1, 9999, &errstr);
@@ -212,8 +222,7 @@ main(int argc, char *argv[])
 		}
 		break;
 	case 0:
-		(void)time(&now);
-		local_time = localtime(&now);
+		local_time = localtime(NULL);
 		year = local_time->tm_year + 1900;
 		if (!yflag)
 			month = local_time->tm_mon + 1;
@@ -242,12 +251,12 @@ main(int argc, char *argv[])
 int
 week(int day, int month, int year)
 {
-	int	yearday;
-	int	firstweekday;
-	int	weekday;
-	int	firstday;
-	int	firstsunday;
-	int	shift;
+	static int	yearday;
+	static int	firstweekday;
+	static int	weekday;
+	static int	firstday;
+	static int	firstsunday;
+	static int	shift;
 	
 	if (mflag)
 		return isoweek(day, month, year);
@@ -270,7 +279,7 @@ int
 isoweek(int day, int month, int year)
 {
 	/* http://www.tondering.dk/claus/cal/node8.html */
-	int a, b, c, s, e, f, g, d, n;
+	static int a, b, c, s, e, f, g, d, n;
 
 	a = month <= 2 ? year - 1 : year;
 	b = a/4 - a/100 + a/400;
@@ -298,8 +307,8 @@ isoweek(int day, int month, int year)
 void
 monthly(int month, int year)
 {
-	int col, row, len, days[MAXDAYS], firstday;
-	char *p, lineout[30];
+	static int col, row, len, days[MAXDAYS], firstday;
+	static char *p, lineout[30];
 
 	day_array(month, year, days);
 	(void)snprintf(lineout, sizeof(lineout), "%s %d",
@@ -328,9 +337,9 @@ monthly(int month, int year)
 void
 j_yearly(int year)
 {
-	int col, *dp, i, month, row, which_cal;
-	int days[12][MAXDAYS];
-	char *p, lineout[80];
+	static int col, *dp, i, month, row, which_cal;
+	static int days[12][MAXDAYS];
+	static char *p, lineout[80];
 
 	(void)snprintf(lineout, sizeof(lineout), "%d", year);
 	center(lineout, J_WEEK_LEN * 2 + J_HEAD_SEP, 0);
@@ -363,9 +372,9 @@ j_yearly(int year)
 void
 yearly(int year)
 {
-	int col, *dp, i, month, row, which_cal, week_len, wn, firstday;
-	int days[12][MAXDAYS];
-	char *p, lineout[81];
+	static int col, *dp, i, month, row, which_cal, week_len, wn, firstday;
+	static int days[12][MAXDAYS];
+	static char *p, lineout[81];
 
 	week_len = WEEK_LEN;
 	if (wflag)
@@ -544,6 +553,22 @@ usage(void)
 	exit(1);
 }
 
+int parse_month_name(const char *s, struct tm *tm) {
+	static unsigned char i, strlen_3;
+	
+	strlen_3 = strlen(s) == 3;
+	
+	for (i = 0; i < 12; ++i) {
+		if ((!strcmp(s, month_names[i])) ||
+			(strlen_3 && !memcmp(s, month_names[i], 3))) {
+			tm->tm_mon = i;
+			return 1;
+		}
+	}
+	
+	return 0; // unable to parse
+}
+
 int
 parsemonth(const char *s)
 {
@@ -554,7 +579,7 @@ parsemonth(const char *s)
 	v = (int)strtol(s, &cp, 10);
 	if (*cp != '\0') {		/* s wasn't purely numeric */
 		v = 0;
-		if ((cp = strptime(s, "%b", &tm)) != NULL && *cp == '\0')
+		if (parse_month_name(s, &tm))
 			v = tm.tm_mon + 1;
 	}
 	if (v <= 0 || v > 12)
