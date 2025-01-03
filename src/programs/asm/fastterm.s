@@ -35,8 +35,10 @@ CURSOR_UP = $91
 CURSOR_DOWN = $11
 
 PLOT_X = $0B
-PLOT_Y = $0C	
-	
+PLOT_Y = $0C
+VERBATIM_MODE = $80
+
+TAB = $09
 CARRIAGE_RETURN = $0D
 LINE_FEED = $0A
 NEWLINE = LINE_FEED
@@ -129,16 +131,12 @@ init:
 	phx
 	rep #$20
 	lda chrout_ringbuff, X
-	sta pid_printing - 1
 	sep #$20
-	beq @null_char
-	pha
+	xba
+	sta pid_printing
+	xba
 	jsr print_chr_to_screen
-	pla
-@null_char:
-	ldx pid_printing
-	sta last_char_parsed, X
-	
+@null_char:	
 	rep #$20
 	.a16
 	pla
@@ -154,17 +152,30 @@ init:
 	bra @loop
 
 print_chr_to_screen:
-	pha
+	xba
 	ldx pid_printing
 	lda last_char_parsed, X
+	xba
+	sta last_char_parsed, X
+	pha
+	xba
 	cmp #PLOT_X
 	bcc :+
 	cmp #PLOT_Y + 1
 	bcs :+
+	xba
+	lda #0
+	xba
 	tay
 	pla
+	stz last_char_parsed, X
 	jmp handle_plot
-	:	
+	:
+	cmp #VERBATIM_MODE
+	bne :+
+	stz last_char_parsed, X
+	bra @printable_char
+	:
 	pla
 	
 	pha
@@ -259,6 +270,9 @@ tab:
 	plx
 	dex
 	bne @space_loop
+	lda #TAB
+	ldx pid_printing
+	sta last_char_parsed, X
 	rts
 	
 home:
@@ -495,6 +509,9 @@ cursor_color:
 screen_scroll_offset:
 	.word 0
 
+pid_printing:
+	.word 0
+
 last_char_parsed:
 	.res 256, 0
 
@@ -507,9 +524,6 @@ TERM_HEIGHT:
 	
 TERM_ROW_OFFSET:
 	.word 0
-
-pid_printing := * + 1
-	.res 2 + 1
 	
 character_height_shifts:
 	.word 0

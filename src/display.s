@@ -18,6 +18,7 @@ LEFT_CURSOR = $9D
 CARRIAGE_RETURN = $d
 LINE_FEED = $a
 NEWLINE = LINE_FEED
+VERBATIM_MODE = $80
 
 .export default_screen_mode
 default_screen_mode:
@@ -208,13 +209,22 @@ putc_v:
 	clc
 	jmp PLOT
 	:
+	cmp #VERBATIM_MODE ; verbatim mode
+	bne :+
+	lda #0
+	sta programs_last_printed_special_char, Y
+	lda #VERBATIM_MODE
+	jsr CHROUT
+	txa
+	jmp CHROUT
+	:
 	txa
 	
 	; need to handle quote mode ;
 	cmp #'"' ; "
 	bne :+
 	pha
-	lda #$80
+	lda #VERBATIM_MODE
 	jsr CHROUT
 	bra @valid_char
 	:
@@ -264,6 +274,8 @@ putc_v:
 	rts
 	:
 	
+	cmp #VERBATIM_MODE
+	beq :+
 	cmp #PLOT_X
 	beq :+
 	cmp #PLOT_Y
@@ -318,7 +330,7 @@ putc_v:
 	:
 	
 	; needs to be appended ;
-	lda #$80
+	lda #VERBATIM_MODE
 	jsr CHROUT
 	jmp @valid_char
 
