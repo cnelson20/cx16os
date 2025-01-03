@@ -1142,7 +1142,12 @@ run_kernal_routine:
 	stx ptr1
 	jmp @parse_args_loop
 @end_parse_args_loop:
-	
+	ldx ptr0
+	cpx #$FE00
+	bcc :+
+	stz $01
+	:
+
 	; do routine
 	lda routine_status_reg_value
 	pha
@@ -1160,6 +1165,8 @@ run_kernal_routine:
 	stx routine_x_reg_value
 	sty routine_y_reg_value
 	sep #$20
+	lda $00
+	sta $01
 	pla
 	sta routine_status_reg_value
 	; set some vars according to results of call
