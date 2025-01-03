@@ -7,6 +7,8 @@ A_FLAGS = -t none --cpu 65816
 
 OBJS := $(patsubst %.s,%.o,$(wildcard *.s))
 
+INCS = routines.inc time.inc
+
 stripped.lib: supervision.lib
 	cp supervision.lib stripped.lib
 	ar65 d stripped.lib joy-kernel.o joy_count.o joy_load.o joy_read.o joy_stat_stddrv.o joy_unload.o
@@ -22,10 +24,10 @@ cx16os_bonk.lib: cx16os.lib $(C_BONK_CONFIG) crt0_bonk.o
 	ar65 d $@ crt0.o
 	ar65 a $@ crt0_bonk.o
 	
-$(OBJS): %.o: %.s routines.inc
+$(OBJS): %.o: %.s $(INCS)
 	$(AS) $(A_FLAGS) $<
 
-crt0_bonk.o: crt0.s
+crt0_bonk.o: crt0.s $(INCS)
 	$(AS) $(A_FLAGS) -o $@ -D __BONK_DEFINE__ crt0.s
 
 clean:
