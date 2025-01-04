@@ -47,3 +47,5 @@ _set_stdin_read_mode := set_stdin_read_mode
 .export _detach_self
 _detach_self := detach_self
 
+.export _get_args
+_get_args = get_args

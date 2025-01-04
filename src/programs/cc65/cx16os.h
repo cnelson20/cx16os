@@ -6,6 +6,8 @@ unsigned char __fastcall__ getin();
 void __fastcall__ chrout(unsigned char ch);
 void __fastcall__ print_str(char *str);
 
+char *get_args(void);
+
 unsigned short __fastcall__ parse_num(char *num_str);
 unsigned short __fastcall__ hex_num_to_string(unsigned char b);
 
