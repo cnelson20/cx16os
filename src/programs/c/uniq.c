@@ -34,25 +34,89 @@
  */
 
 #include <ctype.h>
-#include <err.h>
 #include <limits.h>
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 #include <unistd.h>
-#include <wchar.h>
-#include <wctype.h>
+#include <errno.h>
 
-long long numchars, numfields;
-unsigned long long repeats;
+#include "cx16os.h"
+
+int errno;
+
+/* 
+	Functions added to make up for lesser lib support with cx16os
+*/
+
+#define errx(status, ...) { printf("uniq: "); printf(__VA_ARGS__); printf("\n"); exit(status); }
+#define err(status, ...) { printf("uniq: "); printf(__VA_ARGS__); printf(": %s\n", strerror(errno)); exit(status); }
+
+long strtonum(const char *nptr, long minval, long maxval, const char **errstr);
+char *getprogname(void);
+size_t getline(char **lineptr, size_t *n, FILE *stream);
+
+long strtonum(const char *nptr, long minval, long maxval, const char **errstr) {
+	long convres = strtol(nptr, NULL, 10);
+	if ((minval <= convres) && (convres <= maxval)) {
+		*errstr = NULL;
+		return convres;
+	} else {
+		*errstr = "The given string was out of range";
+	}
+}
+
+char *getprogname(void) {
+	return get_args();
+}
+
+#include <peekpoke.h>
+
+size_t getline(char **lineptr, size_t *n, FILE *stream) {
+	static int i;
+	i = 0;
+	
+	if (lineptr == NULL) {
+		errno = EINVAL;
+		return -1;
+	} else if (*lineptr == NULL) {
+		*n = 16;
+		*lineptr = realloc(*lineptr, *n);
+	}
+	while (1) {
+		static int slen;
+		if (!fgets(*lineptr + i, *n - i, stream)) {
+			return -1;
+		}
+		
+		slen = strlen(*lineptr + i);
+		if ((*lineptr)[i + slen - 1] == '\n') return i + slen;
+		
+		i += slen;
+		if (i + 1 < *n) {
+			if (i != 0) return i;
+			// Error: read no bytes - at EOF
+			return -1;
+		}
+		// Allocate a larger buffer;
+		*n = *n * 2;
+		*lineptr = realloc(*lineptr, *n);
+	}
+}
+
+/*
+	Original code (w/ some changes)
+*/
+
+long numchars, numfields;
+unsigned long repeats;
 int cflag, dflag, iflag, uflag;
 
 void	 show(const char *);
 char	*skip(char *);
 void	 obsolete(char *[]);
-__dead void	usage(void);
+void	usage(void);
 
 int
 main(int argc, char *argv[])
@@ -60,13 +124,8 @@ main(int argc, char *argv[])
 	const char *errstr;
 	char *p, *prevline, *t, *thisline, *tmp;
 	size_t prevsize, thissize, tmpsize;
-	ssize_t len;
+	size_t len;
 	int ch;
-
-	setlocale(LC_CTYPE, "");
-
-	if (pledge("stdio rpath wpath cpath", NULL) == -1)
-		err(1, "pledge");
 
 	obsolete(argv);
 	while ((ch = getopt(argc, argv, "cdf:is:u")) != -1) {
@@ -78,7 +137,7 @@ main(int argc, char *argv[])
 			dflag = 1;
 			break;
 		case 'f':
-			numfields = strtonum(optarg, 0, LLONG_MAX, &errstr);
+			numfields = strtonum(optarg, 0, LONG_MAX, &errstr);
 			if (errstr)
 				errx(1, "fields is %s: %s", errstr, optarg);
 			break;
@@ -86,7 +145,7 @@ main(int argc, char *argv[])
 			iflag = 1;
 			break;
 		case 's':
-			numchars = strtonum(optarg, 0, LLONG_MAX, &errstr);
+			numchars = strtonum(optarg, 0, LONG_MAX, &errstr);
 			if (errstr)
 				errx(1, "chars is %s: %s", errstr, optarg);
 			break;
@@ -114,9 +173,6 @@ main(int argc, char *argv[])
 		if (freopen(argv[1], "w", stdout) == NULL)
 			err(1, "%s", argv[1]);
 	}
-
-	if (pledge("stdio", NULL) == -1)
-		err(1, "pledge");
 
 	prevsize = 0;
 	prevline = NULL;
@@ -190,20 +246,15 @@ show(const char *str)
 char *
 skip(char *str)
 {
-	long long nchars, nfields;
-	wchar_t wc;
-	int len;
+	long nchars, nfields;
+	char wc;
 	int field_started;
 
 	for (nfields = numfields; nfields && *str; nfields--) {
 		/* Skip one field, including preceding blanks. */
-		for (field_started = 0; *str != '\0'; str += len) {
-			if ((len = mbtowc(&wc, str, MB_CUR_MAX)) == -1) {
-				(void)mbtowc(NULL, NULL, MB_CUR_MAX);
-				wc = L'?';
-				len = 1;
-			}
-			if (iswblank(wc)) {
+		for (field_started = 0; *str != '\0'; str += 1) {
+			wc = *str;
+			if (isspace(wc)) {
 				if (field_started)
 					break;
 			} else
@@ -212,10 +263,7 @@ skip(char *str)
 	}
 
 	/* Skip some additional characters. */
-	for (nchars = numchars; nchars-- && *str != '\0'; str += len)
-		if ((len = mblen(str, MB_CUR_MAX)) == -1)
-			len = 1;
-
+	for (nchars = numchars; nchars-- && *str != '\0'; str += 1);
 	return (str);
 }
 
@@ -243,12 +291,12 @@ obsolete(char *argv[])
 			err(1, "malloc");
 		*p++ = '-';
 		*p++ = ap[0] == '+' ? 's' : 'f';
-		(void)strlcpy(p, ap + 1, len - 2);
+		(void)strncpy(p, ap + 1, len - 2);
 		*argv = start;
 	}
 }
 
-__dead void
+void
 usage(void)
 {
 	fprintf(stderr,
