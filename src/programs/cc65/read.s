@@ -4,6 +4,8 @@ r0 := $02
 r1 := $04
 r2 := $06
 
+EOF = $07
+
 .import popax
 .import popa
 
@@ -24,6 +26,8 @@ r2 := $06
     jsr popax
     jsr read_file
 	cpy #0
+	beq :+
+	cpy #EOF
 	beq :+
 	lda #$FF
 	tax	
