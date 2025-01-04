@@ -131,7 +131,7 @@ int wflag = 0;
 	Functions added to make up for lesser lib support with cx16os
 */
 
-#define errx(status, ...) { printf(__VA_ARGS__); exit(status); }
+#define errx(status, ...) { printf("cal: "); printf(__VA_ARGS__); printf("\n"); exit(status); }
 
 long strtonum(const char *nptr, long minval, long maxval, const char **errstr) {
 	long convres = strtol(nptr, NULL, 10);
