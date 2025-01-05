@@ -30,13 +30,30 @@
  */
 
 #include <ctype.h>
-#include <err.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#define errx(status, ...) { fprintf(stderr, "printf: "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, "\n"); \
+	exit(status); }
+#define err(status, ...) { fprintf(stderr, "printf: "); \
+	printf(stderr, __VA_ARGS__); \
+	printf(stderr, ": %s\n", \
+	strerror(errno)); \
+	exit(status); }
+#define warnx(...) { fprintf(stderr, "printf: "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, ": %s\n", strerror(errno)); }
+#define warnc(code, ...) { fprintf(stderr, "printf: "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, ": %s\n", strerror(code)); }
+
+int errno;
 
 static int	 print_escape_str(const char *);
 static int	 print_escape(const char *);
@@ -49,7 +66,7 @@ static unsigned long getulong(void);
 static char	*getstr(void);
 static char	*mklong(const char *, int); 
 static void      check_conversion(const char *, const char *);
-static void __dead usage(void);
+static void usage(void);
      
 static int	rval;
 static char  **gargv;
@@ -78,9 +95,6 @@ main(int argc, char *argv[])
 	int fieldwidth, precision;
 	char convch, nextch;
 	char *format;
-
-	if (pledge("stdio", NULL) == -1)
-		err(1, "pledge");
 
 	/* Need to accept/ignore "--" option. */
 	if (argc > 1 && strcmp(argv[1], "--") == 0) {
@@ -201,9 +215,8 @@ main(int argc, char *argv[])
 				case 'F':
 				case 'g':
 				case 'G': {
-					double p = getdouble();
-					PF(start, p);
-					break;
+					warnx("%s: floating-point directive not supported", start);
+					return(1);
 				}
 				default:
 					warnx("%s: invalid directive", start);
@@ -322,11 +335,7 @@ print_escape(const char *str)
 		break;
 
 	case 'e':			/* escape */
-#ifdef __GNUC__
-		putchar('\e');
-#else
 		putchar(033);
-#endif
 		break;
 
 	case 'f':			/* form-feed */
@@ -456,32 +465,16 @@ getulong(void)
 	return val;
 }
 
-static double
-getdouble(void)
-{
-	double val;
-	char *ep;
-
-	if (!*gargv)
-		return(0.0);
-
-	if (**gargv == '\"' || **gargv == '\'')
-		return (unsigned char) *((*gargv++)+1);
-
-	errno = 0;
-	val = strtod(*gargv, &ep);
-	check_conversion(*gargv++, ep);
-	return val;
-}
 
 static void
 check_conversion(const char *s, const char *ep)
 {
 	if (*ep) {
-		if (ep == s)
+		if (ep == s) {
 			warnx("%s: expected numeric value", s);
-		else
+		} else {
 			warnx("%s: not completely converted", s);
+		}
 		rval = 1;
 	} else if (errno == ERANGE) {
 		warnc(ERANGE, "%s", s);
@@ -489,7 +482,7 @@ check_conversion(const char *s, const char *ep)
 	}
 }
 
-static void __dead
+void
 usage(void)
 {
 	(void)fprintf(stderr, "usage: printf format [argument ...]\n");
