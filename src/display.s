@@ -13,12 +13,14 @@
 
 PLOT_X = $0B
 PLOT_Y = $0C
-
-LEFT_CURSOR = $9D
-CARRIAGE_RETURN = $d
+BACKSPACE = $8
 LINE_FEED = $a
+CARRIAGE_RETURN = $d
+
 NEWLINE = LINE_FEED
+
 VERBATIM_MODE = $80
+LEFT_CURSOR = $9D
 
 .export default_screen_mode
 default_screen_mode:
@@ -252,6 +254,14 @@ putc_v:
 	cmp #NEWLINE ; '\r'
 	bne :+
 	lda #CARRIAGE_RETURN
+	jsr CHROUT
+	pla
+	rts
+	:
+	
+	cmp #BACKSPACE ; '\b'
+	bne :+
+	lda #LEFT_CURSOR
 	jsr CHROUT
 	pla
 	rts
