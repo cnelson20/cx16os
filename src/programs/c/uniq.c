@@ -50,8 +50,21 @@ int errno;
 	Functions added to make up for lesser lib support with cx16os
 */
 
-#define errx(status, ...) { printf("uniq: "); printf(__VA_ARGS__); printf("\n"); exit(status); }
-#define err(status, ...) { printf("uniq: "); printf(__VA_ARGS__); printf(": %s\n", strerror(errno)); exit(status); }
+#define errx(status, ...) { fprintf(stderr, "uniq: "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, "\n"); \
+	exit(status); }
+#define err(status, ...) { fprintf(stderr, "uniq: "); \
+	printf(stderr, __VA_ARGS__); \
+	printf(stderr, ": %s\n", \
+	strerror(errno)); \
+	exit(status); }
+#define warnx(...) { fprintf(stderr, "uniq: "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, ": %s\n", strerror(errno)); }
+#define warnc(code, ...) { fprintf(stderr, "uniq: "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, ": %s\n", strerror(code)); }
 
 long strtonum(const char *nptr, long minval, long maxval, const char **errstr);
 char *getprogname(void);
