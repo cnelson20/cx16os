@@ -311,8 +311,8 @@ input(FILE *fp)
 
 			/* Skip leading, multiple, and trailing separators. */
 
-			while ((wc = *p) > 0 &&
-			    strchr(separator, wc) != NULL)
+			while (*p &&
+			    strchr(separator, *p) != NULL)
 				p += 1;
 			if (*p == '\0')
 				break;
@@ -325,7 +325,7 @@ input(FILE *fp)
 			s = p;
 			width = 0;
 			while (*p != '\0') {
-				if (strchr(separator, wc) != NULL)
+				if (strchr(separator, *p) != NULL)
 					break;
 				if (*p == '\t')
 					INCR_NEXTTAB(width);
