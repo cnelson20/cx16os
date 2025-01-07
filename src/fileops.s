@@ -1622,8 +1622,10 @@ write_file:
 write_stdout:
 	index_16_bit
 	.i16
-	ldx KZE0
+	push_zp_word KZES4
 	ldy KZE1
+	sty KZES4
+	ldx KZE0
 
 	cpy #0
 	beq :++
@@ -1647,8 +1649,10 @@ write_stdout:
 	index_8_bit
 	.i8
 	
-	lda KZE1
-	ldx KZE1 + 1
+	lda KZES4
+	ldx KZES4 + 1
+	ply_word KZE1
+	ldy #0
 	rts
 
 ;
