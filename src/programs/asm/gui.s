@@ -32,6 +32,7 @@ COMMAND_DISPLAY_CHARS = 0
 COMMAND_EXIT_GUI = 1
 
 ; special cntrl chars ;
+BACKSPACE = 8
 NEWLINE = $0A
 LEFT_CURSOR = $9d
 SWAP_COLORS = $01
@@ -285,7 +286,7 @@ display_chars:
 	lda message_body, Y
 @compare_char:
 	cmp #NEWLINE
-	bne :+
+	bne @not_newline
 
 	lda @this_line_length
 	ldx ptr0
@@ -311,9 +312,13 @@ display_chars:
 	inc next_y_offset_chars
 	
 	jmp @dont_store_char
-	:
+
+@not_newline:
+	cmp #BACKSPACE
+	beq :+
 	cmp #LEFT_CURSOR ; left_arrow
 	bne @not_backspace
+	:
 	cpx #0
 	beq :+
 	dex 
@@ -325,6 +330,7 @@ display_chars:
 	dec saved_x_offset_chars
 	:
 	jmp @dont_store_char
+
 @not_backspace:
 	cmp #$93 ; clear screen
 	bne @not_clear

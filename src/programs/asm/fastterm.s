@@ -236,7 +236,7 @@ handle_plot:
 ctrl_chars_table_0:
 	.word do_nothing, swap_colors, do_nothing, do_nothing
 	.word do_nothing, color_cmd, do_nothing, bell
-	.word do_nothing, tab, handle_newline, plot_x
+	.word cursor_left, tab, handle_newline, plot_x
 	.word plot_y, carriage_return, do_nothing, do_nothing
 	.word do_nothing, cursor_down, do_nothing, home
 	.word do_nothing, do_nothing, do_nothing, do_nothing

@@ -33,6 +33,7 @@ CURSOR_RIGHT = $1D
 CURSOR_UP = $91
 CURSOR_DOWN = $11
 
+BACKSPACE = 8
 CARRIAGE_RETURN = $0D
 LINE_FEED = $0A
 NEWLINE = LINE_FEED
@@ -704,8 +705,11 @@ write_line_screen:
 	jmp @dont_draw_char
 
 @not_newline:
-	cmp #$9D ; backspace
+	cmp #BACKSPACE
+	beq :+
+	cmp #CURSOR_LEFT ; backspace
 	bne @not_backspace
+	:
 	cpx #0
 	beq :+
 	dex
