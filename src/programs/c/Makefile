@@ -8,7 +8,7 @@ C_FLAGS = --include-dir $(INCL_DIR)/ -t none --cpu 65sc02
 L_FLAGS = -C $(INCL_DIR)/cx16os_c.cfg
 BONK_L_FLAGS = -C $(INCL_DIR)/cx16os_bonk_c.cfg
 
-all: bindir ctest date wc cmp untar cowsay yes expr sort cal uniq printf
+all: bindir ctest date wc cmp untar cowsay yes expr sort cal uniq printf column
 
 clean:
 	rm *.s
@@ -37,6 +37,12 @@ ctest: ctest.c $(BONK_LIB_FILE)
 #
 # *nix utilities
 #
+
+column: column.c $(BONK_LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
+	cp $@ $(MNT_DIR)/bin
 
 printf: printf.c $(BONK_LIB_FILE)
 	cc65 $(C_FLAGS) $@.c

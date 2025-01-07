@@ -31,18 +31,92 @@
  */
 
 #include <sys/types.h>
-#include <sys/ioctl.h>
 
 #include <ctype.h>
-#include <err.h>
 #include <limits.h>
-#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <wchar.h>
-#include <wctype.h>
+#include <errno.h>
+
+void *reallocarray(void *, size_t, size_t);
+long strtonum(const char *nptr, long minval, long maxval, const char **errstr);
+size_t getline(char **lineptr, size_t *n, FILE *stream);
+
+#define errx(status, ...) { fprintf(stderr, "uniq: "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, "\n"); \
+	exit(status); }
+#define err(status, ...) { fprintf(stderr, "uniq: "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, ": %s\n", \
+	strerror(errno)); \
+	exit(status); }
+#define warn(...) { fprintf(stderr, "uniq: "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, ": %s\n", \
+	strerror(errno)); }
+#define warnx(...) { fprintf(stderr, "uniq: "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, ": %s\n", strerror(errno)); }
+#define warnc(code, ...) { fprintf(stderr, "uniq: "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, ": %s\n", strerror(code)); }
+
+int errno;
+
+void *reallocarray(void *ptr, size_t nmemb, size_t size) {
+	return realloc(ptr, nmemb * size);
+}
+
+long strtonum(const char *nptr, long minval, long maxval, const char **errstr) {
+	long convres = strtol(nptr, NULL, 10);
+	if ((minval <= convres) && (convres <= maxval)) {
+		*errstr = NULL;
+		return convres;
+	} else {
+		*errstr = "The given string was out of range";
+	}
+}
+
+size_t getline(char **lineptr, size_t *n, FILE *stream) {
+	static int i;
+	i = 0;
+	
+	if (lineptr == NULL) {
+		errno = EINVAL;
+		return -1;
+	} else if (*lineptr == NULL) {
+		*n = 16;
+		*lineptr = realloc(*lineptr, *n);
+	}
+	while (1) {
+		static int slen;
+		if (!fgets(*lineptr + i, *n - i, stream)) {
+			return -1;
+		}
+		
+		slen = strlen(*lineptr + i);
+		if ((*lineptr)[i + slen - 1] == '\n') return i + slen;
+		
+		i += slen;
+		if (i + 1 < *n) {
+			if (i != 0) return i;
+			// Error: read no bytes - at EOF
+			return -1;
+		}
+		// Allocate a larger buffer;
+		*n = *n * 2;
+		*lineptr = realloc(*lineptr, *n);
+	}
+}
+
+static unsigned char is_printable(char c) {
+	return ((c & 0x7F) >= 0x20) && (c != 0x7F);
+}
+
+/* Implemented by original authors: */
 
 void  c_columnate(void);
 void *ereallocarray(void *, size_t, size_t);
@@ -50,7 +124,7 @@ void  input(FILE *);
 void  maketbl(void);
 void  print(void);
 void  r_columnate(void);
-__dead void usage(void);
+void usage(void);
 
 struct field {
 	char *content;
@@ -62,30 +136,19 @@ int entries;			/* number of records */
 int eval;			/* exit value */
 int *maxwidths;			/* longest record per column */
 struct field **table;		/* one array of pointers per line */
-wchar_t *separator = L"\t ";	/* field separator for table option */
+char *separator = "\t ";	/* field separator for table option */
 
 int
 main(int argc, char *argv[])
 {
-	struct winsize win;
 	FILE *fp;
 	int ch, tflag, xflag;
-	char *p;
 	const char *errstr;
 
-	setlocale(LC_CTYPE, "");
-
-	termwidth = 0;
-	if ((p = getenv("COLUMNS")) != NULL)
-		termwidth = strtonum(p, 1, INT_MAX, NULL);
-	if (termwidth == 0 && ioctl(STDOUT_FILENO, TIOCGWINSZ, &win) == 0 &&
-	    win.ws_col > 0)
-		termwidth = win.ws_col;
-	if (termwidth == 0)
-		termwidth = 80;
-
-	if (pledge("stdio rpath", NULL) == -1)
-		err(1, "pledge");
+	__asm__ ("jsr %w", 0x9DB4); // get_console_info
+	__asm__ ("lda %b", 0x02);
+	__asm__ ("sta %v", termwidth);
+	__asm__ ("stz %v + 1", termwidth);
 
 	tflag = xflag = 0;
 	while ((ch = getopt(argc, argv, "c:s:tx")) != -1) {
@@ -96,11 +159,7 @@ main(int argc, char *argv[])
 				errx(1, "%s: %s", errstr, optarg);
 			break;
 		case 's':
-			if ((separator = reallocarray(NULL, strlen(optarg) + 1,
-			    sizeof(*separator))) == NULL)
-				err(1, NULL);
-			if (mbstowcs(separator, optarg, strlen(optarg) + 1) ==
-			    (size_t) -1)
+			if ((separator = strdup(optarg)) == NULL)
 				err(1, "sep");
 			break;
 		case 't':
@@ -115,7 +174,7 @@ main(int argc, char *argv[])
 	}
 
 	if (!tflag)
-		separator = L"";
+		separator = "";
 	argv += optind;
 
 	if (*argv == NULL) {
@@ -131,9 +190,6 @@ main(int argc, char *argv[])
 			}
 		}
 	}
-
-	if (pledge("stdio", NULL) == -1)
-		err(1, "pledge");
 
 	if (!entries)
 		return eval;
@@ -153,8 +209,8 @@ main(int argc, char *argv[])
 void
 c_columnate(void)
 {
-	int col, numcols;
-	struct field **row;
+	static int col, numcols;
+	static struct field **row;
 
 	INCR_NEXTTAB(*maxwidths);
 	if ((numcols = termwidth / *maxwidths) == 0)
@@ -177,7 +233,7 @@ c_columnate(void)
 void
 r_columnate(void)
 {
-	int base, col, numcols, numrows, row;
+	static int base, col, numcols, numrows, row;
 
 	INCR_NEXTTAB(*maxwidths);
 	if ((numcols = termwidth / *maxwidths) == 0)
@@ -231,14 +287,13 @@ input(FILE *fp)
 	static int maxentry = 0;
 	static int maxcols = 0;
 	static struct field *cols = NULL;
-	int col, width, twidth;
+	int col, width;
 	size_t blen;
-	ssize_t llen;
+	size_t llen;
 	char *p, *s, *buf = NULL;
-	wchar_t wc;
-	int wlen;
+	char wc;
 
-	while ((llen = getline(&buf, &blen, fp)) > -1) {
+	while ((signed)(llen = getline(&buf, &blen, fp)) > -1) {
 		if (buf[llen - 1] == '\n')
 			buf[llen - 1] = '\0';
 
@@ -247,18 +302,18 @@ input(FILE *fp)
 
 			/* Skip lines containing nothing but whitespace. */
 
-			for (s = p; (wlen = mbtowc(&wc, s, MB_CUR_MAX)) > 0;
-			     s += wlen)
-				if (!iswspace(wc))
+			for (s = p; wc = *s;
+			     s += 1)
+				if (!isspace(wc))
 					break;
 			if (*s == '\0')
 				break;
 
 			/* Skip leading, multiple, and trailing separators. */
 
-			while ((wlen = mbtowc(&wc, p, MB_CUR_MAX)) > 0 &&
-			    wcschr(separator, wc) != NULL)
-				p += wlen;
+			while ((wc = *p) > 0 &&
+			    strchr(separator, wc) != NULL)
+				p += 1;
 			if (*p == '\0')
 				break;
 
@@ -270,20 +325,14 @@ input(FILE *fp)
 			s = p;
 			width = 0;
 			while (*p != '\0') {
-				if ((wlen = mbtowc(&wc, p, MB_CUR_MAX)) == -1) {
-					width++;
-					p++;
-					continue;
-				}
-				if (wcschr(separator, wc) != NULL)
+				if (strchr(separator, wc) != NULL)
 					break;
 				if (*p == '\t')
 					INCR_NEXTTAB(width);
-				else  {
-					width += (twidth = wcwidth(wc)) == -1 ?
-					    1 : twidth;
+				else if (is_printable(*p)) {
+					width += 1;
 				}
-				p += wlen;
+				p += 1;
 			}
 
 			if (col + 1 >= maxcols) {
@@ -309,7 +358,7 @@ input(FILE *fp)
 				maxwidths[col] = width;
 			if (*p != '\0') {
 				*p = '\0';
-				p += wlen;
+				p += 1;
 			}
 			if ((cols[col].content = strdup(s)) == NULL)
 				err(1, NULL);
@@ -342,7 +391,7 @@ ereallocarray(void *ptr, size_t nmemb, size_t size)
 	return ptr;
 }
 
-__dead void
+void
 usage(void)
 {
 	(void)fprintf(stderr,
