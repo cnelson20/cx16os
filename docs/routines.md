@@ -93,7 +93,7 @@ Return values:
 - .Y should contain number of args represented by string in .AX
 - If caller is active process & r0.L != 0, new process will become new active process
 - If r2.L and r2.H are valid fds in caller file table, new process stdin will be file represented by r2.L, stdout will be r2.H
-- Files will be closed for caller if exec is successful
+- The calling process should close the files passed to exec after calling the function. Formerly, the files passed to exec would be closed for the caller if exec was successful
  
 Return values:
 - If .A != 0 -> new process has pid .A,  instance id in .X
