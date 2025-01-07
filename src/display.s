@@ -16,6 +16,7 @@ PLOT_Y = $0C
 BACKSPACE = $8
 LINE_FEED = $a
 CARRIAGE_RETURN = $d
+TAB = $09
 
 NEWLINE = LINE_FEED
 
@@ -251,7 +252,7 @@ putc_v:
 	pla
 	sta programs_last_printed_special_char, Y 
 
-	cmp #NEWLINE ; '\r'
+	cmp #NEWLINE ; '\n'
 	bne :+
 	lda #CARRIAGE_RETURN
 	jsr CHROUT
@@ -267,19 +268,19 @@ putc_v:
 	rts
 	:
 	
-	cmp #$9 ; '\t'
+	cmp #TAB ; '\t'
 	bne :++
 	pla
 	sec
 	jsr PLOT
 	tya
-	and #3
+	and #7
 	tay
 	lda #' '
 	:
 	jsr CHROUT
 	iny
-	cpy #4
+	cpy #8
 	bcc :-
 	rts
 	:
