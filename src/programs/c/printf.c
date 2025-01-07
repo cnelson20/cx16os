@@ -42,8 +42,8 @@
 	fprintf(stderr, "\n"); \
 	exit(status); }
 #define err(status, ...) { fprintf(stderr, "printf: "); \
-	printf(stderr, __VA_ARGS__); \
-	printf(stderr, ": %s\n", \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, ": %s\n", \
 	strerror(errno)); \
 	exit(status); }
 #define warnx(...) { fprintf(stderr, "printf: "); \

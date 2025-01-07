@@ -55,8 +55,8 @@ int errno;
 	fprintf(stderr, "\n"); \
 	exit(status); }
 #define err(status, ...) { fprintf(stderr, "uniq: "); \
-	printf(stderr, __VA_ARGS__); \
-	printf(stderr, ": %s\n", \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, ": %s\n", \
 	strerror(errno)); \
 	exit(status); }
 #define warnx(...) { fprintf(stderr, "uniq: "); \
