@@ -1367,6 +1367,14 @@ narg_not_0_amp:
 	sta child_id_table, Y
 	txa
 	sta child_instance_table, Y
+	lda r2 ; process' stdin
+	beq :+
+	jsr close_file
+	:
+	lda r2 + 1 ; process' stdout
+	beq :+
+	jsr close_file
+	:
 	ply
 	plx
 	inc num_cmds_ran
@@ -1397,9 +1405,21 @@ narg_not_0_amp:
 	cmp #0
 	beq exec_error
 
-@store_child_info:	
+@store_child_info:
+	phx
+	pha
+	lda new_stdin_fileno
+	beq :+
+	jsr close_file
+	:
+	lda new_stdout_fileno
+	beq :+
+	jsr close_file
+	:
 	stz new_stdin_fileno
 	stz new_stdout_fileno
+	pla
+	plx
 	
 	ldy num_cmds_ran
 	sta child_id_table, Y
@@ -1432,11 +1452,23 @@ wait_child:
 	jmp new_line
 	
 exec_error:
+	lda r2
+	beq :+
+	cmp new_stdin_fileno
+	beq :+
+	jsr close_file
+	:
 	lda new_stdin_fileno
 	beq @new_stdin_file_zero
 	jsr close_file
 	stz new_stdin_fileno
 @new_stdin_file_zero:
+	lda r2 + 1
+	beq :+
+	cmp new_stdout_fileno
+	beq :+
+	jsr close_file
+	:
 	lda new_stdout_fileno
 	beq @new_stdout_file_zero
 	jsr close_file
