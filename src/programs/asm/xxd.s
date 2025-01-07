@@ -180,6 +180,8 @@ file_print_loop:
 	sta bytes_read
 	cpy #0
 	beq :+
+	cpy #7; EOF
+	beq :+
 	jmp file_error_read
 	:
 	stz read_again
