@@ -1496,20 +1496,18 @@ setup_process_info:
 	; see if r2H is a valid file num ; 
 	;
 	lda r2 + 1
-	beq :+ ; skip check if filenum is 0. to use stdin, use 0 | 16
+	bne :+
+	lda #1
+	:
 	and #$0F
 	tax
 	lda PV_OPEN_TABLE, X
 	tax
-	cpx #2
-	bcc :+
 	cpx #MAX_VALID_FILE + 1 ; valid files go up to 2F
 	bcs :+
 	; is valid file!
 	; clear entry in host file table ;
 	ldy r2 + 1
-	lda #NO_FILE
-	sta PV_OPEN_TABLE, Y
 	bra :++
 	:
 	ldx #1
@@ -1519,20 +1517,13 @@ setup_process_info:
 	; same for r2L ; 
 	;
 	lda r2
-	beq :+
 	and #$0F
 	tay
 	lda PV_OPEN_TABLE, Y
-	cmp #2
-	bcc :+
 	cmp #MAX_VALID_FILE + 1
 	bcs :+
 	; again, valid file ;
 	ldy r2
-	pha
-	lda #NO_FILE ; empty file table entry
-	sta PV_OPEN_TABLE, Y
-	pla
 	bra :++
 	:
 	lda #0

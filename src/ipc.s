@@ -873,9 +873,7 @@ close_pipe_ext:
 	bra @return_success
 @write_end:
 	; KZE1 in .X
-	lda pipe_table, X
-	dec A
-	sta pipe_table, X
+	dec pipe_table, X
 	stz pipe_table_write_end_pid, X
 @return_success:
 	clear_atomic_st
@@ -898,6 +896,11 @@ pass_pipe_other_process:
 	cmp #$20
 	bcs @write_end
 @read_end:
+	lda pipe_table, X
+	clc
+	adc #$10
+	sta pipe_table, X
+	
 	pla
 	cmp pipe_table_read_end_pid, X
 	beq :+
@@ -908,6 +911,8 @@ pass_pipe_other_process:
 	sta pipe_table_read_end_pid, X
 	rts
 @write_end:
+	inc pipe_table, X
+	
 	pla
 	cmp pipe_table_write_end_pid, X
 	beq :+
@@ -988,8 +993,8 @@ read_pipe_ext:
 	bne @can_read_byte
 	ldy KZE0
 	lda pipe_table, Y
-	cmp #$11 ; both ends open
-	bne @never_will_read
+	and #$0F ; write end still open?
+	beq @never_will_read
 	lda pipe_table_write_end_pid, Y
 	jsr surrender_to_process
 	bra :-
@@ -1111,8 +1116,8 @@ write_pipe_ext:
 	bne @can_write_byte
 	ldx KZE0
 	lda pipe_table, X
-	cmp #$11 ; both ends open
-	bne @never_will_write
+	and #$F0 ; is the read end still open?
+	beq @never_will_write
 	lda pipe_table_read_end_pid, X
 	jsr surrender_to_process
 	bra :--	

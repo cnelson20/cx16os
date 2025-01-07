@@ -660,7 +660,18 @@ pass_fd_other_process:
 	pla
 	:
 	
-	; dont worry about files on disk
+	pha
+	lda RAM_BANK
+	pha
+	lda #1
+	sta RAM_BANK
+	lda file_table_count, Y
+	inc A
+	sta file_table_count, Y
+	pla
+	sta RAM_BANK
+	pla
+	; dont increase counter for files on disk
 	rts
 
 .export CALL_open_file
