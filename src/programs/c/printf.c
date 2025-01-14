@@ -482,7 +482,7 @@ check_conversion(const char *s, const char *ep)
 	}
 }
 
-void
+static void
 usage(void)
 {
 	(void)fprintf(stderr, "usage: printf format [argument ...]\n");
