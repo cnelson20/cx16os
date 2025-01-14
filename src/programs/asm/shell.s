@@ -182,17 +182,22 @@ new_line:
 	stz curr_running_script
 	stz stay_alive_after_input_eof
 	
+	lda next_fd
+	ldx #0
+	jsr move_fd
 	jsr try_open_shrc
 	bne @no_exit_after_exec
-	:
+	beq @couldnt_open_shrc
 	
+	:
 	ldx #0
 	lda next_fd
 	cmp #$FF
 	bne :+
 	lda #2
 	:
-	jsr move_fd
+	jsr set_fd_stdin
+@couldnt_open_shrc:
 	lda next_running_script
 	sta curr_running_script
 	stz next_running_script
@@ -1788,13 +1793,28 @@ set_script_fd_stdin:
 	sta next_stay_alive_after_eof
 	stz stay_alive_after_input_eof
 	pla
-
-	ldx #0 ; move to stdin
-	jsr move_fd
+	jsr set_fd_stdin
 
 	lda #1
 	sta curr_running_script
 	rts
+
+set_fd_stdin:
+	ldx #0 ; move to stdin
+	jsr move_fd
+	cmp #0
+	beq :+
+	lda #<@stdin_str
+	ldx #>@stdin_str
+	ldy #0
+	jsr open_file
+	ldx #0
+	jsr move_fd
+	:
+	rts
+
+@stdin_str:
+	.asciiz "#stdin"
 
 exit_shell:
 	sta ptr0
