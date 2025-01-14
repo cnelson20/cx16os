@@ -144,6 +144,8 @@ shrc_filename:
 	.asciiz "~/home/.shrc"
 bootrc_filename:
 	.asciiz "~/home/.bootrc"
+stdin_stream_filename:
+	.asciiz "#stdin"
 
 welcome:
 	stz new_stdin_fileno
@@ -1804,17 +1806,14 @@ set_fd_stdin:
 	jsr move_fd
 	cmp #0
 	beq :+
-	lda #<@stdin_str
-	ldx #>@stdin_str
+	lda #<stdin_stream_filename
+	ldx #>stdin_stream_filename
 	ldy #0
 	jsr open_file
 	ldx #0
 	jsr move_fd
 	:
 	rts
-
-@stdin_str:
-	.asciiz "#stdin"
 
 exit_shell:
 	sta ptr0
