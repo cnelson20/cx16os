@@ -369,7 +369,7 @@ irq_re_caller:
 	lda current_program_id
 	cmp #FIRST_PROGRAM_BANK
 	beq :+
-	stp
+	;stp
 	:
 	
 	lda nmi_queued
@@ -385,14 +385,12 @@ irq_re_caller:
 	ldy STORE_PROG_ROMBANK
 	plx
 	stx RAM_BANK
-	cpy #FIRST_CART_BANK
-	bcc :+
 	cmp #FIRST_PROGRAM_BANK
-	bcc :+
+	bcc @program_ok
 	tax
 	and #%11111110
 	cmp current_program_id
-	beq :+
+	beq @program_ok
 	lda RAM_BANK
 	pha
 	lda current_program_id
@@ -402,11 +400,11 @@ irq_re_caller:
 	ply
 	sty RAM_BANK
 	cmp #0
-	beq :+ ; process owns extmem bank
+	beq @program_ok ; process owns extmem bank
 	
 	lda STORE_PROG_ADDR + 1
 	cmp #$A0 ; process running in code space 
-	bcc :+
+	bcc @program_ok
 	; process trampled into another bank, need to kill
 	txa ; STORE_PROG_RAMBANK
 	ldx #RETURN_PAGE_ENTERED
@@ -414,7 +412,7 @@ irq_re_caller:
 	lda current_program_id
 	ldx #RETURN_PAGE_BREAK
 	jmp program_exit
-	:
+@program_ok:
 
 	lda keyhandler_queue_pass_active_process
 	beq :+
