@@ -128,3 +128,21 @@ r7 := $10
 
 .endscope
 
+; 65C22 Versatile Interface Adapter
+.struct VIA1                    ; Versatile Interface Adapter
+        .org    $9F00
+  PRB   .byte                   ; mouse, LED, VIC bus  (Port Register B)
+  PRA   .byte                   ; keyboard, controllers  (Port Register A)
+  DDRB  .byte                   ; (Data Direction Register B)
+  DDRA  .byte                   ; (Data Direction Register A)
+  T1    .word                   ; (Timer 1)
+  T1L   .word                   ; (Timer 1 Latch)
+  T2    .word                   ; (Timer 2)
+  SR    .byte                   ; (Shift Register)
+  ACR   .byte                   ; (Auxiliary Control Register)
+  PCR   .byte                   ; (Peripheral Control Register)
+  IFR   .byte                   ; (Interrupt Flags Register)
+  IER   .byte                   ; (Interrupt Enable Register)
+  PRA2  .byte                   ; keyboard, controllers  (PRA without handshake)
+.endstruct
+

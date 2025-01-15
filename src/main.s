@@ -174,9 +174,26 @@ setup_interrupts:
 	lda #custom_keyinput_handler
 	sta $032E 
 
+	; set up t1 on VIA ;
 	accum_8_bit
 	.a8
-
+	
+	lda VIA1::T1 ; clear t1 interrupt flag
+	
+	lda #<$20C4 ; maybe $20C5 would be more accurate?
+	sta VIA1::T1
+	lda #>$20C4
+	sta VIA1::T1 + 1
+	
+	lda VIA1::ACR
+	and #%111111
+	ora #( %01 ) << 6
+	sta VIA1::ACR
+	
+	lda VIA1::IER
+	ora #$40
+	sta VIA1::IER
+	
 	lda #1
 	sta irq_already_triggered
 	stz atomic_action_st
@@ -237,13 +254,13 @@ jump_default_handler:
 custom_irq_816_handler:
 	save_p_816
 	sep #$30
-
+	
 	;
 	; Check for new frame flag on vera
 	;
 	lda VERA::IRQ_FLAGS
 	and #$01
-	beq jump_default_handler
+	beq @not_vera_irq
 	
 	; 1 vera frame has passed so increment int. jiffy timer
 	lda internal_jiffy_counter
@@ -253,10 +270,27 @@ custom_irq_816_handler:
 	lda #0
 	:
 	sta internal_jiffy_counter
+@not_vera_irq:
+	lda VIA1::IFR
+	and #$40
+	beq jump_default_handler
+	lda VIA1::T1
 	
 	; Decrement time process has left to run
+	rep #$20
+	.a16
+	lda internal_ms_counter
+	inc A
+	cmp #1000
+	bcc :+
+	lda #0
+	:
+	sta internal_ms_counter
+	sep #$20
+	.a8
+	
 	jsr dec_process_time
-
+	
 	;
 	; if program is going through irq process, don't restart the irq
 	; if not, rewrite stack to run system code
@@ -331,6 +365,12 @@ custom_irq_816_handler:
 irq_re_caller:
 	stz ROM_BANK
 	accum_index_8_bit
+	
+	lda current_program_id
+	cmp #FIRST_PROGRAM_BANK
+	beq :+
+	stp
+	:
 	
 	lda nmi_queued
 	beq :+
@@ -410,7 +450,6 @@ custom_brk_handler:
 	.a8
 	php
 	
-
 	lda #1
 	sta irq_already_triggered
 
@@ -434,16 +473,16 @@ default_816_nmi_handler:
 custom_nmi_handler:
 	pha
 	php
-
+	
 	accum_8_bit ; only accumulator to not clear .XH and .YH
-
+	
 	lda current_program_id
 	cmp active_process
 	bne :+
 	cmp #FIRST_PROGRAM_BANK ; first process is nmi-able
 	bne @stop_active_process
-
-	:	
+	:
+	
 	lda active_process
 	sta nmi_queued ; queue nmi and return
 	jmp @end_nmi
@@ -1791,6 +1830,9 @@ run_first_prog:
 ; global jiffy counter for get_time
 .export internal_jiffy_counter
 internal_jiffy_counter:
+	.byte 0
+.export internal_ms_counter
+internal_ms_counter:
 	.word 0
 
 ; info about current process ;
