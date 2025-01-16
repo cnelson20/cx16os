@@ -491,7 +491,14 @@ wait_process:
 set_own_priority:
 	save_p_816_8bitmode
 	cmp #0
-	bne :+
+	beq :+
+	
+	asl A
+	asl A
+	asl A
+	asl A
+	bra :++
+	:
 	lda #DEFAULT_PRIORITY
 	:
 	cmp #MAX_PRIORITY

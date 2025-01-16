@@ -129,6 +129,7 @@ load_error_msg:
 shell_name:
 	.literal "shell", 0
 
+IRQ_EMU_VECTOR := $0314
 IRQ_816_VECTOR := $0338
 BRK_816_VECTOR := $033A
 
@@ -144,6 +145,14 @@ setup_interrupts:
 	
 	lda #custom_irq_816_handler
 	sta IRQ_816_VECTOR
+	
+	; copy emulation mode irq handler ;
+	
+	lda IRQ_EMU_VECTOR
+	sta default_emu_irq_handler
+	
+	lda #custom_irq_emu_handler
+	sta IRQ_EMU_VECTOR
 	
 	; copy brk handler
 
@@ -205,15 +214,23 @@ setup_interrupts:
 reset_interrupts:
 	sei 
 	php
+	
+	; disable VIA1 T1 ;
+	lda VIA1::IER
+	and #$FF ^ $40
+	sta VIA1::IER
 
 	rep #$20
 	.a16
-
+	
 	; copy back irq handler ;
 	
 	lda default_816_irq_handler
 	sta IRQ_816_VECTOR
-
+	
+	lda default_emu_irq_handler
+	sta IRQ_EMU_VECTOR
+	
 	; copy back nmi handler ;
 	
 	lda default_nmi_handler
@@ -236,6 +253,9 @@ reset_interrupts:
 default_816_irq_handler:
 	.word 0
 
+default_emu_irq_handler:
+	.word 0
+
 ; irq_already_triggered := $72
 ; atomic_action_st := $73
 
@@ -245,6 +265,37 @@ default_keyinput_handler:
 .export nmi_queued
 nmi_queued:
 	.byte 0
+
+increment_ms_counter:
+	lda internal_ms_counter
+	ldx internal_ms_counter + 1
+	inc A
+	bne :+
+	inx
+	:
+	cpx #>1000
+	bcc @store
+	bne @overflow
+	cmp #<1000
+	bcc @store
+@overflow:
+	lda #0
+	tax
+@store:
+	sta internal_ms_counter
+	stx internal_ms_counter + 1
+	
+	rts
+
+custom_irq_emu_handler:
+	lda VERA::IRQ_FLAGS
+	and #$40
+	beq :+
+	lda VIA1::T1 ; clear irq flag
+	jsr increment_ms_counter
+	jsr dec_process_time
+	:
+	jmp (default_emu_irq_handler)
 
 jump_default_handler:
 	restore_p_816
@@ -274,21 +325,11 @@ custom_irq_816_handler:
 	lda VIA1::IFR
 	and #$40
 	beq jump_default_handler
-	lda VIA1::T1
+	lda VIA1::T1 ; clear irq flag
+	
+	jsr increment_ms_counter
 	
 	; Decrement time process has left to run
-	rep #$20
-	.a16
-	lda internal_ms_counter
-	inc A
-	cmp #1000
-	bcc :+
-	lda #0
-	:
-	sta internal_ms_counter
-	sep #$20
-	.a8
-	
 	jsr dec_process_time
 	
 	;
@@ -732,11 +773,6 @@ switch_next_program:
 	stz atomic_action_st
 	lda current_program_id
 	jsr find_next_process
-	
-	tax
-	lda process_priority_table, X
-	sta schedule_timer
-	txa
 	
 	cmp current_program_id
 	bne :+
@@ -1765,6 +1801,13 @@ switch_control_bank:
 	
 	index_8_bit ; make X 8 bits
 	.i8
+	
+	lda schedule_timer
+	bne :+
+	ldx current_program_id
+	lda process_priority_table, X
+	sta schedule_timer
+	:
 	
 	lda STORE_REG_STATUS
 	pha
