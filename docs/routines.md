@@ -40,8 +40,8 @@
 | $9D8A | [`set_own_priority`](#9d8a-set_own_priority) | .A | | .X, .YH | &check; |
 | $9D8D | [`surrender_process_time`](#9d8d-surrender_process_time) | | | | &check; |
 | $9D90 | [`mark_last_hook_message_received`](system_hooks.md#mark_last_hook_message_received) | .A | | .XY | &cross; |
-| $9D93 | [`lock_vera_regs`](system_hooks.md#lock_vera_regs) | .A | .XY | | &cross; |
-| $9D96 | [`unlock_vera_regs`](system_hooks.md#unlock_vera_regs) | .A | .XY | | &cross; |
+| $9D93 | [`lock_vera_regs`](system_hooks.md#lock_vera_regs) | | .A  | .XY | &cross; |
+| $9D96 | [`unlock_vera_regs`](system_hooks.md#unlock_vera_regs) | | .A | .XY | &cross; |
 | $9D99 | [`bin_to_bcd16`](#9d99-bin_to_bcd16) | .AX | .AXY | | &check; |
 | $9D9C | [`move_fd`](#9d9c-move_fd) | .A, .X | .A | .Y | &mdash; |
 | $9D9F | [`get_time`](#9d9f-get_time) | | r0, r1, r2, r3 | .AXY | &cross; |

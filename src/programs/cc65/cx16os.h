@@ -42,3 +42,6 @@ void __fastcall__ bin_to_bcd(int, unsigned char *);
 int __fastcall__ set_console_mode(unsigned char);
 void __fastcall__ set_stdin_read_mode(unsigned char);
 void __fastcall__ detach_self(unsigned char);
+
+unsigned char __fastcall__ lock_vera_regs(void);
+unsigned char __fastcall__ lock_vera_regs(void);

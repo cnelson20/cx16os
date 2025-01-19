@@ -49,3 +49,9 @@ _detach_self := detach_self
 
 .export _get_args
 _get_args = get_args
+
+.export _lock_vera_regs
+_lock_vera_regs = lock_vera_regs
+
+.export _unlock_vera_regs
+_unlock_vera_regs = unlock_vera_regs
