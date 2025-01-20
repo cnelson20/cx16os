@@ -11,7 +11,7 @@
 ;
 ; returns length of string pointed to by .AX in .A
 ;
-.export strlen
+.export strlen, strlen_16bit
 strlen:
 	save_p_816
 	xba
@@ -23,12 +23,10 @@ strlen:
 	jsr :+
 	restore_p_816
 	rts
-
 ;
 ; returns length of str in .X in .C
 ; also returns pointer to null byte at end of str in .X
 ;
-.export strlen_16bit
 strlen_16bit:
 	save_p_816
 	jsr :+
@@ -340,6 +338,8 @@ hex_num_to_string_kernal:
 ; convert 16bit binary num to 24 bit BCD value
 .export bin_bcd16
 bin_bcd16:
+@BIN := KZE0
+@BCD := KZE1
 	save_p_816
 	accum_index_8_bit
 	.a8
@@ -371,10 +371,6 @@ bin_bcd16:
 	restore_p_816	; Back to binary mode
 	.a8
 	rts
-@BIN:
-	.res 2
-@BCD:
-	.res 4
 
 ;
 ; toupper
@@ -431,7 +427,7 @@ get_process_name_kernal_ext:
 	rts
 	:
 	
-	lda RAM_BANK
+	lda current_program_id
 	sta KZE2 ; bank to copy to
 	
 	lda KZE3 ; process to get name of
@@ -458,10 +454,10 @@ get_process_name_kernal_ext:
 	plx
 	jsr memcpy_banks_ext
 	
+	clear_atomic_st
 	pla
 	plx ; pull again to return number of bytes copied	
 	ldy #0
-	clear_atomic_st
 	rts
 
 ;
