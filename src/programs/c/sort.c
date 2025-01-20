@@ -20,13 +20,13 @@ char *insert_line_buff_into_list();
 void display_output();
 void usage(int);
 
-int alphanum_strcmp(char *, char *);
-int printable_strcmp(char *, char *);
+int alphanum_strcmp(const char *, const char *);
+int printable_strcmp(const char *, const char *);
 
 // Modified by options
 char *output_filename = NULL;
 int sort_mult = 1;
-int (*strcmp_ptr)(char *, char *) = strcmp;
+int __fastcall__ (*strcmp_ptr)(const char *, const char *) = strcmp;
 
 int main(int argc, char *argv[]) {
 	FILE *fp;
@@ -117,7 +117,7 @@ void usage(int status) {
 /*
 	Custom sort functions
 */
-int printable_strcmp(char *s1, char *s2) {
+int printable_strcmp(const char *s1, const char *s2) {
 	while (*s1) {
 		while (*s1 && !isprint(*s1)) ++s1;
 		while (*s2 && !isprint(*s2)) ++s2;
@@ -129,7 +129,7 @@ int printable_strcmp(char *s1, char *s2) {
 	return 0 - *s2;
 }
 
-int alphanum_strcmp(char *s1, char *s2) {
+int alphanum_strcmp(const char *s1, const char *s2) {
 	while (*s1) {
 		while (*s1 && !isspace(*s1) && !isalnum(*s1)) ++s1;
 		while (*s2 && !isspace(*s2) && !isalnum(*s2)) ++s2;
