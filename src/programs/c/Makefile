@@ -29,9 +29,7 @@ $(MNT_DIR)/bin:
 #
 
 ctest: ctest.c $(BONK_LIB_FILE)
-	cc65 $(C_FLAGS) $@.c
-	ca65 --cpu 65sc02 $@.s
-	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
+	mos-common-clang -o $@ -Os $@.c -lexit-return -linit-stack
 	cp $@ $(MNT_DIR)/bin
 
 #

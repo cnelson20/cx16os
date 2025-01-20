@@ -1,19 +1,12 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <fcntl.h>
-
 #include <peekpoke.h>
-
-#include "cx16os.h"
 
 char hello_str[] = "Hello, World!";
 
-char buff[256] = {'\0'};
-
 int main() {
-	printf("%s\n", hello_str);
-	printf("pid: %d\n", PEEK(0x00));
+	unsigned char ptrlo = (unsigned)hello_str & 0xFF;
+	unsigned char ptrhi = (unsigned)hello_str >> 8;
 	
-	return 0;
+	asm ("jsr\t$9D09" :: "a"(ptrlo), "x"(ptrhi));
+	
+	return PEEK(0);
 }
