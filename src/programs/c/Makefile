@@ -8,6 +8,8 @@ C_FLAGS = --include-dir $(INCL_DIR)/ -t none --cpu 65sc02
 L_FLAGS = -C $(INCL_DIR)/cx16os_c.cfg
 BONK_L_FLAGS = -C $(INCL_DIR)/cx16os_bonk_c.cfg
 
+LLVM_FLAGS = --config mos-common.cfg -lexit-return -linit-stack
+
 all: bindir ctest date wc cmp untar cowsay yes expr sort cal uniq printf column
 
 clean:
@@ -29,7 +31,7 @@ $(MNT_DIR)/bin:
 #
 
 ctest: ctest.c $(BONK_LIB_FILE)
-	mos-common-clang -o $@ -Os $@.c -lexit-return -linit-stack
+	mos-clang $(LLVM_FLAGS) -Os -o $@ $@.c
 	cp $@ $(MNT_DIR)/bin
 
 #
