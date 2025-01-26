@@ -10,7 +10,7 @@ BONK_L_FLAGS = -C $(INCL_DIR)/cx16os_bonk_c.cfg
 
 LLVM_FLAGS = --config mos-common.cfg -lexit-return -linit-stack
 
-all: bindir ctest date wc cmp untar cowsay yes expr sort cal uniq printf column
+all: bindir ctest date wc cmp untar cowsay yes expr sort cal uniq printf column format
 
 clean:
 	rm *.s
@@ -37,6 +37,12 @@ ctest: ctest.c $(BONK_LIB_FILE)
 #
 # *nix utilities
 #
+
+format: format.c $(LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
+	cp $@ $(MNT_DIR)/bin
 
 column: column.c $(BONK_LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
