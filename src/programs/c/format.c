@@ -33,7 +33,7 @@ int main(int argc, char **argv);
 void usage(char status, char *optstr);
 
 void parse_file(int fd);
-int parse_line(char *line);
+int parse_line(unsigned linenum, char *line);
 
 void parse_options(int argc, char **argv) {
 	(void)argc;
@@ -97,11 +97,12 @@ int main(int argc, char **argv) {
 char line_buff[257];
 
 void parse_file(int fd) {
-	static unsigned linenum;
-	static unsigned i;
 	static char *cptr;
 	
-	linenum = 0;
+	static unsigned linenum;
+	static size_t i;
+	
+	linenum = 1;
 	
 	i = 0;
 	while (1) {
@@ -111,8 +112,8 @@ void parse_file(int fd) {
 		if (!cptr && i >= 256) {
 			errx(1, "error: line %u exceeds maximum line length\n", linenum);
 		} else {
-		
-		parse_line(line_buff);
+			parse_line(linenum, line_buff);
+		}
 		
 		++linenum;
 		if (!cptr) { break; } // If cptr is NULL, we are at the end of our file
@@ -124,10 +125,67 @@ void parse_file(int fd) {
 	return;
 }
 
-int parse_line(char *line) {
-	(void)line;
+char *find_non_space(char *c) {
+	while (*c && isspace(*c)) ++c;
+	return c;
+}
+
+#define PARA_BUFF_SIZE 1024
+
+char paragraph_buff[PARA_BUFF_SIZE + 1] = {'\0'};
+size_t paragraph_buff_size = 0;
+
+void print_formatted_paragraph() {
+	if (*paragraph_buff) {
+		
+	}
+	paragraph_buff[0] = '\0';
+	paragraph_buff_size = 0;
+}
+
+void paragraph_add(char *lineptr) {
+	if (!lineptr) {
+		// Flush output
+		print_formatted_paragraph();
+	} else {
+		static unsigned l;
+		static char *strtok_arg;
+		
+		strtok_arg = lineptr;
+		while (*lineptr) {
+			char *word = strtok(strtok_arg, " \t");
+			strtok_arg = NULL;
+			
+			if (!word) break;
+			
+			l = strlen(word); // strtok always returns non-empty tokens
+			// If word would overflow buffer, print out current buff and clear it
+			if (paragraph_buff_size + l >= PARA_BUFF_SIZE) print_formatted_paragraph();
+			strcpy(paragraph_buff + paragraph_buff_size, word);
+			paragraph_buff_size += l;
+			strcpy(paragraph_buff + paragraph_buff_size, " ");
+			++paragraph_buff_size;
+			
+			lineptr = find_non_space(lineptr);
+		}
+	}
+}
+
+int parse_line(unsigned linenum, char *line) {
+	static char *ptr;
 	
-	puts(line);
+	printf("%u: %s\n", linenum, line);
+	
+	ptr = line;
+	while (*ptr && isspace(ptr)) ++ptr;
+	
+	// If the first char in the str is '.', it is a command
+	if (*ptr == '.') {
+		paragraph_add(NULL);
+		
+	} else {
+		paragraph_add(ptr);
+	}
 	
 	return 0;
 }
