@@ -8,12 +8,32 @@
 
 #include "cx16os.h"
 
+#define PROGNAME "format"
+
+#define errx(status, ...) { fprintf(stderr, PROGNAME ": "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, "\n"); \
+	exit(status); }
+#define err(status, ...) { fprintf(stderr, PROGNAME ": "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, ": %s\n", \
+	strerror(errno)); \
+	exit(status); }
+#define warnx(...) { fprintf(stderr, PROGNAME ": "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, ": %s\n", strerror(errno)); }
+#define warnc(code, ...) { fprintf(stderr, PROGNAME ": "); \
+	fprintf(stderr, __VA_ARGS__); \
+	fprintf(stderr, ": %s\n", strerror(code)); }
+
 char *input_filename = NULL;
 
 void parse_options(int argc, char **argv);
 int main(int argc, char **argv);
-void usage(char, char *);
-void parse_file(int);
+void usage(char status, char *optstr);
+
+void parse_file(int fd);
+int parse_line(char *line);
 
 void parse_options(int argc, char **argv) {
 	(void)argc;
@@ -74,6 +94,40 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
+char line_buff[257];
+
 void parse_file(int fd) {
+	static unsigned linenum;
+	static unsigned i;
+	static char *cptr;
+	
+	linenum = 0;
+	
+	i = 0;
+	while (1) {
+		i += read(fd, line_buff + i, 256 - i);
+		line_buff[i] = '\0';
+		if (cptr = strchr(line_buff, '\n')) { *cptr = '\0'; } // If newline is pres, remove it
+		if (!cptr && i >= 256) {
+			errx(1, "error: line %u exceeds maximum line length\n", linenum);
+		} else {
+		
+		parse_line(line_buff);
+		
+		++linenum;
+		if (!cptr) { break; } // If cptr is NULL, we are at the end of our file
+		
+		strcpy(line_buff, cptr + 1);
+		i = strlen(line_buff);
+	}
+ 	
 	return;
+}
+
+int parse_line(char *line) {
+	(void)line;
+	
+	puts(line);
+	
+	return 0;
 }
