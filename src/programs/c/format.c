@@ -38,7 +38,7 @@ void usage(char status, char *optstr);
 void parse_file(int fd);
 int parse_line(unsigned linenum, char *line);
 
-void print_formatted_paragraph();
+void print_formatted_paragraph(char space_last_line);
 void paragraph_add(char *lineptr);
 
 void parse_options(int argc, char **argv) {
@@ -162,7 +162,9 @@ char print_spaces(char count) {
 
 #define TAB_WIDTH 8
 
-void print_formatted_paragraph() {
+void print_formatted_paragraph(char space_last_line) {
+	(void)space_last_line;
+	
 	if (paragraph_buff_size) {
 		static unsigned i;
 		
@@ -211,7 +213,7 @@ void paragraph_add(char *lineptr) {
 	
 	if (!lineptr) {
 		// Flush output
-		print_formatted_paragraph();
+		print_formatted_paragraph(0);
 	} else {
 		static unsigned l;
 		static char *strtok_arg;
@@ -226,11 +228,24 @@ void paragraph_add(char *lineptr) {
 			
 			l = strlen(word); // strtok always returns non-empty tokens
 			// If word would overflow buffer, print out current buff and clear it
-			if (paragraph_buff_size + l >= PARA_BUFF_SIZE) print_formatted_paragraph();
+			if (paragraph_buff_size + l >= PARA_BUFF_SIZE) print_formatted_paragraph(1);
 			
 			memmove_extmem(para_bank, paragraph_buff + paragraph_buff_size, 0, word, l + 1);
 			paragraph_buff_size += l + 1;
 		}
+	}
+}
+
+void print_strtok(char *delim) {
+	static char *tok;
+	static char c;
+	
+	c = 0;
+	while (tok = strtok(NULL, delim)) {
+		if (c) chrout(' ');
+		c = 1;
+		
+		print_str(tok);		
 	}
 }
 
@@ -255,12 +270,17 @@ int parse_line(unsigned linenum, char *line) {
 		char *tok = strtok(++ptr, " \t\r\n");
 		
 		paragraph_add(NULL);	
-		if (!strcmp(tok, "I")) {
-			chrout(1);
+		if (!strcmp(tok, "TH")) {
 			while (tok = strtok(NULL, " \t\r\n")) {
-				chrout(' ');
-				print_str(tok);
+				paragraph_add(tok);
 			}
+			print_formatted_paragraph(1); // Do want to space out title
+		} else if (!strcmp(tok, "SH")) {
+			print_strtok(" \t\r\n");
+			print_str("\n\n");
+		} else if (!strcmp(tok, "I")) {
+			print_str("\x01 "); // Inverted color header
+			print_strtok(" \t\r\n");
 			print_str(" \x01\n\n");
 		} else {
 			errx(1, "error on line %u: invalid directive .%s\n", linenum, tok);
