@@ -39,7 +39,7 @@ void parse_file(int fd);
 int parse_line(unsigned linenum, char *line);
 
 void print_formatted_paragraph(char space_last_line);
-void paragraph_add(char *lineptr);
+void print_formatted_paragraph(char space_last_line, char *prefix_str);
 
 void parse_options(int argc, char **argv) {
 	(void)argc;
@@ -162,7 +162,7 @@ char print_spaces(char count) {
 
 #define TAB_WIDTH 8
 
-void print_formatted_paragraph(char space_last_line) {
+void print_formatted_paragraph(char space_last_line, char *prefix_str) {
 	(void)space_last_line;
 	
 	if (paragraph_buff_size) {
@@ -182,7 +182,7 @@ void print_formatted_paragraph(char space_last_line) {
 			line_len = 0;
 			cur_ptr = temp_line_buff;
 			
-			chrout('\t');
+			print_str(prefix_str);
 			while ((cur_ptr - temp_line_buff) < paragraph_buff_size) {
 				int slen = strlen(cur_ptr);
 				if (line_len + slen >= term_width - TAB_WIDTH) break;
@@ -195,11 +195,13 @@ void print_formatted_paragraph(char space_last_line) {
 				line_len += slen;
 				cur_ptr += slen + 1;
 			}
+			chrout('\n');
 			i += (cur_ptr - temp_line_buff);
 			
 		}
-		chrout('\n');
-		chrout('\n');
+		if (!space_last_line) {
+			chrout('\n');
+		}
 	}
 	paragraph_buff[0] = '\0';
 	paragraph_buff_size = 0;
@@ -213,14 +215,14 @@ void paragraph_add(char *lineptr) {
 	
 	if (!lineptr) {
 		// Flush output
-		print_formatted_paragraph(0);
+		print_formatted_paragraph(0, "\t");
 	} else {
 		static unsigned l;
 		static char *strtok_arg;
 		
 		strtok_arg = lineptr;
 		while (1) {
-			char *word = strtok(strtok_arg, " \t\r\n");
+			char *word = strtok(strtok_arg, " \n\r\t");
 			if (!word) break;
 			strtok_arg = NULL;
 			
@@ -228,7 +230,7 @@ void paragraph_add(char *lineptr) {
 			
 			l = strlen(word); // strtok always returns non-empty tokens
 			// If word would overflow buffer, print out current buff and clear it
-			if (paragraph_buff_size + l >= PARA_BUFF_SIZE) print_formatted_paragraph(1);
+			if (paragraph_buff_size + l >= PARA_BUFF_SIZE) print_formatted_paragraph(1, "\t");
 			
 			memmove_extmem(para_bank, paragraph_buff + paragraph_buff_size, 0, word, l + 1);
 			paragraph_buff_size += l + 1;
@@ -274,7 +276,7 @@ int parse_line(unsigned linenum, char *line) {
 			while (tok = strtok(NULL, " \t\r\n")) {
 				paragraph_add(tok);
 			}
-			print_formatted_paragraph(1); // Do want to space out title
+			print_formatted_paragraph(1, ""); // Do space out title
 		} else if (!strcmp(tok, "SH")) {
 			print_strtok(" \t\r\n");
 			print_str("\n\n");
