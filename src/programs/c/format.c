@@ -41,6 +41,7 @@ int parse_line(unsigned linenum, char *line);
 unsigned printable_width(char *);
 
 void print_formatted_paragraph(char space_last_line, char *prefix_str);
+void paragraph_add_word(char *word);
 void paragraph_add(char *str);
 
 void parse_options(int argc, char **argv) {
@@ -170,7 +171,7 @@ unsigned printable_width(char *str) {
 	while (*str) {
 		if (*str == '\t') {
 			w += TAB_WIDTH;
-		} else if ((*str >= 0x20 && *str <= 0x7E) || *str >= 0xA0) {
+		} else {
 			w += 1;
 		}
 		++str;
@@ -185,7 +186,7 @@ void print_formatted_paragraph(char space_last_line, char *prefix_str) {
 		
 		i = 0;
 		while (i < paragraph_buff_size) {
-			static int line_len;
+			static char line_len;
 			static char num_words;
 			static char string_length;
 			static char *cur_ptr, *end_ptr;
@@ -196,7 +197,7 @@ void print_formatted_paragraph(char space_last_line, char *prefix_str) {
 			
 			string_length = printable_width(prefix_str);
 			line_len = string_length;
-			while ((cur_ptr - temp_line_buff) < paragraph_buff_size) {
+			while ((cur_ptr + i - temp_line_buff) < paragraph_buff_size) {
 				static int slen;
 				
 				slen = strlen(cur_ptr);
@@ -224,6 +225,7 @@ void print_formatted_paragraph(char space_last_line, char *prefix_str) {
 				pad_bytes = term_width - line_len;
 				bytes_padded = 0;
 				word_index = 0;
+				
 				while (word_index < num_words) {
 					if (word_index) {
 						static char c;
@@ -244,9 +246,7 @@ void print_formatted_paragraph(char space_last_line, char *prefix_str) {
 					++word_index;
 				}
 			} else {
-				static char word_index; // Yes. Just print out all the words in the line
-				
-				word_index = 0;
+				char word_index = 0; // Yes. Just print out all the words in the line
 				while (word_index < num_words) {		
 					if (word_index) {
 						chrout(' ');
@@ -268,6 +268,17 @@ void print_formatted_paragraph(char space_last_line, char *prefix_str) {
 	paragraph_buff_size = 0;
 }
 
+void paragraph_add_word(char *word) {
+	static unsigned l;
+	
+	l = strlen(word); // strtok always returns non-empty tokens
+	// If word would overflow buffer, print out current buff and clear it
+	if (paragraph_buff_size + l >= PARA_BUFF_SIZE) print_formatted_paragraph(1, "\t");
+			
+	memmove_extmem(para_bank, paragraph_buff + paragraph_buff_size, 0, word, l + 1);
+	paragraph_buff_size += l + 1;
+}
+
 void paragraph_add(char *lineptr) {
 	if (!para_bank) {
 		para_bank = res_extmem_bank();
@@ -278,7 +289,6 @@ void paragraph_add(char *lineptr) {
 		// Flush output
 		print_formatted_paragraph(0, "\t");
 	} else {
-		static unsigned l;
 		static char *strtok_arg;
 		
 		strtok_arg = lineptr;
@@ -288,13 +298,7 @@ void paragraph_add(char *lineptr) {
 			strtok_arg = NULL;
 			
 			//printf("word: %s\n", word);
-			
-			l = strlen(word); // strtok always returns non-empty tokens
-			// If word would overflow buffer, print out current buff and clear it
-			if (paragraph_buff_size + l >= PARA_BUFF_SIZE) print_formatted_paragraph(1, "\t");
-			
-			memmove_extmem(para_bank, paragraph_buff + paragraph_buff_size, 0, word, l + 1);
-			paragraph_buff_size += l + 1;
+			paragraph_add_word(word);			
 		}
 	}
 }
@@ -311,6 +315,8 @@ void print_strtok(char *delim) {
 		print_str(tok);		
 	}
 }
+
+extern char Last;
 
 int parse_line(unsigned linenum, char *line) {
 	static char *ptr;
@@ -333,11 +339,12 @@ int parse_line(unsigned linenum, char *line) {
 		char *tok = strtok(++ptr, " \t\r\n");
 		
 		paragraph_add(NULL);	
-		if (!strcmp(tok, "TH")) {			
+		if (!strcmp(tok, "TH")) {
 			while (tok = strtok(NULL, ",\r")) {
-				paragraph_add(tok);
+				paragraph_add_word(tok);
 			}
 			print_formatted_paragraph(1, ""); // Do space out title
+			print_str("\n");
 		} else if (!strcmp(tok, "SH")) {
 			print_strtok(" \t\r\n");
 			print_str("\n\n");
