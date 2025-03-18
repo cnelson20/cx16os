@@ -225,7 +225,7 @@ testfile:
 	.asciiz "~/home/macbeth.txt"
 
 formatter:
-	.asciiz "cat"
+	.asciiz "format"
 manpager:
 	.asciiz "less"
 

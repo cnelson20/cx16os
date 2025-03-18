@@ -38,8 +38,10 @@ void usage(char status, char *optstr);
 void parse_file(int fd);
 int parse_line(unsigned linenum, char *line);
 
-void print_formatted_paragraph(char space_last_line);
+unsigned printable_width(char *);
+
 void print_formatted_paragraph(char space_last_line, char *prefix_str);
+void paragraph_add(char *str);
 
 void parse_options(int argc, char **argv) {
 	(void)argc;
@@ -162,42 +164,101 @@ char print_spaces(char count) {
 
 #define TAB_WIDTH 8
 
-void print_formatted_paragraph(char space_last_line, char *prefix_str) {
-	(void)space_last_line;
+unsigned printable_width(char *str) {
+	static unsigned char w;
+	w = 0;
+	while (*str) {
+		if (*str == '\t') {
+			w += TAB_WIDTH;
+		} else if ((*str >= 0x20 && *str <= 0x7E) || *str >= 0xA0) {
+			w += 1;
+		}
+		++str;
+	}
 	
+	return w;
+}
+
+void print_formatted_paragraph(char space_last_line, char *prefix_str) {
 	if (paragraph_buff_size) {
 		static unsigned i;
 		
 		i = 0;
 		while (i < paragraph_buff_size) {
 			static int line_len;
-			static char *cur_ptr;
-			
-			POKEW(0x02, (unsigned)temp_line_buff);
-			POKEW(0x04, paragraph_buff_size);
-			POKEW(0x0A, 0x60DB);
-			__asm__ ("jsr %w", 0x000A);
+			static char num_words;
+			static char string_length;
+			static char *cur_ptr, *end_ptr;
 			
 			memmove_extmem(0, temp_line_buff, para_bank, paragraph_buff + i, term_width + 1);
-			line_len = 0;
+			num_words = 0;
 			cur_ptr = temp_line_buff;
 			
-			print_str(prefix_str);
+			string_length = printable_width(prefix_str);
+			line_len = string_length;
 			while ((cur_ptr - temp_line_buff) < paragraph_buff_size) {
-				int slen = strlen(cur_ptr);
-				if (line_len + slen >= term_width - TAB_WIDTH) break;
+				static int slen;
+				
+				slen = strlen(cur_ptr);
+				if (line_len + slen >= term_width) break;
 				// else	
-				if (line_len) {
-					++line_len;
-					chrout(' ');
+				if (line_len != string_length) {
+					++line_len; // space between words
 				}
-				print_str(cur_ptr);
 				line_len += slen;
 				cur_ptr += slen + 1;
+				++num_words;
 			}
-			chrout('\n');
-			i += (cur_ptr - temp_line_buff);
+			end_ptr = cur_ptr;
+			cur_ptr = temp_line_buff;
 			
+			i += (end_ptr - temp_line_buff);
+			
+			print_str(prefix_str);
+			if (space_last_line || i < paragraph_buff_size) { // Is this the last line?
+				static char pad_bytes; // No
+				static char bytes_padded;
+				static char word_index;
+				
+				// Represent extra bytes we need to print
+				pad_bytes = term_width - line_len;
+				bytes_padded = 0;
+				word_index = 0;
+				while (word_index < num_words) {
+					if (word_index) {
+						static char c;
+						chrout(' ');
+						++string_length;
+						if (num_words > 1) {
+							c = word_index * pad_bytes / (num_words - 1);
+							if (c > bytes_padded) {
+								print_spaces(c - bytes_padded);
+								string_length += c - bytes_padded;
+								bytes_padded = c;
+							}
+						}
+					}
+					print_str(cur_ptr);
+					string_length += strlen(cur_ptr);
+					cur_ptr += strlen(cur_ptr) + 1;
+					++word_index;
+				}
+			} else {
+				static char word_index; // Yes. Just print out all the words in the line
+				
+				word_index = 0;
+				while (word_index < num_words) {		
+					if (word_index) {
+						chrout(' ');
+						++string_length;
+					}
+					print_str(cur_ptr);
+					string_length += strlen(cur_ptr);
+					cur_ptr += strlen(cur_ptr) + 1;
+					++word_index;
+				}
+			}
+			if (string_length < term_width) chrout('\n');
 		}
 		if (!space_last_line) {
 			chrout('\n');
@@ -272,8 +333,8 @@ int parse_line(unsigned linenum, char *line) {
 		char *tok = strtok(++ptr, " \t\r\n");
 		
 		paragraph_add(NULL);	
-		if (!strcmp(tok, "TH")) {
-			while (tok = strtok(NULL, " \t\r\n")) {
+		if (!strcmp(tok, "TH")) {			
+			while (tok = strtok(NULL, ",\r")) {
 				paragraph_add(tok);
 			}
 			print_formatted_paragraph(1, ""); // Do space out title
