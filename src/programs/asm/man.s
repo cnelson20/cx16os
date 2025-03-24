@@ -218,11 +218,6 @@ strlen:
 	txy
 	plx
 	rts
-	
-	
-	
-testfile:
-	.asciiz "~/home/macbeth.txt"
 
 formatter:
 	.asciiz "format"
