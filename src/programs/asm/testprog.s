@@ -9,7 +9,6 @@ ptr0 := $30
 
 init:
     .byte $EA, $EA
-	stp
 	lda #<filename
 	ldx #>filename
 	ldy #0
@@ -34,6 +33,37 @@ init:
 	stz r2
 	lda ptr0
 	jsr read_file	
+	
+	lda #1
+	jsr write_file
+	
+	lda #$0A ; newline
+	jsr CHROUT
+		
+	lda ptr0
+	jsr tell_file
+	lda r0
+	ldx r0 + 1
+	jsr bin_to_bcd16
+	pha
+	phx
+	tya
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	pla
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	pla
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	lda #$0A ; newline
+	jsr CHROUT
 	
 	lda #0
     rts

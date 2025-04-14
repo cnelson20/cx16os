@@ -183,12 +183,12 @@ parse_hex:
 	stz KZE1 + 1
 	
 	lda (KZE0), Y
-	jsr @get_hex_digit
+	jsr get_hex_digit
 	sta KZE1
 	dey
 	bmi @end
 	lda (KZE0), Y
-	jsr @get_hex_digit
+	jsr get_hex_digit
 	jsr @mult_16
 	ora KZE1
 	sta KZE1
@@ -196,12 +196,12 @@ parse_hex:
 	bmi @end
 	
 	lda (KZE0), Y
-	jsr @get_hex_digit
+	jsr get_hex_digit
 	sta KZE1 + 1
 	dey
 	bmi @end
 	lda (KZE0), Y
-	jsr @get_hex_digit
+	jsr get_hex_digit
 	jsr @mult_16
 	ora KZE1 + 1
 	sta KZE1 + 1
@@ -217,8 +217,9 @@ parse_hex:
 	asl A
 	asl A
 	rts
-	
-@get_hex_digit:
+
+.export get_hex_digit
+get_hex_digit:
 	cmp #$30
 	bcc fail_not_digit
 	cmp #$3A
@@ -231,7 +232,6 @@ parse_hex:
 	bcc fail_not_digit
 	cmp #'g'
 	bcs fail_not_digit
-
 	
 @valid_hex_digit:
 	and #$0F

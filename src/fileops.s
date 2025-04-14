@@ -7,7 +7,7 @@
 .SEGMENT "CODE"
 
 .import file_table
-.import strlen, memcpy_ext, memcpy_banks_ext, strcmp_banks_ext
+.import strlen, memcpy_ext, memcpy_banks_ext, strcmp_banks_ext, get_hex_digit
 .import strncpy_int, strncat_int, memcpy_int, memcpy_banks_int, rev_str, toupper, tolower
 .import check_process_owns_bank, getchar_from_keyboard
 .import open_pipe_ext, close_pipe_ext, close_pipe_int, read_pipe_ext, write_pipe_ext, pass_pipe_other_process
@@ -2329,8 +2329,6 @@ run_seek_tell:
 	
 	lda #0
 	rts
-	
-	
 
 ;
 ; seek_file
@@ -2338,6 +2336,11 @@ run_seek_tell:
 ; args: fileno in .A, offset in r0-r1
 ;
 seek_file:
+	ldx #0
+	bra :+
+tell_file:
+	ldx #1
+	: ; start of shared code
 	inc RAM_BANK
 	cmp #PV_OPEN_TABLE_SIZE
 	bcc :+
@@ -2361,6 +2364,56 @@ seek_file:
 	jmp @return
 	:
 	
+	cpx #0
+	beq @seek_file
+@tell_file:
+	ldy #'T'
+	sty PV_TMP_FILENAME
+	sta PV_TMP_FILENAME + 1
+	lda #2
+	jsr run_seek_tell
+	cmp #0
+	bne @close_dos_error
+	; read from dos
+	ldx #15
+	jsr CHKIN
+	bcs @close_dos_error ; error CHKIN'ing file
+	jsr GETIN
+	cmp #'0'
+	bne @close_dos_error
+	jsr GETIN
+	cmp #'7'
+	bne @close_dos_error
+	jsr GETIN
+	cmp #','
+	bne @close_dos_error
+	ldy #3
+	:
+	phy
+	jsr GETIN ; fetch hex rep of higher nybble
+	jsr get_hex_digit
+	asl A
+	asl A
+	asl A
+	asl A
+	sta KZE0
+	jsr GETIN ; lower nybble
+	jsr get_hex_digit
+	ora KZE0
+	ply
+	sta r0, Y
+	dey
+	bpl :-
+	
+	jsr CLRCHN
+	lda #15
+	jsr CLOSE
+	
+	jsr free_dos_channel
+	lda #0
+	bra @return
+	
+@seek_file:	
 	ldy #'P'
 	sty PV_TMP_FILENAME
 	sta PV_TMP_FILENAME + 1
@@ -2374,7 +2427,7 @@ seek_file:
 	lda #6 ; P + fileno + 4 bytes
 	jsr run_seek_tell ; run dos operation
 	cmp #0
-	bne @dos_error ; if 
+	bne @close_dos_error
 	jsr check_channel_status
 	pha
 	
@@ -2387,22 +2440,16 @@ seek_file:
 	
 	lda #0
 	bra @return
-@dos_error:
+@close_dos_error:
 	lda #15
 	jsr CLOSE
+	jsr free_dos_channel
 @return_dos_error: ; channel #15 already closed here
 	lda #EOF
 @return:
 	ldx current_program_id
 	stx RAM_BANK
 	rts
-
-;
-; tell_file
-;
-tell_file:
-	rts
-
 
 ;
 ; deletes file with filename in .AX
