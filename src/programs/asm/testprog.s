@@ -39,7 +39,7 @@ init:
 	
 	lda #$0A ; newline
 	jsr CHROUT
-		
+	
 	lda ptr0
 	jsr tell_file
 	lda r0
