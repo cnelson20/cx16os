@@ -2018,6 +2018,8 @@ dos_cmds_tmp_filename:
 .export CALL_chdir, CALL_unlink
 .export CALL_rename, CALL_copy_file
 .export CALL_mkdir, CALL_rmdir
+.export CALL_seek_file, CALL_tell_file
+
 CALL_chdir:
 	preserve_rom_run_routine_8bit chdir
 	rts
@@ -2040,6 +2042,14 @@ CALL_mkdir:
 
 CALL_rmdir:
 	preserve_rom_run_routine_8bit rmdir
+	rts
+
+CALL_seek_file:
+	preserve_rom_run_routine_8bit seek_file
+	rts
+	
+CALL_tell_file:
+	preserve_rom_run_routine_8bit tell_file
 	rts
 
 ;
@@ -2294,6 +2304,105 @@ dos_cmd_open_error:
 	jsr free_dos_channel
 	pla
 	rts
+
+run_seek_tell:
+	pha
+	jsr wait_dos_channel
+	; now we can do command ;
+	
+	lda current_program_id
+	inc A
+	sta RAM_BANK
+	
+	pla ; 'filename' length
+	ldx #<PV_TMP_FILENAME
+	ldy #>PV_TMP_FILENAME
+	jsr SETNAM
+	
+	lda #15
+	ldx #8
+	tay
+	jsr SETLFS
+	
+	jsr OPEN
+	bcs dos_cmd_open_error
+	
+	lda #0
+	rts
+	
+	
+
+;
+; seek_file
+;
+; args: fileno in .A, offset in r0-r1
+;
+seek_file:
+	inc RAM_BANK
+	cmp #PV_OPEN_TABLE_SIZE
+	bcc :+
+	lda #NO_SUCH_FILE
+	jmp @return
+	:
+	tay
+	lda PV_OPEN_TABLE, Y
+	cmp #NO_FILE
+	bne :+
+	lda #NO_SUCH_FILE
+	jmp @return
+	:
+	cmp #STDERR_FILENO + 1
+	bcc :+
+	cmp #$10
+	bcs :+
+	bra :++
+	:
+	lda #INVALID_MODE
+	jmp @return
+	:
+	
+	ldy #'P'
+	sty PV_TMP_FILENAME
+	sta PV_TMP_FILENAME + 1
+	ldy #3
+	:
+	lda r0, Y
+	sta PV_TMP_FILENAME + 2, Y
+	dey
+	bpl :-
+	
+	lda #6 ; P + fileno + 4 bytes
+	jsr run_seek_tell ; run dos operation
+	cmp #0
+	bne @dos_error ; if 
+	jsr check_channel_status
+	pha
+	
+	lda #15
+	jsr CLOSE
+	
+	jsr free_dos_channel
+	pla
+	bne @return_dos_error
+	
+	lda #0
+	bra @return
+@dos_error:
+	lda #15
+	jsr CLOSE
+@return_dos_error: ; channel #15 already closed here
+	lda #EOF
+@return:
+	ldx current_program_id
+	stx RAM_BANK
+	rts
+
+;
+; tell_file
+;
+tell_file:
+	rts
+
 
 ;
 ; deletes file with filename in .AX

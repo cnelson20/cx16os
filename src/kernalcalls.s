@@ -16,7 +16,7 @@
 .import is_valid_process
 
 .import CALL_open_file, CALL_close_file, CALL_read_file, CALL_write_file
-.import CALL_move_fd, CALL_copy_fd, CALL_load_dir_listing_extmem
+.import CALL_move_fd, CALL_copy_fd, CALL_load_dir_listing_extmem, CALL_seek_file, CALL_tell_file
 .import CALL_get_pwd, CALL_chdir, CALL_unlink, CALL_rename, CALL_copy_file, CALL_mkdir, CALL_rmdir
 
 .import PV_OPEN_TABLE
@@ -112,6 +112,8 @@ call_table:
 	jmp CALL_set_console_mode ; $9DB7
 	jmp CALL_set_stdin_read_mode ; $9DBA
 	jmp CALL_pipe ; $9DBD
+	jmp CALL_seek_file ; $9DC0
+	jmp CALL_tell_file ; $9DC3
 	.res 3, $FF
 .export call_table_end
 call_table_end:
