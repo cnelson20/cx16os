@@ -2360,7 +2360,7 @@ tell_file:
 	bcs :+
 	bra :++
 	:
-	lda #INVALID_MODE
+	lda #IS_PIPE
 	jmp @return
 	:
 	
