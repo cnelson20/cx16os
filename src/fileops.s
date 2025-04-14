@@ -2365,7 +2365,8 @@ tell_file:
 	:
 	
 	cpx #0
-	beq @seek_file
+	bne @tell_file
+	jmp @seek_file
 @tell_file:
 	ldy #'T'
 	sty PV_TMP_FILENAME
@@ -2373,20 +2374,44 @@ tell_file:
 	lda #2
 	jsr run_seek_tell
 	cmp #0
-	bne @close_dos_error
+	beq :+
+	jmp @close_dos_error
+	:
 	; read from dos
 	ldx #15
 	jsr CHKIN
-	bcs @close_dos_error ; error CHKIN'ing file
+	bcc :+
+	jmp @close_dos_error ; error CHKIN'ing file
+	:
 	jsr GETIN
 	cmp #'0'
-	bne @close_dos_error
+	beq :+
+	jmp @close_dos_error
+	:
 	jsr GETIN
 	cmp #'7'
-	bne @close_dos_error
+	beq :+
+	jmp @close_dos_error
+	:
 	jsr GETIN
 	cmp #','
+	beq :+
+	jmp @close_dos_error
+	:
+	
+	lda #r0
+	sta KZE0
+	stz KZE0 + 1
+	jsr @read_pos_size
+	jsr GETIN
+	cmp #' '
 	bne @close_dos_error
+	lda #r2
+	sta KZE0
+	jsr @read_pos_size
+	bra @end_read
+
+@read_pos_size:	
 	ldy #3
 	:
 	phy
@@ -2396,15 +2421,17 @@ tell_file:
 	asl A
 	asl A
 	asl A
-	sta KZE0
+	sta KZE2
 	jsr GETIN ; lower nybble
 	jsr get_hex_digit
-	ora KZE0
+	ora KZE2
 	ply
-	sta r0, Y
+	sta (KZE0), Y
 	dey
 	bpl :-
-	
+	rts
+
+@end_read:
 	jsr CLRCHN
 	lda #15
 	jsr CLOSE
