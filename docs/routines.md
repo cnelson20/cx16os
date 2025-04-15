@@ -59,13 +59,13 @@
 | $9DC3 | [`tell_file`](#9dc3-tell_file) | .A | .A, r0, r1, r2, r3 | .X, .Y | &mdash; |
 
 ### Note:
-Functions with an '&mdash;' under the `C Wrapper Implemented?` column mean that existing C builtins or functions provide the same functionality and are not necessary. 
+Functions with an '&mdash;' under the `C Wrapper Implemented?` column mean that existing C builtins or functions provide the same functionality and are not necessary.  
 
 For example, the `open`, `close`, `read`, `write` C functions offer the same functionally as [`open_file`](#9d1e-open_file), [`close_file`](#9d21-close_file), [`read_file`](#9d24-read_file), and [`write_file`](#9d27-write_file) respectively.
 
 `dup` and `dup2` are wrappers to [`copy_fd`](#9da8-copy_fd) and [`move_fd`](#9d9c-move_fd) routines.
 
-`lseek` offers the same functionality as both [`seek_file`](#9dc0-seek_file) and [`tell_file`](#9dc3-tell_file).
+`lseek` offers the equivalent functionality as both [`seek_file`](#9dc0-seek_file) and [`tell_file`](#9dc3-tell_file).
 
 There is no `get_args` wrapper because the cx16os cc65 library already populates `argc` and `argv` and passes them to main.
 
@@ -453,6 +453,7 @@ Return values:
 ### $9DBD: pipe
 
 - Opens a unnamed FIFO with both a read and write end and returns a file descriptor for each
+- See [here](https://linux.die.net/man/7/pipe) for a basic rundown on what a pipe/FIFO is
 
 Arguments:
 - None
