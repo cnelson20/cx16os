@@ -54,6 +54,9 @@
 | $9DB4 | [`get_console_info`](#9db4-get_console_info) | | .A, .X, r0 | .Y | &cross; |
 | $9DB7 | [`set_console_mode`](#9db7-set_console_mode) | .A, .X | .A | .Y | &check; |
 | $9DBA | [`set_stdin_read_mode`](#9dba-set_stdin_read_mode) | .A | | .A, .X, .Y | &check; |
+| $9DBD | [`pipe`](#9dbd-pipe) | | .A, .X | .Y | &check; |
+| $9DC0 | [`seek_file`](#9dc0-seek_file) | .A, r0, r1 | .A | .X, .Y | &mdash; |
+| $9DC3 | [`tell_file`](#9dc3-tell_file) | .A | .A, r0, r1, r2, r3 | .X, .Y | &mdash; |
 
 ### Note:
 Functions with an '&mdash;' under the `C Wrapper Implemented?` column mean that existing C builtins or functions provide the same functionality and are not necessary. 
@@ -61,6 +64,8 @@ Functions with an '&mdash;' under the `C Wrapper Implemented?` column mean that 
 For example, the `open`, `close`, `read`, `write` C functions offer the same functionally as [`open_file`](#9d1e-open_file), [`close_file`](#9d21-close_file), [`read_file`](#9d24-read_file), and [`write_file`](#9d27-write_file) respectively.
 
 `dup` and `dup2` are wrappers to [`copy_fd`](#9da8-copy_fd) and [`move_fd`](#9d9c-move_fd) routines.
+
+`lseek` offers the same functionality as both [`seek_file`](#9dc0-seek_file) and [`tell_file`](#9dc3-tell_file).
 
 There is no `get_args` wrapper because the cx16os cc65 library already populates `argc` and `argv` and passes them to main.
 
@@ -441,5 +446,44 @@ Arguments:
 - A -> byte whose zeroness signifies the keyboard input mode to use
 
 Return values:
-- None 
+- None
+
+---
+
+### $9DBD: pipe
+
+- Opens a unnamed FIFO with both a read and write end and returns a file descriptor for each
+
+Arguments:
+- None
+
+Return Values:
+- On success, return read fd in .A, write fd in .X, and 0 in .Y
+- On failure to open pipe, return a non-zero error code in .Y
+---
+
+### $9DC0: seek_file
+
+- Sets the absolute position of the file offset of a particular file descriptor
+
+Arguments:
+- A -> file descriptor which to seek
+- r0-r1 -> little endian 32-bit value to set the file offset
+
+Return Values:
+- A -> 0 on a successful seek, non-zero on error
+
+---
+
+### $9DC3: tell_file
+
+- Retrieves the position of the file offset, and total file size of a particular file descriptor
+
+Arguments:
+- A -> file descriptor to get the offset and size of
+
+Return values:
+- A -> 0 on success, non-zero on error
+- r0-r1: little endian 32-bit value of the current file offset
+- r2-r3: little endian 32-bit value of the file's total size
 
