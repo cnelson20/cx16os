@@ -81,6 +81,8 @@ SEEK_END = 1
 	rts
 @return_error:
 	lda #$FF ; return -1 on error
+	sta sreg
+	sta sreg + 1
 	tax
 	rts
 	
