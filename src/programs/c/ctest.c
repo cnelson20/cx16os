@@ -1,12 +1,36 @@
-#include <peekpoke.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <fcntl.h>
 
-char hello_str[] = "Hello, World!";
+char filename[] = "macbeth.txt";
+
+char buff[512];
 
 int main() {
-	unsigned char ptrlo = (unsigned)hello_str & 0xFF;
-	unsigned char ptrhi = (unsigned)hello_str >> 8;
+	int fd = open("macbeth.txt", O_RDONLY);
 	
-	asm ("jsr\t$9D09" :: "a"(ptrlo), "x"(ptrhi));
+	read(fd, buff, 512);
 	
-	return PEEK(0);
+	// Should print 512
+	printf("%ld\n", lseek(fd, 0, SEEK_CUR));
+	
+	lseek(fd, 100, SEEK_SET);
+	
+	// Should print 100
+	printf("%ld\n", lseek(fd, 0, SEEK_CUR));
+	
+	lseek(fd, 100, SEEK_CUR);
+	
+	// Should print 200
+	printf("%ld\n", lseek(fd, 0, SEEK_CUR));
+	
+	lseek(fd, -100, SEEK_END);
+	
+	// Should print ~113550
+	printf("%ld\n", lseek(fd, 0, SEEK_CUR));
+	
+	return 0;
 }
+

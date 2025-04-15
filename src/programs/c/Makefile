@@ -30,9 +30,13 @@ $(MNT_DIR)/bin:
 # ctest
 #
 
-ctest: ctest.c $(BONK_LIB_FILE)
-	mos-clang $(LLVM_FLAGS) -Os -o $@ $@.c
+ctest: ctest.c $(LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
 	cp $@ $(MNT_DIR)/bin
+#	mos-clang $(LLVM_FLAGS) -Os -o $@ $@.c
+#	cp $@ $(MNT_DIR)/bin
 
 #
 # *nix utilities
