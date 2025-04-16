@@ -78,6 +78,10 @@ init:
 	
 	; sync internal jiffy clock with i2c rtc
 	; rtc seconds are at device $6F, addr $00
+	lda #<1865 * 2
+	sta r1
+	lda #>1865 * 2
+	sta r1 + 1
 	ldx #$6F
 	ldy #$00
 	jsr i2c_read_byte
@@ -87,7 +91,13 @@ init:
 	ldy #$00
 	jsr i2c_read_byte
 	cmp r0
-	beq :-
+	bne :+
+	; check for max iterations
+	dec r1
+	bne :-
+	dec r1 + 1
+	bpl :-
+	:
 	stz internal_jiffy_counter
 	
 	lda #<shell_name ; load shell as first program
