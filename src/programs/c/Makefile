@@ -10,7 +10,10 @@ BONK_L_FLAGS = -C $(INCL_DIR)/cx16os_bonk_c.cfg
 
 LLVM_FLAGS = --config mos-common.cfg -lexit-return -linit-stack
 
-all: bindir ctest date wc cmp untar cowsay yes expr sort cal uniq printf column format
+PROGRAMS = ctest date wc cmp untar cowsay yes expr sort cal uniq printf column format 
+
+all: bindir $(PROGRAMS)
+	cp $(PROGRAMS) $(MNT_DIR)/bin
 
 clean:
 	rm -f *.s
@@ -20,7 +23,7 @@ clear:
 	find . -type f  -regextype posix-egrep ! -regex "\./(\S*\.\S*|[A-Z]\S*)" -delete
 
 bindir: $(MNT_DIR)/bin
-	
+		
 
 $(MNT_DIR)/bin:	
 	mkdir -p $(MNT_DIR)/bin
@@ -33,9 +36,7 @@ ctest: ctest.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
-	cp $@ $(MNT_DIR)/bin
 #	mos-clang $(LLVM_FLAGS) -Os -o $@ $@.c
-#	cp $@ $(MNT_DIR)/bin
 
 #
 # *nix utilities
@@ -45,76 +46,63 @@ format: format.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
-	cp $@ $(MNT_DIR)/bin
 
 column: column.c $(BONK_LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
-	cp $@ $(MNT_DIR)/bin
 
 printf: printf.c $(BONK_LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
-	cp $@ $(MNT_DIR)/bin
 
 sort: sort.c $(BONK_LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
-	cp $@ $(MNT_DIR)/bin
 
 expr: expr.c $(BONK_LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
-	cp $@ $(MNT_DIR)/bin
 
 uniq: uniq.c $(BONK_LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
-	cp $@ $(MNT_DIR)/bin
 
 cal: cal.c $(BONK_LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
-	cp $@ $(MNT_DIR)/bin
 
 date: date.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
-	cp $@ $(MNT_DIR)/bin
 
 untar: untar.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
-	cp $@ $(MNT_DIR)/bin
 
 cmp: cmp.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
-	cp $@ $(MNT_DIR)/bin
 
 wc: wc.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
-	cp $@ $(MNT_DIR)/bin
 
 cowsay: cowsay.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
-	cp $@ $(MNT_DIR)/bin
 
 yes: yes.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
-	cp $@ $(MNT_DIR)/bin
