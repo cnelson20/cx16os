@@ -33,7 +33,7 @@ init:
 	clc
 	xce ; enter 816 native mode
 	bcs @correct_cpu
-	; not on 65816
+	; if carry still clear, not on 65816
 	ldx #0
 	:
 	lda incorrect_cpu_msg, X
