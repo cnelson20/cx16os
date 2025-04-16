@@ -13,8 +13,8 @@ LLVM_FLAGS = --config mos-common.cfg -lexit-return -linit-stack
 all: bindir ctest date wc cmp untar cowsay yes expr sort cal uniq printf column format
 
 clean:
-	rm *.s
-	rm *.o
+	rm -f *.s
+	rm -f *.o
 
 clear:
 	find . -type f  -regextype posix-egrep ! -regex "\./(\S*\.\S*|[A-Z]\S*)" -delete
@@ -23,8 +23,7 @@ bindir: $(MNT_DIR)/bin
 	
 
 $(MNT_DIR)/bin:	
-	-mkdir $(MNT_DIR)
-	-mkdir $(MNT_DIR)/bin
+	mkdir -p $(MNT_DIR)/bin
 
 #
 # ctest

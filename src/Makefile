@@ -26,40 +26,39 @@ cx16os.img:
 	cp blank_sd.img cx16os.img
 
 clean:
-	-make -C programs/ clean
-	-rm *.lbl
-	-rm *.map
-	-rm *.nvram
-	-rm -r mnt/
-	-rm -r mnt_dir/
+	make -C programs/ clean
+	rm -f *.lbl
+	rm -f *.map
+	rm -f *.nvram
+	rm -rf mnt/
+	rm -rf mnt_dir/
 
 clear: clean
-	-make clear -C programs/
-	-rm cx16os.img
+	make clear -C programs/
+	rm -f cx16os.img
 
 build: os.prg programs
 	cp os.prg mnt/OS.PRG
 	
 	cp -r osfiles/* mnt/
-	-mkdir mnt/tmp/ mnt/etc/ mnt/usr/
+	mkdir -p mnt/tmp/ mnt/etc/ mnt/usr/
 
 sd: copy build
 ifneq ($(USE_MTOOLS),)
-	-mkdir mnt_dir/
-	-mkdir mnt_dir/OS/
+	mkdir -p mnt_dir/OS/
 	cp mnt/* -r mnt_dir/OS/
 	mcopy -i cx16os.img@@1M -smno mnt_dir/* ::
 else
 ifeq ($(OS),Windows_NT)
-	-rm /cygdrive/c/x16image.vhdx
+	rm -f /cygdrive/c/x16image.vhdx
 	diskpart < scripts/diskpart_mount.in
-	-mkdir /cygdrive/v/OS/
+	mkdir -p /cygdrive/v/OS/
 	cp mnt/* -r /cygdrive/v/OS/
 	diskpart < scripts/diskpart_detach.in
 	qemu-img convert -f vhdx "C:\x16image.vhdx" -O raw cx16os.img
 else
 	sh ./scripts/mount_sd.sh cx16os.img mnt_dir/
-	-sudo mkdir mnt_dir/OS/
+	sudo mkdir -p mnt_dir/OS/
 	sudo cp mnt/* -r mnt_dir/OS/
 	sh ./scripts/close_sd.sh mnt_dir/
 endif

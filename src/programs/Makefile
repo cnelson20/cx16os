@@ -16,5 +16,5 @@ clean:
 clear:
 	-make clear -C c/
 	-make clear -C cc65/
-	-make wipe_binaries -C asm/
+	-make clear_binaries -C asm/
 

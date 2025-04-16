@@ -16,7 +16,7 @@ stripped.lib: supervision.lib
 
 cx16os.lib: stripped.lib $(C_CONFIG) $(OBJS)
 	cp stripped.lib $@
-	-rm crt0_bonk.o
+	rm -f crt0_bonk.o
 	ar65 a $@ *.o
 
 cx16os_bonk.lib: cx16os.lib $(C_BONK_CONFIG) crt0_bonk.o
@@ -31,7 +31,7 @@ crt0_bonk.o: crt0.s $(INCS)
 	$(AS) $(A_FLAGS) -o $@ -D __BONK_DEFINE__ crt0.s
 
 clean:
-	-rm *.o
+	rm -f *.o
 	
 clear:
-	rm cx16os.lib
+	rm -f cx16os.lib
