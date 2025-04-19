@@ -26,12 +26,6 @@ Buffer information pointers hold 4 bytes of information about a hook's FIFO ring
 |-|-|
 | start_offset | end_offset |
 
-The chrout buffer information pointer uses an additional 2 bytes:
-
-| Byte 4 | Byte 5 |
-|-|-|
-| cursor x | cursor y |
-
 - First 2 bytes (start_offset) is the offset of the first character that is part of a message not yet indicated as received
 - Last 2 bytes (end_offset) is the offset of the first non-message byte in the ringbuffer (the last byte of a message is at offset - 1)
 
