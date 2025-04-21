@@ -68,7 +68,7 @@ For an example of a program that assemblers under asm, look [here](/src/osfiles/
 #### directives:
   - `.byte value`: Allocates 1 byte of space for `value`, which can be an expression
   - `.word value`: Allocates 2 bytes of space for `value`, which can be an expression
-  - `.dw value`: Allocates 3 bytes of space for `value`, which can be an expression
+  - `.dw value`: Allocates 4 bytes of space for `value`, which can be an expression
   - `.res size, value`: Currently uninplemented
   - `.equ name value`: Sets the value of `name` to `value`, which can be an expression
   - `.str "string_literal"`: Inserts `string_literal` into the output
