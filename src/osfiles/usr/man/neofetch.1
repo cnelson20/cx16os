@@ -1,0 +1,28 @@
+.TH NEOFETCH(1),User Commands,NEOFETCH(1)
+
+.SH NAME
+neofetch - display system information
+
+.SH SYNOPSIS
+neofetch [-g [FILE]] [-f FILE] [-h]
+
+.SH DESCRIPTION
+neofetch displays different system information, specified by a configuration file
+
+.SH OPTIONS
+
+-g [FILE]: write the default configuration to FILE if specified, otherwise write to ~/etc/neofetch.conf
+
+-f FILE: use the configuration from FILE. If not specified, read from ~/etc/neofetch.conf, if it exists
+
+-h: print a help message and exit
+
+.SH CONFIGURING NEOFETCH
+
+A configuration file consists of some number of commands. Up to one ascii art can be specified, either as one of two defaults or by specifying a filename in quotes.
+
+ascii [default/alt] - Specify a art to use
+
+blank - Print a blank line
+
+info [category] - Print information about [category]. Available options: os, kernal, programs, shell, terminal, cpu, gpu, smc, memory, colors

@@ -1,0 +1,26 @@
+.TH SHELL(1),User Commands,SHELL(1)
+
+.SH NAME
+shell - the default cx16os shell
+
+.SH USAGE
+shell [options]
+
+.SH OPTIONS
+-p: persist after stdin EOF. Useful when redirecting a file to stdin when running shell.
+
+-c: [COMMAND]: run COMMAND, then exit (unless the -p flag is provided)
+
+.SH COMMANDS
+cd [DIRECTORY]: Attempt to chdir to DIRECTORY, else cd to ~ if no argument supplied
+
+setenv NAME VALUE: Set variable NAME to VALUE. It can be accessed by $NAME going forward.
+
+source FILENAME: Run each line in FILENAME as a series of shell commands
+
+.SH SHELL VARIABLES
+$?: the exit code of the last command ran
+
+$$: the pid of the shell process
+
+$@: the pid of the last program put into the background with '&', if it is still alive

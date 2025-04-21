@@ -1,0 +1,99 @@
+.TH ASM(1),User Commands,ASM(1)
+
+.SH NAME
+asm - a 6502(+) assembler for cx16os
+
+.SH USAGE
+asm [OPTIONS] FILE
+
+.SH DESCRIPTION
+	assemble the contents of FILE into 6502/65816 machine code
+
+.SH OPTIONS
+
+-o OUT_FILE: Write the output to OUT_FILE. By default the output is written to 'a.out'
+
+-pc NUMBER: Set the starting program counter to NUMBER (decimal or hex). If not specifed, the default is 0xA300, the starting address of cx16os programs
+
+.SH SYNTAX
+label_name: used to create labels, local labels are unimplemented
+
+Expressions can be used, in the form '[value1] [operation] [value2]'. No parenthesis are used, and if value2 is itself an expression, it will be evaluated as well. No order of operations is respected.
+
+Valid operators within an expression:
+
+- '+': addition
+
+- '-': subtraction
+
+- '&': bitwise AND
+
+- '|': bitwise OR
+
+- '^': bitwise XOR
+
+- 'L': arithmetic shift left
+
+- 'R': logical shift right
+
+Valid values for expressions (and instructions):
+
+- label 'label_name'
+  
+- decimal number 'num'
+
+- hexadecimal number '$hex_num'
+
+- 1 single-quoted character ''c''
+
+- an expression
+
+'<' and '>' can be used to get the low and high bytes of a value, respectively, and can be used only next to labels, but can be used in expressions
+
+.SH INSTRUCTIONS
+
+The following instructions are recognized:
+
+- all base 6502 instructions
+
+- STZ
+
+- TXY, TYX
+
+- DEC A*, INC A*
+
+- PHX, PHY, PLX, PLY
+
+- STP, WAI
+
+- TSX, TXS**
+
+*: DEC A & INC A is the only form of these instructions recognized (no ina, inc).
+
+**: within cx16os, the 65816 always runs in native 65816 mode. If the TXS instruction is ran in 8-bit native mode, the high byte of the stack pointer will be set to $00, likely causing a crash.
+
+.SH DIRECTIVES
+  - .byte VALUE: Allocates 1 byte of space for VALUE, which can be an expression
+
+  - .word VALUE: Allocates 2 bytes of space for VALUE, which can be an expression
+
+  - .dw VALUE: Allocates 4 bytes of space for VALUE, which can be an expression
+
+  - .res size, VALUE: Currently uninplemented
+
+  - .equ NAME VALUE: Sets the value of NAME to VALUE, which can be an expression
+
+  - .str "LITERAL": Inserts LITERAL into the output
+
+  - .strz "LITERAL": Inserts LITERAL into the output, followed by a null byte '\0'
+
+.SH ISSUES
+No .include or .incbin directives
+
+Expression system somewhat limited
+
+'.res' directive not implemented
+
+To use the 'zp,Y' addressing mode for the 'LDX' and 'STX' instructions, ',X' must be used instead and will be substituted for the correct opcode
+
+Maximum file length of 2,730 lines ($8000 / 3)
