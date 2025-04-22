@@ -2,26 +2,31 @@
 #include <stdlib.h>
 #include <string.h>
 
-int STARTX = 0;
-int STARTY = 0;
-int ENDX = 79;
-int ENDY = 24;
+char STARTX = 0;
+char STARTY = 0;
+char ENDX = 79;
+char ENDY = 24;
 
 #define CELL_CHAR '#'
 #define TIME_OUT  300
 
 typedef struct _state {
-	int oldstate;
-	int newstate;
+	char oldstate;
+	char newstate;
 }state;
 
-void display(WINDOW *win, state **area, int startx, int starty, int endx, int endy);
-void calc(state **area, int x, int y);
-void update_state(state **area, int startx, int starty, int endx, int endy);
+void display(char startx, char starty, char endx, char endy);
+void calc(char x, char y);
+void update_state(char startx, char starty, char endx, char endy);
+
+extern void stp();
+#include <peekpoke.h>
+
+state **area;
 
 int main()
-{	state **workarea;
-	int i, j;
+{	
+	char i, j;
 	
 	initscr();
 	cbreak();
@@ -31,65 +36,70 @@ int main()
 	ENDX = COLS - 1;
 	ENDY = LINES - 1;
 
-	workarea = (state **)calloc(COLS, sizeof(state *));
+	area = (state **)calloc(COLS, sizeof(state *));
 	for(i = 0;i < COLS; ++i)
-		workarea[i] = (state *)calloc(LINES, sizeof(state));
+		area[i] = (state *)calloc(LINES, sizeof(state));
 	
 	/* For inverted U */
-	workarea[39][15].newstate = TRUE;
-	workarea[40][15].newstate = TRUE;
-	workarea[41][15].newstate = TRUE;
-	workarea[39][16].newstate = TRUE;
-	workarea[39][17].newstate = TRUE;
-	workarea[41][16].newstate = TRUE;
-	workarea[41][17].newstate = TRUE;
-	update_state(workarea, STARTX, STARTY, ENDX, ENDY);
+	area[39][15].newstate = TRUE;
+	area[40][15].newstate = TRUE;
+	area[41][15].newstate = TRUE;
+	area[39][16].newstate = TRUE;
+	area[39][17].newstate = TRUE;
+	area[41][16].newstate = TRUE;
+	area[41][17].newstate = TRUE;
+	update_state(STARTX, STARTY, ENDX, ENDY);
 	
 	/* For block  */
 /*
-	workarea[37][13].newstate = TRUE;
-	workarea[37][14].newstate = TRUE;
-	workarea[38][13].newstate = TRUE;
-	workarea[38][14].newstate = TRUE;
+	area[37][13].newstate = TRUE;
+	area[37][14].newstate = TRUE;
+	area[38][13].newstate = TRUE;
+	area[38][14].newstate = TRUE;
 
-	update_state(workarea, STARTX, STARTY, ENDX, ENDY);
+	update_state(STARTX, STARTY, ENDX, ENDY);
 */
-	display(stdscr, workarea, STARTX, STARTY, ENDX, ENDY);
-	while(getch() != KEY_F(1))
-	{	for(i = STARTX; i <= ENDX; ++i)
+	display(STARTX, STARTY, ENDX, ENDY);
+	while(getch() != KEY_F(1)) {
+		for(i = STARTX; i <= ENDX; ++i)
 			for(j = STARTY; j <= ENDY; ++j)
-				calc(workarea, i, j);
-		update_state(workarea, STARTX, STARTY, ENDX, ENDY);
-		display(stdscr,  workarea, STARTX, STARTY, ENDX, ENDY);	
+				calc(i, j);
+		update_state(STARTX, STARTY, ENDX, ENDY);
+		display(STARTX, STARTY, ENDX, ENDY);
 	}
 	
 	endwin();
 	return 0;
 }	
 
-void display(WINDOW *win, state **area, int startx, int starty, int endx, int endy)
-{	int i, j;
-	wclear(win);
+void display(char startx, char starty, char endx, char endy)
+{	char i, j;
+	wclear(stdscr);
 	for(i = startx; i <= endx; ++i)
 		for(j = starty;j <= endy; ++j)
 			if(area[i][j].newstate == TRUE)
-				mvwaddch(win, j, i, CELL_CHAR);
-	wrefresh(win);
+				mvwaddch(stdscr, j, i, CELL_CHAR);
+	wrefresh(stdscr);
 }
 
-void calc(state **area, int i, int j)
-{	int neighbours;
-	int newstate;
+void calc(char i, char j)
+{	char neighbours;
+	char newstate;
  	
-	neighbours	= 
-		area[(i - 1 + COLS) % COLS][j].oldstate		+
-		area[(i - 1 + COLS) % COLS][(j - 1 + LINES) % LINES].oldstate 	+
-		area[(i - 1 + COLS) % COLS][(j + 1) % LINES].oldstate 	+
-		area[(i + 1) % COLS][j].oldstate		+
-		area[(i + 1) % COLS][(j - 1 + LINES) % LINES].oldstate 	+
-		area[(i + 1) % COLS][(j + 1) % LINES].oldstate 	+
-		area[i][(j - 1 + LINES) % LINES].oldstate		+
-		area[i][(j + 1) % LINES].oldstate;
+	POKEW(0x0A, i);
+	POKEW(0x0C, j);
+	
+	neighbours = 0;
+	if (i > 0 && j > 0) neighbours += area[i - 1][j - 1].oldstate;
+	if (i > 0) neighbours += area[i - 1][j].oldstate;
+	if (i > 0 && j + 1 < LINES) neighbours += area[i - 1][j + 1].oldstate;
+	
+	if (i + 1 < COLS && j > 0) neighbours += area[i + 1][j - 1].oldstate;
+	if (i + 1 < COLS) neighbours += area[i + 1][j].oldstate;
+	if (i + 1 < COLS && j + 1 < LINES) neighbours += area[i + 1][j + 1].oldstate;
+	
+	if (j > 0) neighbours += area[i][j - 1].oldstate;
+	if (j + 1 < LINES) neighbours += area[i][j + 1].oldstate;
 	
 	newstate = FALSE;
 	if(area[i][j].oldstate == TRUE && (neighbours == 2 || neighbours == 3))
@@ -100,8 +110,8 @@ void calc(state **area, int i, int j)
 	area[i][j].newstate = newstate;
 }
 
-void update_state(state **area, int startx, int starty, int endx, int endy)
-{	int i, j;
+void update_state(char startx, char starty, char endx, char endy)
+{	char i, j;
 	
 	for(i = startx; i <= endx; ++i)
 		for(j = starty; j <= endy; ++j)

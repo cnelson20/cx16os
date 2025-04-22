@@ -49,10 +49,9 @@ PLOT_X = $0B
 PLOT_Y = $0C
 
 .export _stp
-.proc _stp
+_stp:
 	stp
 	rts
-.endproc
 
 ;
 ; return0 & returnFFFF
@@ -344,9 +343,7 @@ _echo := _nocbreak
 	lda tmp2
 	ldy #WINDOW::cury
 	sta (ptr1), Y ; set cury to y
-	lda #0
-	tax
-	rts
+	jmp return0
 @return_err:
 	jmp returnFFFF
 .endproc
@@ -395,48 +392,40 @@ _echo := _nocbreak
 	ldy ptr1
 	plx
 	stx ptr2 ; ch
-
-	lda WINDOW::contents_bank, Y
-	phy
-	jsr set_extmem_wbank
-	ply
-	lda WINDOW::bkgd + 1, Y
-	sta tmp1 ; attrs of bkgd
-	lda WINDOW::curx, Y
-	asl A
-	sta ptr3 ; lower byte of contents is always 0
-	lda WINDOW::contents + 1, Y ; load high byte of ptr
-	clc
-	adc WINDOW::cury, Y
-	sta ptr3 + 1
 	
-	ldy ptr3
-	ldx #0
-	lda ptr2
-	jsr pwrite_extmem_xy
-	inx
+	phy
 	lda ptr2 + 1
-	cmp #0
 	bne :+
-	lda tmp1
+	lda WINDOW::bkgd + 1, Y
 	:
-	jsr pwrite_extmem_xy
+	jsr _set_term_color
+	ply
+	lda WINDOW::cury, Y
+	sta tmp1
+	clc
+	adc WINDOW::begy, Y
+	sta tmp3 ; begy + cury 
+	lda WINDOW::curx, Y
+	sta tmp2
+	clc
+	adc WINDOW::begx, Y
+	sta tmp4 ; begx + curx
+	ldx tmp3
+	jsr _plot_cursor
+	
+	lda ptr2 ; ch low byte
+	jsr CHROUT
 	
 	ldx ptr1 ; .Y = win
-	lda WINDOW::curx, X
-	clc
-	adc WINDOW::begx, X
+	lda tmp4 ; begx + curx
 	cmp WINDOW::maxx, X
 	bcc @done
 	
-	lda WINDOW::cury, X
-	clc
-	adc WINDOW::begy, X
+	lda tmp3 ; begy + cury
 	cmp WINDOW::maxy, X
 	bcs @try_scroll
 	
-	lda #0
-	sta WINDOW::curx, X
+	stz WINDOW::curx, X
 	inc WINDOW::cury, X
 	bra @done
 @try_scroll:
@@ -452,115 +441,8 @@ _echo := _nocbreak
 ; int wrefresh(WINDOW *win);
 ;
 .proc _wrefresh	
-	;stp
-	sta ptr1
-	stx ptr1 + 1 ; win
-	rep #$10
-	.i16
-	ldy ptr1
-	lda WINDOW::contents_bank, Y
-	sta tmp1 ; contents_bank
-	phy
-	jsr set_extmem_rbank
-	ply
-	ldx WINDOW::contents, Y
-	stx ptr2 ; contents
-	
-	lda WINDOW::begx, Y
-	sta ptr3
-	lda WINDOW::begy, Y
-	sta ptr3 + 1
-	
-	lda WINDOW::maxx, Y
-	sec
-	sbc ptr3 ; begx
-	sta @xend
-	stz @xend + 1
-	
-	lda WINDOW::maxy, Y
-	sec
-	sbc ptr3 + 1 ; begy
-	sta tmp3 ; yend
-	
-	lda WINDOW::flags + 0, Y
-	and #_FULLWIN
-	sta tmp4 ; fullwin
-	
-	lda WINDOW::flags + 0, Y
-	ora #$FF ^ (_CLEAR | _FULLWIN)
-	cmp #$FF
-	bne :+
-	; clear screen
-	lda WINDOW::bkgd + 1, Y
-	phy
-	jsr _set_term_color
-	lda #CLEAR
-	jsr CHROUT
-	ply
-	:
-	
-	stz @yind
-	
-	lda tmp1
-	sta r3
-	lda ptr2
-	sta r1
-	stz r2
-	ldy #line_copy
-	sty r0
-@loop:
-	;stp
-	lda @yind ; cury
-	cmp tmp3 ; yend
-	bcs @end_loop
-	
-	; carry is clear
-	adc ptr2 + 1
-	sta r1 + 1
-	
-	lda @xend
-	asl A
-	ldx #0
-	jsr memmove_extmem
-	
-	lda ptr3
-	ldx ptr3 + 1
-	jsr _plot_cursor
-	ldy #0
-	ldx #0
-@inner_loop:
-	lda line_copy, Y
-	pha
-	iny
-	lda line_copy, Y
-	phx
-	jsr _set_term_color
-	plx
-	pla
-	jsr CHROUT
-	inx
-	cpx @xend
-	bcc @inner_loop
-	
-	inc ptr3 + 1 ; cury
-	inc @yind
-	bra @loop
-@end_loop:
-	
-	sep #$10
-	.i8
-	jmp return0
+	jmp return0 ; no-op
 
-.SEGMENT "DATA"
-@yind:
-	.word 0
-@xend:
-	.word 0
-
-line_copy:
-	.res 256
-	
-.SEGMENT "CODE"
 .endproc
 
 
@@ -591,62 +473,20 @@ line_copy:
 	sta ptr1
 	stx ptr1 + 1
 	
-	rep #$10
-	.i16
-	ldy ptr1
-	lda WINDOW::maxx, Y
-	sec
-	sbc WINDOW::begx, Y
-	beq @return
-	sta ptr2 ; cols
-	stz ptr2 + 1
-	lda WINDOW::maxy, Y
-	sec
-	sbc WINDOW::begy, Y
-	beq @return
-	sta ptr3 ; rows	
-	stz ptr3 + 1
-	lda WINDOW::contents_bank, Y
-	phy
-	jsr set_extmem_wbank ; set bank for writing
-	ply
-	
 	lda #0
-	sta WINDOW::curx, Y
-	sta WINDOW::cury, Y
-	rep #$20
-	.a16
-	lda WINDOW::contents, Y
-	sta ptr1
-	lda WINDOW::bkgd, Y
-	stz ptr4
-@loop:
-	ldy ptr1
-	ldx #0
-@inner_loop:
-	jsr pwrite_extmem_xy
-	iny
-	inx
-	cpx ptr2 ; # of cols
-	bcc @inner_loop
-	sep #$20
-	.a8
-	pha
-	inc ptr1 + 1
-	lda ptr4
-	inc A
-	sta ptr4
-	cmp ptr3 ; # of rows
-	pla
-	rep #$20
-	.a16
-	bcc @loop
-
-@return:
-	sep #$30
-	.i8
-	.a8
-	jmp return0
+	ldy #WINDOW::curx
+	sta (ptr1), Y
+	ldy #WINDOW::cury
+	sta (ptr1), Y
+	
+	ldy #WINDOW::flags + 0
+	lda (ptr1), Y
+	and #_FULLWIN
+	beq :+
+	lda #CLEAR
+	jsr CHROUT
+	:
+	jmp return0 ; no-op
 .endproc
 
 ;

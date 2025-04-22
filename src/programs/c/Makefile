@@ -48,7 +48,7 @@ curses/curses.lib: FORCE
 	make -C curses/
 
 life: curses/curses.lib life.c $(BONK_LIB_FILE)
-	cc65 $(C_FLAGS) --include-dir curses/ $@.c
+	cc65 -Cl $(C_FLAGS) --include-dir curses/ $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -m life.map -o $@ $(BONK_L_FLAGS) $@.o curses/curses.lib $(INCL_DIR)/cx16os_bonk.lib
 
