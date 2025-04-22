@@ -7,6 +7,7 @@ STR_BASE = $A000
 
 copytest:
 	;stp
+	lda #0
 	jsr res_extmem_bank
 	sta extmem_bank
 	

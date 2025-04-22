@@ -32,6 +32,7 @@ init:
     rep #$10
     .i16
     
+	lda #0
     jsr res_extmem_bank
     sta ringbuff_bank
     inc A

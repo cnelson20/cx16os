@@ -57,7 +57,8 @@ main:
 
 	rep #$10
 	.i16
-
+	
+	lda #0
 	jsr res_extmem_bank
 	sta extmem_banks + 0
 	stz extmem_banks + 1
@@ -200,7 +201,8 @@ parse_line:
 	bra :++
 
 	:
-
+	
+	lda #0
 	jsr res_extmem_bank
 
 	:

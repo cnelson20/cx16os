@@ -788,7 +788,8 @@ get_programs_info:
 	lda #<@path_str
 	ldx #>@path_str
 	jsr chdir
-
+	
+	lda #0
 	jsr res_extmem_bank
 	sta @dir_listing_bank
 	jsr load_dir_listing_extmem

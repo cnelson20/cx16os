@@ -29,6 +29,7 @@ init:
 	sta r0 + 1
 	jsr get_pwd
 	
+	lda #0
 	jsr res_extmem_bank
 	sta extmem_bank
 	

@@ -193,7 +193,8 @@ end_parse_args:
 	ldx #$A000
 	stx lines_extmem_ptr
 	stx extmem_data_ptr
-
+	
+	lda #0
 	jsr res_extmem_bank
 	sta lines_extmem_bank
 	inc A
@@ -594,6 +595,7 @@ second_parse:
 	ldx starting_pc
 	stx current_pc
 	
+	lda #0
 	jsr res_extmem_bank
 	sta labels_values_banks + 0
 
@@ -1858,7 +1860,8 @@ set_label_value:
 	lda labels_values_banks, X
 	and #1
 	beq :+
-
+	
+	lda #0
 	jsr res_extmem_bank
 	ldx labels_values_banks_last_index
 	sta labels_values_banks, X
@@ -2076,6 +2079,7 @@ next_extmem_data_bank:
 	rts
 
 	:
+	lda #0
 	jsr res_extmem_bank
 	sta last_extmem_data_bank
 	rts

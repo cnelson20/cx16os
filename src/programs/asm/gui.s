@@ -60,6 +60,7 @@ multiples_80_hi := $B200
 .endmacro
 
 init:
+	lda #0
 	jsr res_extmem_bank
 	sta hook0_extmem_bank ; same as charset bank
 	inc A

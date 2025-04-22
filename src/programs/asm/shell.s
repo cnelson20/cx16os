@@ -2076,6 +2076,7 @@ set_alias:
 find_env_space:
 	lda env_extmem_bank
 	bne @already_have_bank
+	lda #0
 	jsr res_extmem_bank
 	sta env_extmem_bank
 

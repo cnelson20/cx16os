@@ -41,8 +41,15 @@ res_bank_load_proc_entry_pt:
 	bra :+
 res_extmem_bank:
 	save_p_816_8bitmode
-
-	lda #0
+	cmp #0
+	beq :+
+	lda $A300
+	cmp #$EA ; does program have bonk 2-byte header?
+	bne @return_failure
+	lda $A301
+	cmp #$EA
+	bne @return_failure
+	lda #1
 	:	
 	set_atomic_st
 	jsr find_new_process_bank
@@ -66,8 +73,12 @@ res_extmem_bank:
 	stx ROM_BANK
 	
 	clear_atomic_st
+	:
 	restore_p_816
 	rts
+@return_failure:
+	lda #0
+	bra :-
 
 ;
 ; Clears / opens up all extmem banks used by process .A
