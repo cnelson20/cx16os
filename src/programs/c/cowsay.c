@@ -177,7 +177,7 @@ char **read_argv_from_stdin() {
 	static char *file_copy_buff;
 	static int bytes_read;
 	
-	input_extmem_bank = res_extmem_bank();
+	input_extmem_bank = res_extmem_bank(0);
 	set_extmem_wbank(input_extmem_bank);
 	
 	file_copy_buff = (char *)0xA000;

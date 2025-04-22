@@ -24,11 +24,6 @@ COLOR_CYAN = $9F
 SINGLE_QUOTE = 39
 NEWLINE = $0A
 
-r0 := $02
-r1 := $04
-r2 := $06
-r3 := $08
-
 ptr0 := $30
 ptr1 := $32
 ptr2 := $34
@@ -793,7 +788,8 @@ get_programs_info:
 	lda #<@path_str
 	ldx #>@path_str
 	jsr chdir
-
+	
+	lda #0
 	jsr res_extmem_bank
 	sta @dir_listing_bank
 	jsr load_dir_listing_extmem

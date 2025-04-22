@@ -1,9 +1,5 @@
 .include "routines.inc"
 
-r0 := $02
-r1 := $04
-r2 := $06
-
 ptr0 := $30
 ptr1 := $32
 

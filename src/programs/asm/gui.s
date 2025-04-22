@@ -37,9 +37,6 @@ NEWLINE = $0A
 LEFT_CURSOR = $9d
 SWAP_COLORS = $01
 
-r0 := $02
-r1 := $04
-
 ptr0 := $30
 ptr1 := $32
 ptr2 := $34
@@ -63,6 +60,7 @@ multiples_80_hi := $B200
 .endmacro
 
 init:
+	lda #0
 	jsr res_extmem_bank
 	sta hook0_extmem_bank ; same as charset bank
 	inc A

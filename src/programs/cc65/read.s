@@ -1,9 +1,5 @@
 .include "routines.inc"
 
-r0 := $02
-r1 := $04
-r2 := $06
-
 EOF = $07
 
 .import popax

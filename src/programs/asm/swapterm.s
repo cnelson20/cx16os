@@ -38,11 +38,6 @@ CARRIAGE_RETURN = $0D
 LINE_FEED = $0A
 NEWLINE = LINE_FEED
 
-r0 = $02
-r1 = $04
-r2 = $06
-r3 = $08
-
 ptr0 := $30
 ptr1 := $32
 ptr2 := $34
@@ -73,6 +68,7 @@ init:
 	rep #$10
 	.i16
 	
+	lda #0
 	jsr res_extmem_bank
 	sta ringbuff_bank
 	inc A

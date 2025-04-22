@@ -41,8 +41,15 @@ res_bank_load_proc_entry_pt:
 	bra :+
 res_extmem_bank:
 	save_p_816_8bitmode
-
-	lda #0
+	cmp #0
+	beq :+
+	lda $A300
+	cmp #$EA ; does program have bonk 2-byte header?
+	bne @return_failure
+	lda $A301
+	cmp #$EA
+	bne @return_failure
+	lda #1
 	:	
 	set_atomic_st
 	jsr find_new_process_bank
@@ -66,8 +73,12 @@ res_extmem_bank:
 	stx ROM_BANK
 	
 	clear_atomic_st
+	:
 	restore_p_816
 	rts
+@return_failure:
+	lda #0
+	bra :-
 
 ;
 ; Clears / opens up all extmem banks used by process .A
@@ -302,6 +313,7 @@ readf_byte_extmem_y:
 	sta KZE0 + 1
 	
 	lda STORE_PROG_EXTMEM_RBANK
+	sta ROM_BANK
 	sta RAM_BANK
 	
 	restore_p_816
@@ -313,6 +325,7 @@ readf_byte_extmem_y:
 
 	pha
 	lda current_program_id
+	sta ROM_BANK
 	sta RAM_BANK
 	pla
 	
@@ -341,6 +354,7 @@ writef_byte_extmem_y:
 	
 	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	restore_p_816
 	lda KZE1
@@ -350,6 +364,7 @@ writef_byte_extmem_y:
 
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	restore_p_816
 	lda KZE1
@@ -409,6 +424,7 @@ vread_byte_extmem_y:
 	
 	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	restore_p_816
 
@@ -419,6 +435,7 @@ vread_byte_extmem_y:
 	pha
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	pla
 	
 	restore_p_816
@@ -443,6 +460,7 @@ vwrite_byte_extmem_y:
 	
 	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
+	sta ROM_BANK
 
 	lda KZE1 ; only need to load back low byte of .C
 	restore_p_816
@@ -454,6 +472,7 @@ vwrite_byte_extmem_y:
 	
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	lda KZE1 ; same thing here
 	restore_p_816
@@ -475,6 +494,7 @@ pread_extmem_xy:
 	
 	lda STORE_PROG_EXTMEM_RBANK
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	restore_p_816
 
@@ -485,6 +505,7 @@ pread_extmem_xy:
 	pha
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	pla
 	
 	restore_p_816
@@ -507,6 +528,7 @@ pwrite_extmem_xy:
 	
 	lda STORE_PROG_EXTMEM_WBANK
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	lda KZE1 ; only need to load back low byte of .C
 	restore_p_816
@@ -517,6 +539,7 @@ pwrite_extmem_xy:
 	
 	lda current_program_id
 	sta RAM_BANK
+	sta ROM_BANK
 	
 	restore_p_816
 	lda KZE1

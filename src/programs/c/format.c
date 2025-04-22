@@ -281,7 +281,7 @@ void paragraph_add_word(char *word) {
 
 void paragraph_add(char *lineptr) {
 	if (!para_bank) {
-		para_bank = res_extmem_bank();
+		para_bank = res_extmem_bank(0);
 		paragraph_buff_size = 0;
 	}
 	

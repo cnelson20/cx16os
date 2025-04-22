@@ -59,12 +59,6 @@
 	sty addr + 1
 .endmacro
 
-r0 := $02
-r1 := $04
-r2 := $06
-r3 := $08
-r4 := $0A
-
 ptr0 := $30
 ptr1 := $32
 ptr2 := $34
@@ -109,6 +103,7 @@ ALL = $02
 LST = $03
 
 main:
+	lda #0
 	jsr res_extmem_bank
 	cmp #0
 	bne :+
@@ -118,6 +113,7 @@ main:
 	sta lines_ordered_bank
 	jsr fill_bank_zero
 	
+	lda #0
 	jsr res_extmem_bank
 	sta extmem_banks + 0
 	jsr fill_bank_zero
@@ -2796,7 +2792,8 @@ find_extmem_space:
 	
 	:
 	; need to reserve new banks ;
-	phy 
+	phy
+	lda #0
 	jsr res_extmem_bank
 	ply
 	

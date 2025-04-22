@@ -1,17 +1,13 @@
 .include "routines.inc"
 .segment "CODE"
 
-r0 := $02
-r1 := $04
-r2 := $06
-r3 := $08
-
 ptr0 := $30
 
 STR_BASE = $A000
 
 copytest:
 	;stp
+	lda #0
 	jsr res_extmem_bank
 	sta extmem_bank
 	

@@ -7,11 +7,6 @@
 
 .export _lseek
 
-r0 := $02
-r1 := $04
-r2 := $06
-r3 := $08
-
 SEEK_SET = 2
 SEEK_CUR = 0
 SEEK_END = 1

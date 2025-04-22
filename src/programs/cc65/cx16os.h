@@ -15,7 +15,7 @@ unsigned char __fastcall__ kill_process(unsigned char pid);
 
 int __fastcall__ wait_process(unsigned char pid);
 
-unsigned char __fastcall__ res_extmem_bank(void);
+unsigned char __fastcall__ res_extmem_bank(unsigned char large);
 unsigned char __fastcall__ free_extmem_bank(unsigned char bank);
 
 unsigned char __fastcall__ set_extmem_rbank(unsigned char bank);

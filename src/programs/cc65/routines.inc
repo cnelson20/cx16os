@@ -1,6 +1,23 @@
 .setcpu "65816"
 
 ;
+; simple defines
+;
+CLEAR = $93
+LF = $0A
+CR = $0D
+
+;
+; pseudo-registers
+;
+r0 := $02
+r1 := $04
+r2 := $06
+r3 := $08
+r4 := $0A
+r5 := $0C
+
+;
 ; System routines
 ;
 

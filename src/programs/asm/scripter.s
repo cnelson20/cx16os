@@ -22,11 +22,6 @@ $ : define a variable
 
 .segment "CODE"
 
-r0 := $02
-r1 := $04
-r2 := $06
-r3 := $08
-
 ptr0 := $30
 ptr1 := $32
 ptr2 := $34
@@ -323,6 +318,7 @@ fill_whole_extmem_bank:
 	jmp fill_extmem
 
 interactive_mode_setup_lines:
+	lda #0
 	jsr res_extmem_bank
 	sta line_space_curr_bank
 	inc A
@@ -377,6 +373,7 @@ get_next_line:
 	lda line_addr_banks, X
 	and #1
 	beq :+
+	lda #0
 	jsr res_extmem_bank
 	bra :++
 	:
@@ -487,6 +484,7 @@ read_lines_from_file:
 	:
 	sta fd
 	
+	lda #0
 	jsr res_extmem_bank
 	sta line_space_curr_bank
 	inc A
@@ -602,6 +600,7 @@ read_lines_from_file:
 	inc A
 	bra :++
 	:
+	lda #0
 	jsr res_extmem_bank
 	:
 	
@@ -656,6 +655,7 @@ alloc_space_extmem:
 	inc A
 	bra :++
 	:
+	lda #0
 	jsr res_extmem_bank
 	:
 	sta line_space_curr_bank	
@@ -2038,6 +2038,7 @@ set_label_value:
 	
 	lda labels_values_banks + 0
 	bne :+
+	lda #0
 	jsr res_extmem_bank
 	sta labels_values_banks + 0
 	stz labels_values_banks_last_index
@@ -2127,7 +2128,8 @@ set_label_value:
 	lda labels_values_banks, X
 	and #1
 	beq :+
-
+	
+	lda #0
 	jsr res_extmem_bank
 	ldx labels_values_banks_last_index
 	sta labels_values_banks, X
