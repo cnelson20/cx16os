@@ -5,7 +5,7 @@ Routines to expand a program's data access beyond its allocated $2000 bytes
 ### Function table:
 | Address | Function name | Argument Registers | Return Registers | Registers trampled |
 |---------|---------------|--------------------|------------------|--------------------|
-| $9D33 | [`res_extmem_bank`](#res_extmem_bank) | | .A | .XY |
+| $9D33 | [`res_extmem_bank`](#res_extmem_bank) | .A | .A | .XY |
 | $9D36 | [`set_extmem_rbank`](#set_extmem_rbank) | .A | .A | .XH, .YH |
 | $9D57 | [`set_extmem_wbank`](#set_extmem_wbank) | .A | .A | .XH, .YH |
 | $9D39 | [`set_extmem_rptr`](#set_extmem_rptr) | .A | .A | .XH, .YH |
@@ -24,6 +24,7 @@ Routines to expand a program's data access beyond its allocated $2000 bytes
 ### res_extmem_bank
 - Get a bank to use other extmem routines with  
 - Can use bank, bank + 1 for calls to [set_extmem_rbank](#set_extmem_rbank) and [set_extmem_wbank](#set_extmem_wbank)
+- If .A = 0, returns 8K bank (A000-BFFF), if .A = 1 & program has bonk header, returns 24K bank (A000-FFFF) 
 
 Return values:
 - On success, returns a new extmem bank in .A
