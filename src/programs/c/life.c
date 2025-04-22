@@ -19,9 +19,6 @@ void display(char startx, char starty, char endx, char endy);
 void calc(char x, char y);
 void update_state(char startx, char starty, char endx, char endy);
 
-extern void stp();
-#include <peekpoke.h>
-
 state **area;
 
 int main()
@@ -85,9 +82,6 @@ void display(char startx, char starty, char endx, char endy)
 void calc(char i, char j)
 {	char neighbours;
 	char newstate;
- 	
-	POKEW(0x0A, i);
-	POKEW(0x0C, j);
 	
 	neighbours = 0;
 	if (i > 0 && j > 0) neighbours += area[i - 1][j - 1].oldstate;
