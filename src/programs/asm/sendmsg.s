@@ -1,11 +1,7 @@
 .include "routines.inc"
 .segment "CODE"
 
-r0 := $02
-r1 := $04
-
 ptr0 := $30
-
 
 init:
     jsr get_args

@@ -37,9 +37,6 @@ NEWLINE = $0A
 LEFT_CURSOR = $9d
 SWAP_COLORS = $01
 
-r0 := $02
-r1 := $04
-
 ptr0 := $30
 ptr1 := $32
 ptr2 := $34

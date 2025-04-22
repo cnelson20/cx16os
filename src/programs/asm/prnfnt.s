@@ -3,8 +3,6 @@
 
 NEWLINE = $0A
 
-r0 := $02
-
 start:
 	lda #<top_str
 	ldx #>top_str

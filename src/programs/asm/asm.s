@@ -13,11 +13,6 @@ TAB = 9
 NEWLINE = LINE_FEED
 SINGLE_QUOTE = 39
 
-r0 := $02
-r1 := $04
-r2 := $06
-r3 := $08
-
 ptr0 := $30
 ptr1 := $32
 ptr2 := $34

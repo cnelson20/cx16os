@@ -1,8 +1,6 @@
 .include "routines.inc"
 .segment "CODE"
 
-r0 := $02
-
 init:
     ldx #$10 / 2
 @init_loop:

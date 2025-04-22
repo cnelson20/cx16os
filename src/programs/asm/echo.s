@@ -1,8 +1,8 @@
 .include "routines.inc"
 .segment "CODE"
 
-r0L = $02
-r0H = $03
+r0L := r0
+r0H := r0 + 1
 
 main:
 	jsr get_args

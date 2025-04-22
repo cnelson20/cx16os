@@ -1,11 +1,6 @@
 .include "routines.inc"
 .segment "CODE"
 
-r0 := $02
-r1 := $04
-r2 := $06
-r3 := $08
-
 ptr0 := $30
 ptr1 := $32
 ptr2 := $34

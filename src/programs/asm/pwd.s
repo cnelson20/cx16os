@@ -3,9 +3,6 @@
 
 ENOUGH_BYTES = 512
 
-r0 := $02
-r1 := $04
-
 start:
 	rep #$30
 	
