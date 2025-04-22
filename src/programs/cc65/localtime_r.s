@@ -3,11 +3,6 @@
 
 .export _localtime_r
 
-r0 := $02
-r1 := $04
-r2 := $06
-r3 := $08
-
 .import incsp2
 
 .importzp ptr1

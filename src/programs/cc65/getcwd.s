@@ -1,9 +1,6 @@
 .include "routines.inc"
 .include "fcntl.inc"
 
-r0 := $02
-r1 := $04
-
 .import popax
 .export _getcwd
 

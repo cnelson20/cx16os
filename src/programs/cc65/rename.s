@@ -4,9 +4,6 @@
 
 .import popax
 
-r0 := $02
-r1 := $04
-
 .segment "CODE"
 
 .proc _rename

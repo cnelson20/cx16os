@@ -1,8 +1,5 @@
 .include "routines.inc"
 
-r0 := $02
-r1 := $04
-
 .import popax
 .import popa
 
