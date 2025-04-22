@@ -15,15 +15,21 @@ PROGRAMS = ctest date wc cmp untar cowsay yes expr sort cal uniq printf column f
 all: bindir $(PROGRAMS)
 	cp $(PROGRAMS) $(MNT_DIR)/bin
 
+FORCE:
+	
+
 clean:
 	rm -f *.s
 	rm -f *.o
+	rm -f link.ld
+	rm -f *.map
+	-make -C curses/ clean
 
-clear:
+clear: clean
 	find . -type f  -regextype posix-egrep ! -regex "\./(\S*\.\S*|[A-Z]\S*)" -delete
 
 bindir: $(MNT_DIR)/bin
-		
+	
 
 $(MNT_DIR)/bin:	
 	mkdir -p $(MNT_DIR)/bin
@@ -38,10 +44,13 @@ ctest: ctest.c $(LIB_FILE)
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
 #	mos-clang $(LLVM_FLAGS) -Os -o $@ $@.c
 
-life: life.c $(BONK_LIB_FILE)
+curses/curses.lib: FORCE
+	make -C curses/
+
+life: curses/curses.lib life.c $(BONK_LIB_FILE)
 	cc65 $(C_FLAGS) --include-dir curses/ $@.c
 	ca65 --cpu 65sc02 $@.s
-	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
+	ld65 -m life.map -o $@ $(BONK_L_FLAGS) $@.o curses/curses.lib $(INCL_DIR)/cx16os_bonk.lib
 
 #
 # *nix utilities
