@@ -44,7 +44,7 @@ Valid values for expressions (and instructions):
 
 - hexadecimal number '$hex_num'
 
-- 1 single-quoted character ''c''
+- 1 single-quoted character 'c'
 
 - an expression
 
@@ -68,7 +68,7 @@ The following instructions are recognized:
 
 - TSX, TXS**
 
-*: DEC A & INC A is the only form of these instructions recognized (no ina, inc).
+*: DEC A & INC A is the only form of these instructions recognized (no INA, INC).
 
 **: within cx16os, the 65816 always runs in native 65816 mode. If the TXS instruction is ran in 8-bit native mode, the high byte of the stack pointer will be set to $00, likely causing a crash.
 
