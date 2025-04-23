@@ -8,6 +8,9 @@ PAGE_DOWN = 2
 NEWLINE = $a
 CURSOR_DOWN = $11
 
+TAB = $9
+TAB_WIDTH = 8
+
 init:
 	jsr get_args
 	stx ptr0 + 1
@@ -227,11 +230,9 @@ read_file_loop:
 
 @byte_not_newline:
 	jsr is_printable_char
-	bne :+
-	jmp read_file_loop
-	:
-	lda ptr1
-	inc A
+	txa
+	clc
+	adc ptr1
 	sta ptr1
 	cmp term_width
 	bcc :+
@@ -329,6 +330,11 @@ print_starting_colors:
 ; Returns result in .X & Z flag
 ;
 is_printable_char:
+	cmp #TAB
+	bne :+
+	ldx #TAB_WIDTH
+	rts
+	:
 	pha
 	and #$7F
 	cmp #$20
