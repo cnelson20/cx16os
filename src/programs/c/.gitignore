@@ -1,6 +1,7 @@
 [a-z]*[a-z]
 !*.*
 
+!curses/
 !curses/*
 
 *.s
