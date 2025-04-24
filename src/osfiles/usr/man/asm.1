@@ -18,7 +18,9 @@ asm [OPTIONS] FILE
 .SH SYNTAX
 label_name: used to create labels, local labels are unimplemented
 
-Expressions can be used, in the form '[value1] [operation] [value2]'. No parenthesis are used, and if value2 is itself an expression, it will be evaluated as well. No order of operations is respected.
+Expressions can be used, in the form '[value1] [operation] [value2]'.
+No parenthesis are used, and if value2 is itself an expression, it will be evaluated as well.
+No order of operations is respected.
 
 Valid operators within an expression:
 
@@ -70,7 +72,8 @@ The following instructions are recognized:
 
 *: DEC A & INC A is the only form of these instructions recognized (no INA, INC).
 
-**: within cx16os, the 65816 always runs in native 65816 mode. If the TXS instruction is ran in 8-bit native mode, the high byte of the stack pointer will be set to $00, likely causing a crash.
+**: within cx16os, the 65816 always runs in native 65816 mode.
+If the TXS instruction is ran in 8-bit native mode, the high byte of the stack pointer will be set to $00, likely causing a crash.
 
 .SH DIRECTIVES
   - .byte VALUE: Allocates 1 byte of space for VALUE, which can be an expression
