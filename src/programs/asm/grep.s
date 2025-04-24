@@ -5,11 +5,12 @@ CARRIAGE_RETURN = $0D
 LINE_FEED = $0A
 NEWLINE = LINE_FEED
 
+SINGLE_QUOTE = $27
+
 ptr0 := $30
 ptr1 := $32
 ptr2 := $34
 ptr3 := $36
-
 
 .segment "CODE"
 
@@ -40,19 +41,47 @@ init:
 	:
 	
 	stz exit_code
-	
-	lda argc
-	bne @file_loop
-	lda #<stdin_str
-	ldx #>stdin_str
-	bra :+
 @file_loop:
 	lda argc
-	beq @end_file_loop
-	jsr get_next_arg
-	lda args_pointer
-	ldx args_pointer + 1
+	bne :+
+	lda have_read_file
+	bne @end_file_loop
+@use_stdin_input:
+	lda #<stdin_str
+	ldx #>stdin_str
+	bra @open_text_file
 	:
+	jsr get_next_arg
+	ldx args_pointer
+	lda $00, X
+	cmp #'-'
+	bne @arg_not_flag
+	
+	lda $01, X
+	beq @use_stdin_input ; if arg = "-", means to read from stdin
+	cmp #'i'
+	bne :+
+	ldx #1
+	stx match_case_ins
+	bra @file_loop
+	:
+	
+	pha
+	lda #<invalid_flag_err_str
+	ldx #>invalid_flag_err_str
+	jsr print_str
+	pla
+	jsr CHROUT
+	lda #SINGLE_QUOTE
+	jsr CHROUT
+	lda #NEWLINE
+	jsr CHROUT
+	lda #1
+	rts
+@arg_not_flag: ; not a flag
+	lda args_pointer
+	ldx args_pointer + 1	
+@open_text_file:
 	ldy #0 ; reading
 	jsr open_file
 	cmp #$FF
@@ -68,12 +97,15 @@ init:
 	jsr print_str
 	lda #1
 	sta exit_code
-	bra @file_loop
+	jmp @file_loop
 	:
 	sta fd
 	
+	lda #1
+	sta have_read_file
+	
 	jsr print_file_matches
-	bra @file_loop
+	jmp @file_loop
 @end_file_loop:
 	
 	lda exit_code
@@ -87,6 +119,9 @@ argc:
 fd:
 	.word 0
 exit_code:
+	.word 0
+
+have_read_file:
 	.word 0
 
 get_next_arg:
@@ -760,8 +795,23 @@ strlen:
 ;
 ; Different transition functions
 ;
+match_case_ins:
+	.word 0
+
 match_single_char:
+	ldy match_case_ins
+	bne @match_single_char_ins
 	stx @tmp_word
+	cmp @tmp_word
+	beq :+
+	lda #0
+	:
+	rts
+@match_single_char_ins:
+	jsr tolower
+	sta @tmp_word
+	txa
+	jsr tolower
 	cmp @tmp_word
 	beq :+
 	lda #0
@@ -769,6 +819,15 @@ match_single_char:
 	rts
 @tmp_word:
 	.word 0
+	
+tolower:
+	cmp #'A'
+	bcc :+
+	cmp #'Z' + 1
+	bcs :+
+	adc #'a' - 'A' ; carry clear
+	:
+	rts
 
 match_dot:
 	cmp #CARRIAGE_RETURN
@@ -864,6 +923,9 @@ file_err_str_p1:
 	.asciiz "grep: "
 file_err_str_p2:
 	.byte ": No such file or directory", NEWLINE, 0
+
+invalid_flag_err_str:
+	.asciiz "grep: unrecognized flag '-"
 
 	
 .SEGMENT "BSS"
