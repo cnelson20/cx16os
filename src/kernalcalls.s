@@ -114,6 +114,7 @@ call_table:
 	jmp CALL_pipe ; $9DBD
 	jmp CALL_seek_file ; $9DC0
 	jmp CALL_tell_file ; $9DC3
+	jmp CALL_strerror ; $9DC6
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -666,3 +667,90 @@ CALL_set_console_mode:
 	restore_p_816
 	rts
 
+CALL_strerror:
+	save_p_816_8bitmode
+	cmp #0
+	bmi @neg_errs
+	
+	cmp #STRERROR_POS_TABLE_SIZE
+	bcs @unk_error
+	asl A
+	tax
+	lda strerror_pos_table, X
+	tay
+	inx
+	lda strerror_pos_table, X
+	tax
+	tya
+	bra @return
+@neg_errs:
+	cmp #$100 - STRERROR_NEG_TABLE_SIZE
+	bcc @unk_error
+	dec A
+	eor #$FF
+	asl A
+	tax
+	lda strerror_neg_table, X
+	tay
+	inx
+	lda strerror_neg_table, X
+	tax
+	tya
+	bra @return
+@unk_error:
+	lda #<unspec_error_str
+	ldx #>unspec_error_str
+	bra @return
+@return:
+	restore_p_816
+	rts
+
+.SEGMENT "DATA"
+
+STRERROR_POS_TABLE_SIZE = (strerror_pos_table_end - strerror_pos_table) / 2
+STRERROR_NEG_TABLE_SIZE = (strerror_neg_table_end - strerror_neg_table) / 2
+
+strerror_pos_table:
+	.word no_error_str
+	.word unspec_error_str
+	.word unspec_error_str
+	.word no_such_file_str
+	.word invalid_bank_str
+	.word invalid_mode_str
+	.word no_ext_banks_str
+	.word eof_str
+	.word is_pipe_str
+strerror_pos_table_end:
+
+strerror_neg_table:
+	.word no_file_str
+	.word no_files_left_str
+	.word no_pipes_avail_str
+strerror_neg_table_end:
+
+no_error_str:
+	.asciiz "Operation was successful"
+unspec_error_str:
+	.asciiz "Unspecified error"
+
+no_such_file_str:
+	.asciiz "No such file"
+invalid_bank_str:
+	.asciiz "Invalid bank"
+invalid_mode_str:
+	.asciiz "Invalid mode"
+no_ext_banks_str:
+	.asciiz "No ext banks available"
+eof_str:
+	.asciiz "EOF"
+is_pipe_str:
+	.asciiz "is pipe"
+
+no_pipes_avail_str:
+	.asciiz "No pipes available"
+no_files_left_str:
+	.asciiz "No fds available"
+no_file_str:
+	.asciiz "No fd exists"
+
+.SEGMENT "CODE"

@@ -119,4 +119,6 @@ set_own_priority := $9D8A
 surrender_process_time := $9D8D
 detach_self := $9DA2
 
+strerror := $9DC6
+
 

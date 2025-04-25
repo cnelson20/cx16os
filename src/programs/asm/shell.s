@@ -1361,6 +1361,7 @@ narg_not_0_amp:
 	jsr exec
 	cmp #0
 	bne :+
+	txa ; put error code in .A
 	ply
 	plx
 	jmp exec_error
@@ -1405,7 +1406,10 @@ narg_not_0_amp:
 	:
 	jsr exec
 	cmp #0
-	beq exec_error
+	bne :+
+	txa
+	bra exec_error
+	:
 
 @store_child_info:
 	phx
@@ -1454,6 +1458,7 @@ wait_child:
 	jmp new_line
 	
 exec_error:
+	pha ; push error code
 	lda r2
 	beq :+
 	cmp new_stdin_fileno
@@ -1495,6 +1500,13 @@ exec_error:
 	ldx #>exec_error_p2_message
 	jsr print_str
 	
+	pla ; pull back error code
+	jsr strerror
+	jsr print_str
+	
+	lda #NEWLINE
+	jsr CHROUT
+
 exec_error_done:	
 	jmp new_line
 
@@ -2286,8 +2298,7 @@ welcome_string:
 exec_error_p1_message:
 	.asciiz "Error in exec '"
 exec_error_p2_message:
-	.byte "'"
-	.byte NEWLINE, $00
+	.asciiz "': "
 
 source_err_string:
 	.byte "source: filename argument required"
