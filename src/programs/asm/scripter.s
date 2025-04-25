@@ -475,10 +475,22 @@ read_lines_from_file:
 	jsr open_file
 	cmp #$FF
 	bne :+
-	ldx #file_error_str_p1
-	ldy input_file_ptr
-	lda #SINGLE_QUOTE
-	jsr print_error
+	txa
+	pha ; push error
+	ldax_addr scripter_name_err_str
+	jsr print_str
+	ldax_addr file_error_str_p1
+	jsr print_str
+	lda input_file_ptr
+	ldx input_file_ptr + 1
+	jsr print_str
+	ldax_addr file_error_str_p2
+	jsr print_str
+	pla ; pull error code
+	jsr strerror
+	jsr print_str
+	lda #NEWLINE
+	jsr CHROUT
 	lda #1
 	jmp terminate
 	:
@@ -3119,9 +3131,9 @@ invalid_option_str:
 no_input_file_err_str:
 	.asciiz "no input file provided"
 file_error_str_p1:
-	.asciiz "unable to open file '"
+	.asciiz "unable to open '"
 file_error_str_p2:
-	.asciiz "', code #:"
+	.asciiz "': "
 
 usage_string:
 	.byte "Usage: scripter [options] file [args...]", NEWLINE
