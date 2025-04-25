@@ -3,6 +3,7 @@
 .equ get_args $9D0F
 
 .equ ptr0 $30
+.equ argc $32
 
 start:
 	jsr get_args
@@ -51,6 +52,3 @@ dont_overwrite:
 end:
 	lda #0
 	rts
-
-argc:
-	.byte 0
