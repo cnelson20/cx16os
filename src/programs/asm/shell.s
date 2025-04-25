@@ -1507,7 +1507,7 @@ exec_error:
 	lda #NEWLINE
 	jsr CHROUT
 
-exec_error_done:	
+exec_error_done:
 	jmp new_line
 
 setup_prog_redirects:
