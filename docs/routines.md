@@ -57,6 +57,7 @@
 | $9DBD | [`pipe`](#9dbd-pipe) | | .A, .X | .Y | &check; |
 | $9DC0 | [`seek_file`](#9dc0-seek_file) | .A, r0, r1 | .A | .X, .Y | &mdash; |
 | $9DC3 | [`tell_file`](#9dc3-tell_file) | .A | .A, r0, r1, r2, r3 | .X, .Y | &mdash; |
+| $9DC6 | [`strerror`](#9dc6-strerror) | .A | .AX | .Y | &cross; |
 
 ### Note:
 Functions with an '&mdash;' under the `C Wrapper Implemented?` column mean that existing C builtins or functions provide the same functionality and are not necessary.  
@@ -487,4 +488,16 @@ Return values:
 - A -> 0 on success, non-zero on error
 - r0-r1: little endian 32-bit value of the current file offset
 - r2-r3: little endian 32-bit value of the file's total size
+
+---
+
+### $9DC3: strerror
+
+- Returns a pointer to a string describing to the error passed in .A
+
+Arguments:
+- A -> error code to get string description of
+
+Return values:
+- AX: pointer to string
 
