@@ -31,7 +31,7 @@ Step 1: Download `cx16os.img` from the latest release [here](https://github.com/
 
 Step 2: Run x16emu from the command line in the same directory as the downloaded file with flags `-c816 -ram 2048k -cart roam.crt -sdcard cx16os.img`.
 
-That's it! I also recommend using the `-rtc` flags, since programs like `date` take advantage of the X16's real-time clock.
+That's it! I also recommend using the `-rtc` and `-noemucmdkeys` flags, since programs like `date` take advantage of the X16's real-time clock, and so you can use Ctrl-D to close the active program's stdin without the emulator disconnecting the virtual SD card.
 
 Several programs written in C also need the ROAM cart in order to access a larger flat address space. If you want to see what happens on real HW when those programs are run without ROAM or an equivalent cartridge is installed, you can remove that flag when launching the emulator. You can also exclude `-ram 2048k`, which lowers the RAM available to the system but won't have a noticeable effect in most use cases.
 
