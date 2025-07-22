@@ -10,6 +10,7 @@ CMD_MAX_SIZE = 128
 
 LEFT_CURSOR = $9D
 RIGHT_CURSOR = $1D
+UP_CURSOR = $91
 BACKSPACE = $14
 DEL = $19
 
@@ -145,6 +146,7 @@ stdin_stream_filename:
 welcome:
 	stz new_stdin_fileno
 	stz new_stdout_fileno
+	stz prev_command
 	
 	jsr get_console_info
 	sta fore_color
@@ -334,10 +336,16 @@ wait_for_input:
 	jmp delete
 	:
 
+	cmp #UP_CURSOR
+	beq up_cursor
 	cmp #LEFT_CURSOR
-	beq left_cursor
+	bne :+
+	jmp left_cursor
+	:
 	cmp #RIGHT_CURSOR
-	beq right_cursor
+	bne :+
+	jmp right_cursor
+	:
 	
 @no_script_movement_chars:
 	; if char < $20 and not one of above chars, ignore
@@ -379,6 +387,40 @@ char_entered:
 
 high_input_strlen:
 	.byte 0
+
+up_cursor:
+	; replace input with prev_command
+	cpx #0
+	beq :++ ; can jump fwd to next loop if x = 0
+	:
+	lda #' ' ; clear current line from screen
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+	jsr CHROUT
+	dex
+	cpx #0
+	bne :-
+	
+	ldx #0
+	:
+	lda prev_command, X ; copy to input while printing chars
+	sta input, X
+	beq :+
+	jsr CHROUT
+	inx
+	bra :-
+	:
+	lda #SWAP_COLORS
+	jsr CHROUT
+	lda #' '
+	jsr CHROUT
+	lda #SWAP_COLORS
+	jsr CHROUT
+	lda #LEFT_CURSOR
+	jsr CHROUT
+	
+	jmp wait_for_input
 
 left_cursor:
 	cpx #0
@@ -538,7 +580,7 @@ backspace_not_empty:
 
 command_entered:
 	lda curr_running_script
-	bne :++
+	bne @script_is_running
 	lda input, X
 	bne :+
 	lda #' '
@@ -546,7 +588,16 @@ command_entered:
 	jsr CHROUT
 	lda #NEWLINE
 	jsr CHROUT
+	
+	; copy input to prev_command
+	ldx #0
 	:
+	lda input, X
+	sta prev_command, X
+	inx
+	cmp #0
+	bne :-
+@script_is_running:
 
 	ldx #0
 	jsr find_non_space_char_input
@@ -2378,6 +2429,8 @@ child_instance_table:
 input:
 	.res CMD_MAX_SIZE, 0
 output:
+	.res CMD_MAX_SIZE, 0
+prev_command:
 	.res CMD_MAX_SIZE, 0
 command_length:
 	.byte 0
