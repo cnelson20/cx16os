@@ -26,8 +26,7 @@ clean:
 	-make -C curses/ clean
 
 clear: clean
-	find . -type f  -regextype posix-egrep ! -regex "\./(\S*\.\S*|[A-Z]\S*)" -delete
-
+	find . -type f  -regextype posix-egrep -regex "^\.\/([a-z]+)\$$" -delete
 bindir: $(MNT_DIR)/bin
 	
 
