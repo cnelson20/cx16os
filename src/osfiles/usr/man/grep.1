@@ -1,0 +1,25 @@
+.TH GREP(1),User Commands,GREP(1)
+
+.SH grep - print lines that match patterns
+
+.SH USAGE
+grep PATTERN [OPTIONS]... [FILE]
+
+.SH OPTIONS
+
+-i: Ignore case distinctions in patterns and input data
+
+-n: Print each output line's number
+
+.SH SYNTAX
+
+PATTERN must be a valid regular expression, which is one of the following:
+
+- m, where m is a character not present below
+
+- \m, where m is a character that is present below
+
+- one of \n, \t, \r, \d, \D, \s, \S, \w, \W, @, .
+
+- x?, x*, x+, or (x), where x is a regular expression
+
