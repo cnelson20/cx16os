@@ -40,17 +40,20 @@ init:
 	rts
 	:
 	
+	stz print_line_nums
 	stz exit_code
 @file_loop:
 	lda argc
-	bne :+
+	bne @use_arg_filename ; if we have 1+ args, use the first as the file to open
 	lda have_read_file
-	bne @end_file_loop
+	beq :+
+	jmp @end_file_loop
+	:
 @use_stdin_input:
 	lda #<stdin_str
 	ldx #>stdin_str
 	bra @open_text_file
-	:
+@use_arg_filename:
 	jsr get_next_arg
 	ldx args_pointer
 	lda $00, X
@@ -63,6 +66,13 @@ init:
 	bne :+
 	ldx #1
 	stx match_case_ins
+	bra @file_loop
+	:
+	
+	cmp #'n'
+	bne :+
+	ldx #1
+	stx print_line_nums
 	bra @file_loop
 	:
 	
@@ -141,6 +151,11 @@ stdin_str:
 	.asciiz "#stdin"
 
 print_file_matches:
+	stz file_line_num
+	stz file_line_num + 1
+	stz file_line_num + 2
+	stz file_line_num + 3
+	
 	lda #1
 	sta @still_read
 
@@ -163,7 +178,9 @@ print_file_matches:
 @out_bytes:
 	stz @still_read
 	cpy #temp_buff
-	beq @end_loop_iteration
+	bne :+
+	jmp @end_loop_iteration
+	:
 @newline:
 	lda #0
 	sta temp_buff, Y
@@ -180,20 +197,47 @@ print_file_matches:
 	:
 	sty r1
 	
+	;stp
 	ldx #temp_buff
 	stx r0
 	jsr match_str
 	cmp #0
-	beq :+
-	lda #1
-	jsr write_file
-	lda #NEWLINE
+	beq @no_match
+	
+	; print line num ;
+	lda print_line_nums
+	beq :+ ; don't print line num unless flag set
+	ldx file_line_num
+	ldy file_line_num + 2
+	jsr print_decimal_num
+	lda #':'
+	jsr CHROUT
+	lda #' '
 	jsr CHROUT
 	:
-
+	
+	lda #<temp_buff
+	ldx #>temp_buff
+	jsr print_str
+	lda #NEWLINE
+	jsr CHROUT
+@no_match:
+	
+	inc file_line_num
+	bne :+
+	inc file_line_num + 1
+	bne :+
+	inc file_line_num + 2
+	bne :+
+	inc file_line_num + 3
+	bne :+
+	:
+	
 @end_loop_iteration:	
 	lda @still_read ; should we loop back?
-	bne @read_file_loop
+	beq :+
+	jmp @read_file_loop
+	:
 	
 	lda fd
 	jsr close_file
@@ -793,6 +837,38 @@ strlen:
 	rts
 
 ;
+; takes 32-bit value in X & Y (currently disregards Y), prints as a decimal number
+;
+print_decimal_num:
+	rep #$20
+	.a16
+	txa
+	xba
+	tax
+	xba
+	sep #$20
+	.a8
+	jsr bin_to_bcd16
+	pha
+	txa
+	pha
+	tya
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	pla
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	pla
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jmp CHROUT ; return after last print
+
+;
 ; Different transition functions
 ;
 match_case_ins:
@@ -929,6 +1005,11 @@ invalid_flag_err_str:
 
 	
 .SEGMENT "BSS"
+
+print_line_nums:
+	.word 0
+file_line_num:
+	.res 4
 
 TEMP_BUFF_SIZE = 512
 
