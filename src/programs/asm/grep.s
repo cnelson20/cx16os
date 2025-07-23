@@ -151,7 +151,8 @@ stdin_str:
 	.asciiz "#stdin"
 
 print_file_matches:
-	stz file_line_num
+	lda #1
+	sta file_line_num
 	stz file_line_num + 1
 	stz file_line_num + 2
 	stz file_line_num + 3
