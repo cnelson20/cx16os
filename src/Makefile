@@ -37,6 +37,10 @@ clear: clean
 	make clear -C programs/
 	rm -f cx16os.img
 
+# Need to include X16EMU=path
+run: sd
+	$(X16EMU)/x16emu -c816 -ram 2048k -cart roam.crt -sdcard cx16os.img -rtc -noemucmdkeys
+
 build: os.prg programs
 	cp os.prg mnt/OS.PRG
 	
