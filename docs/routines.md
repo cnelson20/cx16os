@@ -491,7 +491,7 @@ Return values:
 
 ---
 
-### $9DC3: strerror
+### $9DC6: strerror
 
 - Returns a pointer to a string describing to the error passed in .A
 

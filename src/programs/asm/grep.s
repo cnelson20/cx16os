@@ -60,6 +60,24 @@ parse_args_loop:
 	bne :+
 	jmp print_help
 	:
+	cmp #'n'
+	bne :+
+	ldx #1
+	stx print_line_nums
+	bra parse_args_loop
+	:
+	cmp #'H'
+	bne :+
+	ldx #1
+	stx print_file_names
+	bra parse_args_loop
+	:
+	cmp #'v'
+	bne :+
+	ldx #1
+	stx invert_matches_flag
+	bra parse_args_loop
+	:
 	
 	pha
 	lda #<invalid_flag_err_str
@@ -124,8 +142,6 @@ end_parse_args_loop:
 	lda filename_ptrs_hi, Y
 	tax
 	lda filename_ptrs_lo, Y
-	iny
-	sty filename_ptrs_ind ; increment index for next iteration of loop
 @open_text_file:
 	ldy #0 ; reading
 	jsr open_file
@@ -150,6 +166,8 @@ end_parse_args_loop:
 	sta have_read_file
 	
 	jsr print_file_matches
+	
+	inc filename_ptrs_ind ; increment index for next iteration of loop
 	jmp @file_loop
 @end_file_loop:
 	
@@ -225,11 +243,28 @@ reminder_string:
 help_message:
 	.byte "Search for PATTERNS in each FILE.", NEWLINE
 	.byte "Example: grep -i 'hello world' menu.h main.c", NEWLINE
+	.byte NEWLINE
+	.byte "Pattern selection and interpretation:", NEWLINE
+	.byte "  -i: ignore case distinctions in patterns and data", NEWLINE
+	.byte NEWLINE
+	.byte "Miscellaneous:", NEWLINE
+	.byte "  -v: select non-matching lines", NEWLINE
+	.byte "  -h: display this help text and exit", NEWLINE
+	.byte NEWLINE
+	.byte "Output control:", NEWLINE
+	.byte "  -n: print line number with output lines", NEWLINE
+	.byte "  -H: print file name with output lines", NEWLINE
 	.byte 0
 invalid_pattern_err_str:
 	.byte "Invalid regular expression", NEWLINE, 0
 
 print_file_matches:
+	lda #1
+	sta file_line_num
+	stz file_line_num + 1
+	stz file_line_num + 2
+	stz file_line_num + 3
+	
 	lda #1
 	sta @still_read
 
@@ -252,7 +287,9 @@ print_file_matches:
 @out_bytes:
 	stz @still_read
 	cpy #temp_buff
-	beq @end_loop_iteration
+	bne :+
+	jmp @end_loop_iteration
+	:
 @newline:
 	lda #0
 	sta temp_buff, Y
@@ -269,24 +306,59 @@ print_file_matches:
 	:
 	sty r1
 	
+	;stp
 	ldx #temp_buff
 	stx r0
 	jsr match_str
 	sty r1
-	cmp #0
+	cmp invert_matches_flag
+	beq @no_match
+	
+	; print file name? ;
+	lda print_file_names
 	beq :+
+	ldy filename_ptrs_ind
+	lda filename_ptrs_hi, Y
+	tax
+	lda filename_ptrs_lo, Y
+	jsr print_str
+	lda #':'
+	jsr CHROUT
+	:
+	; print line num? ;
+	lda print_line_nums
+	beq :+ ; don't print line num unless flag set
+	ldx file_line_num
+	ldy file_line_num + 2
+	jsr print_decimal_num
+	lda #':'
+	jsr CHROUT
+	lda #' '
+	jsr CHROUT
+	:
+	
 	lda #<temp_buff
 	ldx #>temp_buff
 	jsr print_str
-	;lda #1
-	;jsr write_file
 	lda #NEWLINE
 	jsr CHROUT
+@no_match:
+	
+	inc file_line_num
+	bne :+
+	inc file_line_num + 1
+	bne :+
+	inc file_line_num + 2
+	bne :+
+	inc file_line_num + 3
+	bne :+
 	:
-
+	
 @end_loop_iteration:	
 	lda @still_read ; should we loop back?
-	bne @read_file_loop
+	beq :+
+	jmp @read_file_loop
+	:
 	
 	lda fd
 	jsr close_file
@@ -886,6 +958,38 @@ strlen:
 	rts
 
 ;
+; takes 32-bit value in X & Y (currently disregards Y), prints as a decimal number
+;
+print_decimal_num:
+	rep #$20
+	.a16
+	txa
+	xba
+	tax
+	xba
+	sep #$20
+	.a8
+	jsr bin_to_bcd16
+	pha
+	txa
+	pha
+	tya
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	pla
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jsr CHROUT
+	pla
+	jsr GET_HEX_NUM
+	jsr CHROUT
+	txa
+	jmp CHROUT ; return after last print
+
+;
 ; Different transition functions
 ;
 match_case_ins:
@@ -1020,8 +1124,19 @@ file_err_str_p2:
 invalid_flag_err_str:
 	.asciiz "grep: unrecognized flag '-"
 
-	
+; command line flags ;
+print_line_nums:
+	.word 0
+print_file_names:
+	.word 0
+invert_matches_flag:
+	.word 0
+
 .SEGMENT "BSS"
+
+; counts current line num ;
+file_line_num:
+	.res 4
 
 TEMP_BUFF_SIZE = 512
 

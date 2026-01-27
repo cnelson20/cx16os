@@ -29,9 +29,11 @@ If you want to try out cx16os on an emulator, it is very simple. x16emu is the o
 
 Step 1: Download `cx16os.img` from the latest release [here](https://github.com/cnelson20/cx16os/releases).
 
-Step 2: Run x16emu from the command line in the same directory as the downloaded file with flags `-c816 -sdcard cx16os.img`.
+Step 2: Run x16emu from the command line in the same directory as the downloaded file with flags `-c816 -ram 2048k -cart roam.crt -sdcard cx16os.img`.
 
-That's it! I also recommend using the `-rtc` flags, since programs like `date` take advantage of the X16's real-time clock.
+That's it! I also recommend using the `-rtc` and `-noemucmdkeys` flags, since programs like `date` take advantage of the X16's real-time clock, and so you can use Ctrl-D to close the active program's stdin without the emulator disconnecting the virtual SD card.
+
+Several programs written in C also need the ROAM cart in order to access a larger flat address space. If you want to see what happens on real HW when those programs are run without ROAM or an equivalent cartridge is installed, you can remove that flag when launching the emulator. You can also exclude `-ram 2048k`, which lowers the RAM available to the system but won't have a noticeable effect in most use cases.
 
 <br/>
 
@@ -41,11 +43,13 @@ Reminder: cx16os requires the 65c816 CPU, which is not standard on the Commander
 
 Step 1: Make sure you have a 65c816 CPU installed in your X16 by running the `HELP` command in BASIC.
 
-Skip step 2 if you built cx16os yourself.
+Step 2 (Optional): Install a ROAM or equivalent cartridge in your X16.
 
-Step 2: Download `cx16os.zip` from the latest release [here](https://github.com/cnelson20/cx16os/releases), and extract the `OS/` folder from the zip archive.
+Skip step 3 if you built cx16os yourself.
 
-Step 3: Copy the `OS/` folder to the root of your X16's SD card.
+Step 3: Download `cx16os.zip` from the latest release [here](https://github.com/cnelson20/cx16os/releases), and extract the `OS/` folder from the zip archive.
+
+Step 4: Copy the `OS/` folder to the root of your X16's SD card.
 
 - Please do not only copy `OS.PRG` to your SD Card! cx16os will not work without its associated programs, especially `shell`.
 - It is not strictly required to copy `OS/` to the root of your SD card. However, when developing, `OS/` is at the root of `cx16os.img`, and bugs that arise if it is not may get overlooked for that reason.
