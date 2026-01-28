@@ -26,34 +26,14 @@ init:
 	
 	lda argc
 	bne :+
-	lda #2
-	rts
+	lda #1
+	jmp print_usage
 	:
-	
-	jsr get_next_arg
-	ldx args_pointer
-	jsr check_regex
-	jsr build_regex_from_str
-	cmp #0
-	beq :+
-	lda #2 ; major error
-	rts
-	:
-	
-	stz print_line_nums
-	stz exit_code
-@file_loop:
+parse_args_loop:
 	lda argc
-	bne @use_arg_filename ; if we have 1+ args, use the first as the file to open
-	lda have_read_file
-	beq :+
-	jmp @end_file_loop
+	bne :+
+	jmp end_parse_args_loop
 	:
-@use_stdin_input:
-	lda #<stdin_str
-	ldx #>stdin_str
-	bra @open_text_file
-@use_arg_filename:
 	jsr get_next_arg
 	ldx args_pointer
 	lda $00, X
@@ -61,19 +41,42 @@ init:
 	bne @arg_not_flag
 	
 	lda $01, X
-	beq @use_stdin_input ; if arg = "-", means to read from stdin
+	bne :+ ; is following character \0?
+	ldx filename_ptrs_size ; specified stdin as one input file
+	lda #<stdin_str ; if not, read from stdin
+	sta filename_ptrs_lo, X
+	lda #>stdin_str
+	sta filename_ptrs_hi, X
+	inc filename_ptrs_size ; increment size of files list
+	bra parse_args_loop
+	:
 	cmp #'i'
 	bne :+
 	ldx #1
 	stx match_case_ins
-	bra @file_loop
+	bra parse_args_loop
 	:
-	
+	cmp #'h'
+	bne :+
+	jmp print_help
+	:
 	cmp #'n'
 	bne :+
 	ldx #1
 	stx print_line_nums
-	bra @file_loop
+	bra parse_args_loop
+	:
+	cmp #'H'
+	bne :+
+	ldx #1
+	stx print_file_names
+	bra parse_args_loop
+	:
+	cmp #'v'
+	bne :+
+	ldx #1
+	stx invert_matches_flag
+	bra parse_args_loop
 	:
 	
 	pha
@@ -86,11 +89,59 @@ init:
 	jsr CHROUT
 	lda #NEWLINE
 	jsr CHROUT
-	lda #1
+	lda #1 ; exit with error code
 	rts
 @arg_not_flag: ; not a flag
-	lda args_pointer
-	ldx args_pointer + 1	
+	lda pattern_ptr + 1 ; is pattern_ptr set?
+	bne @arg_is_file
+@arg_is_pattern:
+	ldx args_pointer
+	stx pattern_ptr ; copy ptr
+	jmp parse_args_loop ; loop back
+@arg_is_file:
+	ldx filename_ptrs_size
+	lda args_pointer + 0 ; copy ptr to arg to table
+	sta filename_ptrs_lo, X
+	lda args_pointer + 1
+	sta filename_ptrs_hi, X
+	inc filename_ptrs_size ; increment size by 1
+	jmp parse_args_loop
+
+end_parse_args_loop:
+	lda pattern_ptr + 1 ; if no pattern specified, print usage
+	bne :+
+	lda #1
+	jmp print_usage
+	:
+	
+	ldx pattern_ptr
+	jsr check_regex
+	jsr build_regex_from_str
+	cmp #0
+	beq :+
+	lda #<invalid_pattern_err_str
+	ldx #>invalid_pattern_err_str
+	jsr print_str
+	lda #2 ; major error
+	rts
+	:
+	
+	lda filename_ptrs_size ; see if any files have been specified
+	bne :+
+	lda #<stdin_str ; if not, read from stdin
+	sta filename_ptrs_lo + 0
+	lda #>stdin_str
+	sta filename_ptrs_hi + 0
+	inc filename_ptrs_size ; set to 1
+	:
+	
+@file_loop:
+	ldy filename_ptrs_ind
+	cpy filename_ptrs_size
+	bcs @end_file_loop
+	lda filename_ptrs_hi, Y
+	tax
+	lda filename_ptrs_lo, Y
 @open_text_file:
 	ldy #0 ; reading
 	jsr open_file
@@ -115,6 +166,8 @@ init:
 	sta have_read_file
 	
 	jsr print_file_matches
+	
+	inc filename_ptrs_ind ; increment index for next iteration of loop
 	jmp @file_loop
 @end_file_loop:
 	
@@ -124,6 +177,18 @@ init:
 args_pointer:
 	.word 0
 argc:
+	.word 0
+
+filename_ptrs_lo:
+	.res 8, 0
+filename_ptrs_hi:
+	.res 8, 0
+filename_ptrs_size:
+	.word 0
+filename_ptrs_ind:
+	.word 0
+
+pattern_ptr:
 	.word 0
 
 fd:
@@ -149,6 +214,49 @@ get_next_arg:
 
 stdin_str:
 	.asciiz "#stdin"
+
+print_usage:
+	pha
+	lda #<usage_str
+	ldx #>usage_str
+	jsr print_str
+	lda #<reminder_string
+	ldx #>reminder_string
+	jsr print_str
+	pla
+	rts
+
+print_help:
+	lda #<usage_str
+	ldx #>usage_str
+	jsr print_str
+	lda #<help_message
+	ldx #>help_message
+	jsr print_str
+	lda #0
+	rts
+
+usage_str:
+	.byte "Usage: grep [OPTION]... PATTERNS [FILE]...", NEWLINE, 0
+reminder_string:	
+	.byte "Try 'grep -h' for more information.", NEWLINE, 0
+help_message:
+	.byte "Search for PATTERNS in each FILE.", NEWLINE
+	.byte "Example: grep -i 'hello world' menu.h main.c", NEWLINE
+	.byte NEWLINE
+	.byte "Pattern selection and interpretation:", NEWLINE
+	.byte "  -i: ignore case distinctions in patterns and data", NEWLINE
+	.byte NEWLINE
+	.byte "Miscellaneous:", NEWLINE
+	.byte "  -v: select non-matching lines", NEWLINE
+	.byte "  -h: display this help text and exit", NEWLINE
+	.byte NEWLINE
+	.byte "Output control:", NEWLINE
+	.byte "  -n: print line number with output lines", NEWLINE
+	.byte "  -H: print file name with output lines", NEWLINE
+	.byte 0
+invalid_pattern_err_str:
+	.byte "Invalid regular expression", NEWLINE, 0
 
 print_file_matches:
 	lda #1
@@ -202,10 +310,22 @@ print_file_matches:
 	ldx #temp_buff
 	stx r0
 	jsr match_str
-	cmp #0
+	sty r1
+	cmp invert_matches_flag
 	beq @no_match
 	
-	; print line num ;
+	; print file name? ;
+	lda print_file_names
+	beq :+
+	ldy filename_ptrs_ind
+	lda filename_ptrs_hi, Y
+	tax
+	lda filename_ptrs_lo, Y
+	jsr print_str
+	lda #':'
+	jsr CHROUT
+	:
+	; print line num? ;
 	lda print_line_nums
 	beq :+ ; don't print line num unless flag set
 	ldx file_line_num
@@ -1004,11 +1124,17 @@ file_err_str_p2:
 invalid_flag_err_str:
 	.asciiz "grep: unrecognized flag '-"
 
-	
-.SEGMENT "BSS"
-
+; command line flags ;
 print_line_nums:
 	.word 0
+print_file_names:
+	.word 0
+invert_matches_flag:
+	.word 0
+
+.SEGMENT "BSS"
+
+; counts current line num ;
 file_line_num:
 	.res 4
 
