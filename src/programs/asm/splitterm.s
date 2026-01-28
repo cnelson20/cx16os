@@ -37,6 +37,7 @@ BACKSPACE = 8
 CARRIAGE_RETURN = $0D
 LINE_FEED = $0A
 NEWLINE = LINE_FEED
+SINGLE_QUOTE = $27
 
 ptr0 := $30
 ptr1 := $32
@@ -59,13 +60,59 @@ init:
 	:
 	
 	; parse args ;
+	sta args_ptr
+	stx args_ptr + 1
+	
+	rep #$10
+	.i16
+	; parse quadrant args to change terminal size
+	ldx #0
+@parse_quadrant_args_loop:
+	phx
+	jsr get_next_arg
+	plx
+	ldy args_ptr
+	lda $01, Y
+	bne illegal_quad_arg_error ; should be '\0' as args must be '0', '1', '2', '3'
+	lda $00, Y
+	cmp #'0'
+	bcc illegal_quad_arg_error
+	cmp #'4'
+	bcs illegal_quad_arg_error
+	and #$0F
+	sta quadrant_args, X
+	inx
+	cpx #4
+	bcc @parse_quadrant_args_loop
+@end_parse_quadrant_args_loop:
+	sep #$10
+	.i8
 	
 	jsr lock_vera_regs
 	cmp #0
 	beq :+
 	jmp exit_failure
 	:
+	jmp setup_term_window
 	
+illegal_quad_arg_error:
+	lda #<@msg
+	ldx #>@msg
+	jsr print_str
+	lda args_ptr
+	ldx args_ptr + 1
+	jsr print_str
+	lda #SINGLE_QUOTE
+	jsr CHROUT
+	lda #NEWLINE
+	jsr CHROUT
+	jmp exit_failure
+	
+@msg:
+	.asciiz "Illegal quadrant argument '"
+
+
+setup_term_window:	
 	jsr get_console_info
 	lda r0
 	sta TERM_WIDTH
@@ -119,22 +166,94 @@ init:
 	bne :+
 	rts ; hook 1 being used
 	:
-
-	lda #1
-	sta terms_active + 0
-	sta terms_active + 1
-
-	stz terms_x_offset + 0
-	stz terms_x_offset + 1
-	stz terms_y_offset + 0
-	stz terms_y_offset + 1
-
+	
+	;
+	; setup screen positions based on quadrant args
+	;
+	stp
+	lda #0
+	xba
+	lda #4
+	:
+	dec A
+	bmi @end_active_loop
+	ldx #4
+	:
+	dex
+	bmi :--
+	cmp quadrant_args, X
+	bne :-
+	tay
+	txa ; quadrant num
+	jsr powers_two
+	ora terms_active, Y
+	sta terms_active, Y
+	tya
+	bra :-
+@end_active_loop:
+	;
+	; now loop through terms, changing x_offset & y_offset based on quadrants
+	;
+	stp
+	ldx #4
+@position_terms_loop:
+	dex
+	bmi @end_position_terms_loop
+	lda terms_active, X
+	beq @position_terms_loop
+	tay
+	; if this term lives in q2 or q3, x_offset = 0, else TERM_WIDTH / 2
+	and #%0110 ; bits 2 & 1
+	php
+	lda #0
+	plp
+	;php
+	bne :+
+	lda TERM_WIDTH
+	lsr A
+	:
+	sta terms_x_offset, X
+	
+	tya
+	; if term in either q1 or q4, x_end = TERM_WIDTH, else TERM_WIDTH / 2
+	and #%1001
+	php
+	lda TERM_WIDTH
+	plp
+	bne :+
+	lsr A
+	:
+	sta terms_x_end, X
+	
+	tya
+	; if term in either q3 or q4, y_end = TERM_HEIGHT, else / 2
+	and #%1100
+	php
+	lda TERM_HEIGHT
+	plp
+	bne :+
+	lsr A
+	:
+	sta terms_y_end, X
+	
+	tya
+	; if term lives in q1 or q2, y_offset = 0, else TERM_HEIGHT / 2
+	and #%0011 ; bits 1 & 0
+	php
+	lda #0
+	plp
+	bne :+
+	lda TERM_HEIGHT
+	lsr A
+	:
+	sta terms_y_offset, X
+		
+	bra @position_terms_loop
+@end_position_terms_loop:
+	stp
 	lda #$01
 	sta terms_colors + 0
 	sta terms_colors + 1
-
-	lda terms_mapbase + 0
-	sta vera_layer1_mapbase
 
 	ldy #0
 	:
@@ -221,6 +340,35 @@ exit_failure:
 	lda #1
 	rts
 
+get_next_arg:
+	ldx args_ptr
+	dex
+	:
+	inx
+	lda $00, X
+	bne :-
+	inx
+	stx args_ptr
+	rts
+
+;
+; returns 2 ^ .A
+; preserves all registers except .A
+;
+powers_two:
+	phx
+	tax
+	lda #1
+	:
+	dex
+	bmi :+
+	asl A
+	bra :-	
+	:	
+	plx
+	rts
+	
+
 check_hook1_messages:
 	; don't need because other functions restore this after they finish
 	;lda ringbuff_bank
@@ -264,9 +412,9 @@ check_hook1_messages:
 
 	; carry set
 	sbc #4
-	tax
-	lda terms_mapbase, X
-	sta $9F35
+	;tax
+	;lda terms_mapbase, X
+	;sta $9F35
 	bra @end_parse_msg
 
 	:
@@ -511,7 +659,7 @@ flush_char_actions:
 	inc A
 	cmp TERM_HEIGHT
 	bcc :+
-	lda terms_vram_offset, X
+	lda terms_vram_offset
 	sta temp_term_vram_offset
 	lda terms_colors, X
 	sta temp_term_color
@@ -638,7 +786,7 @@ write_line_screen:
 	lda terms_y_offset, X
 	sta temp_term_y_offset
 	
-	lda terms_vram_offset, X
+	lda terms_vram_offset
 	sta temp_term_vram_offset
 
 	lda terms_colors, X
@@ -1018,6 +1166,8 @@ print_usage:
 	
 @usage_str:
 	.byte "Usage: splitterm [OPTIONS] q1 q2 q3 q4", NEWLINE
+	.byte "Split screen space into smaller windows", NEWLINE
+	.byte "Example: splitterm 0 1 1 0"
 	.byte NEWLINE
 	.byte "Options:", NEWLINE
 	.byte "  -h: Display this message", NEWLINE
@@ -1027,6 +1177,7 @@ print_usage:
 	.byte "  -------", NEWLINE
 	.byte "  q3 | q4", NEWLINE
 	.byte NEWLINE
+	.byte "q1 - q4 arguments should be 0,1,2 or 3", NEWLINE
 	.byte 0
 	
 
@@ -1036,10 +1187,7 @@ TERM_HEIGHT:
 	.word 0
 
 terms_vram_offset:
-	.byte $B4, $78, $38, $00
-
-terms_mapbase:
-	.byte $DA, $DA - 30, $DA - 60, $DA - 90 
+	.byte $B0
 
 chrout_buff_info:
 	.res 4, 0
@@ -1083,7 +1231,16 @@ terms_colors:
 
 terms_x_offset:
 	.res 4, 0
+terms_x_end:
+	.res 4, 0
 terms_y_offset:
+	.res 4, 0
+terms_y_end:
+	.res 4, 0
+
+args_ptr:
+	.word 0
+quadrant_args:
 	.res 4, 0
 
 PROG_BUFFS_START := $A000
