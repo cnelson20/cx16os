@@ -49,7 +49,8 @@ vera_addri := $9F22
 vera_data0 := $9F23
 vera_data1 := $9F24
 vera_ctrl := $9F25
-vera_layer1_mapbase := $9F35
+
+TERMS_VRAM_OFFSET = $B0
 
 init:
 	jsr get_args
@@ -170,7 +171,6 @@ setup_term_window:
 	;
 	; setup screen positions based on quadrant args
 	;
-	stp
 	lda #0
 	xba
 	lda #4
@@ -194,7 +194,6 @@ setup_term_window:
 	;
 	; now loop through terms, changing x_offset & y_offset based on quadrants
 	;
-	stp
 	ldx #4
 @position_terms_loop:
 	dex
@@ -213,6 +212,7 @@ setup_term_window:
 	lsr A
 	:
 	sta terms_x_offset, X
+	sta terms_x_begin, X
 	
 	tya
 	; if term in either q1 or q4, x_end = TERM_WIDTH, else TERM_WIDTH / 2
@@ -247,24 +247,21 @@ setup_term_window:
 	lsr A
 	:
 	sta terms_y_offset, X
+	sta terms_y_begin, X
 		
 	bra @position_terms_loop
 @end_position_terms_loop:
-	stp
-	lda #$01
+	lda #$01 ; BLACK background & WHITE foreground
 	sta terms_colors + 0
 	sta terms_colors + 1
 
-	ldy #0
-	:
-	lda terms_vram_offset, Y
-	sta temp_term_vram_offset
-	phy
+	stz temp_term_x_begin
+	stz temp_term_y_begin
+	lda TERM_WIDTH
+	sta temp_term_x_end
+	lda TERM_HEIGHT
+	sta temp_term_y_end
 	jsr clear_whole_term
-	ply
-	iny
-	cpy #4
-	bcc :-
 
 	jsr active_table_lookup
 	stx last_active_table_index
@@ -657,10 +654,8 @@ flush_char_actions:
 	tax
 	lda terms_y_offset, X
 	inc A
-	cmp TERM_HEIGHT
+	cmp terms_y_end, X
 	bcc :+
-	lda terms_vram_offset
-	sta temp_term_vram_offset
 	lda terms_colors, X
 	sta temp_term_color
 	jsr scroll_term_window
@@ -677,6 +672,7 @@ flush_char_actions:
 	lda prog_term_use, X
 	tax
 	lda terms_y_offset, X
+	cmp terms_y_begin, X
 	beq :+
 	dec A
 	sta terms_y_offset, X
@@ -693,12 +689,13 @@ flush_char_actions:
 	tax
 	lda terms_x_offset, X
 	inc A
-	cmp TERM_WIDTH
+	cmp terms_x_end, X
 	bcs :+
 	sta terms_x_offset, X
 	bra @return
 	:
-	stz terms_x_offset, X
+	lda terms_x_begin, X
+	sta terms_x_offset, X
 	jmp @cursor_down
 
 @not_cursor_right:
@@ -708,7 +705,8 @@ flush_char_actions:
 	ldx prog_printing
 	lda prog_term_use, X
 	tax
-	stz terms_x_offset, X
+	lda terms_x_begin, X
+	sta terms_x_offset, X
 	bra @return
 	:
 	
@@ -780,14 +778,21 @@ write_line_screen:
 	tax
 	
 	; copy to temp vars ;
-
+	; offsets
 	lda terms_x_offset, X
 	sta temp_term_x_offset
 	lda terms_y_offset, X
 	sta temp_term_y_offset
-	
-	lda terms_vram_offset
-	sta temp_term_vram_offset
+	; x begin & end
+	lda terms_x_begin, X 
+	sta temp_term_x_begin
+	lda terms_x_end, X
+	sta temp_term_x_end
+	; y begin & end
+	lda terms_y_begin, X
+	sta temp_term_y_begin
+	lda terms_y_end, X
+	sta temp_term_y_end
 
 	lda terms_colors, X
 	sta temp_term_color
@@ -824,7 +829,7 @@ write_line_screen:
 
 	inc temp_term_y_offset
 	lda temp_term_y_offset
-	cmp TERM_HEIGHT
+	cmp temp_term_y_end
 	bcc :+
 	phy
 	phx
@@ -834,7 +839,7 @@ write_line_screen:
 	dec temp_term_y_offset
 	:
 
-	ldx #0 ; x_offset = 0
+	ldx temp_term_x_begin ; x_offset = x_begin
 	jmp @dont_draw_char
 
 @not_newline:
@@ -843,7 +848,7 @@ write_line_screen:
 	cmp #CURSOR_LEFT ; backspace
 	bne @not_backspace
 	:
-	cpx #0
+	cpx temp_term_y_begin
 	beq :+
 	dex
 	:
@@ -856,8 +861,9 @@ write_line_screen:
 	jsr clear_whole_term
 	ply
 	
-	stz temp_term_y_offset
-	ldx #0 ; x_offset
+	lda temp_term_y_begin 
+	sta temp_term_y_offset
+	ldx temp_term_x_begin ; new x_offset
 	jmp @dont_draw_char
 @not_clr_screen:
 	cmp #1 ; SWAP_COLORS
@@ -955,7 +961,8 @@ write_line_screen:
 	asl A
 	sta vera_addrl
 	lda temp_term_y_offset
-	adc temp_term_vram_offset
+	clc
+	adc #TERMS_VRAM_OFFSET
 	sta vera_addrh
 
 	pla
@@ -964,7 +971,7 @@ write_line_screen:
 	sta vera_data0
 	
 	inx
-	cpx TERM_WIDTH
+	cpx temp_term_x_end
 	bcc @dont_draw_char
 	lda #NEWLINE ; insert newline to wrap text around
 	jmp @skip_read_byte
@@ -1011,21 +1018,32 @@ temp_term_y_offset:
 	.byte 0
 temp_term_color:
 	.byte 0
-temp_term_vram_offset:
+temp_term_x_begin:
+	.byte 0
+temp_term_x_end:
+	.byte 0
+temp_term_y_begin:
+	.byte 0
+temp_term_y_end:
 	.byte 0
 
 clear_whole_term:
 	php
 	pei (ptr0)
 	pei (ptr1)
-
-	stz ptr0
-	lda temp_term_vram_offset
+	
+	lda temp_term_x_begin
+	sta ptr0
+	lda temp_term_y_begin
 	sta ptr0 + 1
 
-	lda TERM_WIDTH
+	lda temp_term_x_end
+	sec
+	sbc temp_term_x_begin
 	sta ptr1
-	lda TERM_HEIGHT
+	lda temp_term_y_end
+	sec
+	sbc temp_term_y_begin
 	sta ptr1 + 1
 	jsr clear_rows
 
@@ -1045,6 +1063,8 @@ clear_rows:
 	sta vera_addri
 	
 	lda ptr0 + 1
+	clc
+	adc #TERMS_VRAM_OFFSET
 	sta vera_addrh
 	lda ptr0
 	asl A
@@ -1052,7 +1072,7 @@ clear_rows:
 @outer_loop:
 	ldy ptr1
 	:
-	lda #$20 ; space
+	lda #' ' ; space
 	sta vera_data0
 	lda temp_term_color
 	sta vera_data0
@@ -1082,12 +1102,16 @@ scroll_term_window:
 	lda #(9 << 4) | 1
 	pha
 	sta vera_addri
-	lda temp_term_vram_offset
+	lda temp_term_y_begin
+	clc
+	adc #TERMS_VRAM_OFFSET
 	sta ptr0 + 1
 	inc A
 	sta vera_addrh
-	stz vera_addrl
-	stz ptr0
+	lda temp_term_x_begin
+	asl A
+	sta vera_addrl
+	sta ptr0
 	
 	lda #1
 	sta vera_ctrl
@@ -1095,15 +1119,23 @@ scroll_term_window:
 	sta vera_addri
 	lda ptr0 + 1
 	sta vera_addrh
-	stz vera_addrl
+	lda temp_term_x_begin
+	asl A
+	sta vera_addrl
+	sta ptr0
 	
 	stz vera_ctrl	
 	
-	lda TERM_WIDTH
+	lda temp_term_x_end
+	sec
+	sbc temp_term_x_begin
 	asl A ; char & color bytes
 	tax
 @outer_loop:
-	ldy TERM_HEIGHT
+	lda temp_term_y_end
+	sec
+	sbc temp_term_y_begin
+	tay
 	dey
 	:
 	lda vera_data0
@@ -1177,7 +1209,7 @@ print_usage:
 	.byte "  -------", NEWLINE
 	.byte "  q3 | q4", NEWLINE
 	.byte NEWLINE
-	.byte "q1 - q4 arguments should be 0,1,2 or 3", NEWLINE
+	.byte "arguments to q1-q4 should be 0,1,2 or 3", NEWLINE
 	.byte 0
 	
 
@@ -1185,9 +1217,6 @@ TERM_WIDTH:
 	.word 0
 TERM_HEIGHT:
 	.word 0
-
-terms_vram_offset:
-	.byte $B0
 
 chrout_buff_info:
 	.res 4, 0
@@ -1231,9 +1260,13 @@ terms_colors:
 
 terms_x_offset:
 	.res 4, 0
+terms_x_begin:
+	.res 4, 0
 terms_x_end:
 	.res 4, 0
 terms_y_offset:
+	.res 4, 0
+terms_y_begin:
 	.res 4, 0
 terms_y_end:
 	.res 4, 0
