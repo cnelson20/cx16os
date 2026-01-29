@@ -429,8 +429,8 @@ Return values:
 - See [here](https://github.com/X16Community/x16-docs/blob/master/X16%20Reference%20-%2003%20-%20Editor.md#modes) for the possible screen modes
 
 Arguments:
-- A -> the X16 terminal screen mode to use
-- If .X is a power of two >= 2, set the default VERA's VSCALE register value to .X
+- If .A <= $80, .A = the X16 terminal screen mode to use and if .X is a power of two >= 2, set the default VERA's VSCALE register value to .X
+- If .A >= $80, define the terminal width and height for [`get_console_info`](#9db4-get_console_info) using .X and .Y
 
 Return values:
 - A -> 0 on success, non-zero on failure to change the screen mode
