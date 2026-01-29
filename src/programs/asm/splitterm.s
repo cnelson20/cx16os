@@ -251,6 +251,16 @@ setup_term_window:
 		
 	bra @position_terms_loop
 @end_position_terms_loop:
+	sec ; making assumption here that pseudo-term 0 is active
+	lda terms_y_end + 0
+	sbc terms_y_begin + 0
+	tay
+	lda terms_x_end + 0
+	sbc terms_x_begin + 0
+	tax
+	lda #$FF ; set assumed width / height for programs
+	jsr set_console_mode
+	
 	lda #$01 ; BLACK background & WHITE foreground
 	sta terms_colors + 0
 	sta terms_colors + 1
