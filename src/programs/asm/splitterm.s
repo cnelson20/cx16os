@@ -1199,7 +1199,9 @@ print_usage:
 @usage_str:
 	.byte "Usage: splitterm [OPTIONS] q1 q2 q3 q4", NEWLINE
 	.byte "Split screen space into smaller windows", NEWLINE
-	.byte "Example: splitterm 0 1 1 0"
+	.byte "Examples: ", NEWLINE
+	.byte "  splitterm 0 1 1 0 [two vertical windows]", NEWLINE
+	.byte "  splitterm 0 0 1 1 [two horizontal windows]", NEWLINE
 	.byte NEWLINE
 	.byte "Options:", NEWLINE
 	.byte "  -h: Display this message", NEWLINE
