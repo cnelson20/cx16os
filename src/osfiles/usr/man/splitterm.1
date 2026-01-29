@@ -1,0 +1,28 @@
+.TH SPLITTERM(1),User Commands,SPLITTERM(1)
+
+.SH NAME
+splitterm - split terminal into smaller windows
+
+.SH USAGE
+splitterm [OPTIONS] q1 q2 q3 q4
+
+.SH DESCRIPTION
+split main view into horizontal or vertical windows
+
+.SH OPTIONS
+-h: display help message
+
+.SH ARGUMENT SYNTAX
+splitterm splits the terminal into four configurable sections. quadrant 1 (q1) is in the top-right corner of the screen, with q2-q4 following counterclockwise. The q1-q4 arguments tell splitterm the boundaries of each pseudo terminal (0 - 3)
+
+.SH EXAMPLES
+To split the view into two horizontal windows:
+
+	splitterm 0 0 1 1 &
+
+To split the view into two vertical windows:
+
+	splitterm 0 1 1 0 &
+
+.SH SEE ALSO
+	fastterm(1), swapterm(1)
