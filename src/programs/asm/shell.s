@@ -196,6 +196,8 @@ new_line:
 	lda #2
 	:
 	jsr set_fd_stdin
+	lda #$FF
+	sta next_fd
 @couldnt_open_shrc:
 	lda next_running_script
 	sta curr_running_script
