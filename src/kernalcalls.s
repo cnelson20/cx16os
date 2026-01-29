@@ -43,6 +43,7 @@
 .import file_table_count
 
 .import screen_mode_wrapper
+.import assumed_term_width, assumed_term_height
 .import programs_fore_color_table, programs_back_color_table
 .import CALL_set_stdin_read_mode
 
@@ -620,13 +621,25 @@ CALL_get_console_info:
 ;
 CALL_set_console_mode:
 	save_p_816_8bitmode
+	phy
 	ldy prog_using_vera_regs
 	beq :+
 	cpy current_program_id
 	beq :+
+	ply
 	lda #1
 	bra @end ; can't modify screen mode when other process has hook on VERA regs
 	:
+	ply
+
+	; if .A >= $80, .X and .Y contain the screen size, in characters
+	cmp #$80
+	bcc @modify_screen_mode
+@set_term_width_height:
+	stx assumed_term_width
+	sty assumed_term_height
+	bra @end
+@modify_screen_mode:
 	sta KZE0
 	stx KZE1
 	clc

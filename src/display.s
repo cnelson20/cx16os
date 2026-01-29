@@ -29,13 +29,34 @@ default_screen_mode:
 .export default_vscale
 default_vscale:
 	.byte 0
+.export assumed_term_width
+assumed_term_width:
+	.byte 0
+.export assumed_term_height
+assumed_term_height:
+	.byte 0
 
 .export screen_mode_wrapper
 screen_mode_wrapper:
 	phx_byte ROM_BANK
-	stx ROM_BANK
 	stz ROM_BANK
+	; carry set = get, carry clear = set
+	bcc :+
+	ldx assumed_term_width
+	beq :+
+	; getting mode
 	jsr screen_mode
+	ldx assumed_term_width
+	ldy assumed_term_height
+	bra :++
+	:
+	; setting mode
+	jsr screen_mode
+	sec
+	jsr screen_mode
+	stx assumed_term_width
+	sty assumed_term_height
+	:
 	xba
 	pla_byte ROM_BANK
 	xba
@@ -81,6 +102,8 @@ reset_display:
 
 	lda default_screen_mode
 	clc
+	stz assumed_term_width
+	stz assumed_term_height
 	jsr screen_mode_wrapper
 	stz VERA::CTRL
 	lda default_vscale
