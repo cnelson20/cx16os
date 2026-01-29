@@ -51,32 +51,39 @@ Buffer information pointers hold 4 bytes of information about a hook's FIFO ring
 
 ### setup_chrout_hook
 Call Address: $9D75  
+
+Sets up chrout hook for calling process
+
 Arguments:
 
 - .A holds 0 for the program bank or an extmem bank to hold the ringbuffer ($1000 bytes)
 - r0 holds a pointer where to write the ringbuffer
 - r1 holds a pointer in a program's RAM where to write info about the ringbuffer
 
-Returns size of buffer in .AX, 0 on failure (hook already in use)
+Return values:
+- .AX = size of buffer, 0 on failure (hook already in use)
 
 ---
 
 ### release_chrout_hook
 Call Address: $9D78  
-Arguments:
-
-- None
 
 Releases the calling program's hook on CHROUT calls, if it has one  
 
+Arguments:
+- None
+
 Return values:
-- Returns 0 on success to release the hook in .A
+- 0 on success to release the hook in .A
 - On failure to release the hook, returns the pid of the process with the chrout hook (non-zero) in .A. If the hook is not being used, returns $FF.
 
 ---
 
 ### setup_general_hook
 Call Address: $9D7B  
+
+Sets up general hook # .A based on the provided arguments  
+
 Arguments:
 
 - .A holds the hook # to setup
@@ -84,85 +91,102 @@ Arguments:
 - r0 holds the address of the same data ringbuffer
 - r1 holds the address where to hold the hook's buffer information in the calling process' bank (see [above](#buffer-information-pointers))
 
-Sets up general hook # .A based on the provided arguments  
-Returns size of buffer in .AX, 0 on failure (hook already in use)
+Return values:
+- .AX = size of buffer, 0 on failure (hook already in use)
 
 ---
 
 ### release_general_hook
 Call Address: $9D7E  
-Arguments:
 
+Releases the calling process' lock on hook # .A, if it has one
+
+Arguments:
 - .A holds the hook # to release
 
-Releases the calling process' lock on hook # .A, if it has one  
-Returns 0 on success, non-zero on failure in .A
+Return values:
+- .A = 0 on success, non-zero on failure
 
 ---
 
 ### get_general_hook_info
 Call Address: $9D81  
-Arguments:
 
+Retrieve info on whether a hook is active, and what process has a lock on it  
+
+Arguments:
 - .A holds the hook # to get information about
 
-Returns whether a hook is active, and what process has a lock on it  
-.A contains the pid of the process with the lock, or 0 if no process has one
+Return values:
+- .A = the pid of the process with the lock, or 0 if no process has one
 
 ---
 
 ### send_message_general_hook
 Call Address: $9D84  
-Arguments:
 
+Sends a message through one of the general hooks
+
+Arguments:
 - .X holds the hook # to send a message to
 - .A holds the message length
 - r0 holds a pointer to the message
 - r1.L holds the bank of the message (0 means the message is in the caller's own bank)
 
-Returns 0 on success, non-zero on failure in .A
+Return values:
+- .A = 0 on success, non-zero on failure
 
 ---
 
 ### send_byte_chrout_hook
 Call Address: $9D87  
-Arguments:
 
+Send a byte directly to the chrout hook. Fails if hook is not in use.
+
+Arguments:
 - .A holds the byte to send
 
-Preserves .A, returns 0 on success, non-zero on failure in .X
+Return values:
+- .A is preserved
+- .X = 0 on success, non-zero on failure
 
 ---
 
 ### mark_last_hook_message_received
 Call Address: $9D90  
-Arguments:
 
+If the calling process has a lock on hook .A, increment that hook's start_offset to point to the next message
+
+Arguments:
 - .A holds the bank number to affect
 
-If the calling process has a lock on hook .A, increment that hook's start_offset to point to the next message  
-Returns 0 on success, non-zero on failure in .A
+Return values:  
+- .A = 0 on success, non-zero on failure
 
 --- 
 
 ### lock_vera_regs
 Call Address: $9D93
-Arguments:
 
+If there is no existing lock on VERA registers, the calling process gets the trust-based lock on VERA's register set. The OS will preserve VERA's address registers when context switching.
+
+Arguments:
 - None
 
-If there is no existing lock on VERA registers, the calling process gets the hook to VERA's register set. The OS will preserve VERA's address registers when context switching.
-Returns 0 on success, non-zero on failure to obtain the hook in .A
+Return values:
+- .A = 0 on success, non-zero on failure
 
 ---
 
 ### unlock_vera_regs
 Call Address: $9D96
-Arguments:
 
+Releases the calling process' lock on VERA, if it has the lock
+
+Arguments:
 - None
 
-Releases the calling process' hook on VERA, if it has the hook
-Returns 0 on success (if the process had the hook), non-zero on failure in .A
+Return values:
+- .A = 0 on success (if the process had the lock), non-zero on failure
 
 
