@@ -1,0 +1,10 @@
+.TH get_general_hook_info(2),System Calls Manual,get_general_hook_info(2)
+.SH ADDRESS
+$9D81
+.SH DESCRIPTION
+Retrieve info on whether a hook is active, and what process has a lock on it
+.SH ARGUMENTS
+- .A holds the hook # to get information about
+.SH RETURN VALUES
+- .A = the pid of the process with the lock, or 0 if no process has one
+

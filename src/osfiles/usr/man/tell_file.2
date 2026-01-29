@@ -1,0 +1,14 @@
+.TH tell_file(2),System Calls Manual,tell_file(2)
+.SH ADDRESS
+$9DC3
+.SH DESCRIPTION
+- Retrieves the position of the file offset, and total file size of a particular file descriptor
+.SH ARGUMENTS
+- A -> file descriptor to get the offset and size of
+.SH RETURN VALUES
+- A -> 0 on success, non-zero on error
+
+- r0-r1: little endian 32-bit value of the current file offset
+
+- r2-r3: little endian 32-bit value of the file's total size
+

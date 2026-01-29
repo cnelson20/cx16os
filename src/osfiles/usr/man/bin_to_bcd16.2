@@ -1,0 +1,18 @@
+.TH bin_to_bcd16(2),System Calls Manual,bin_to_bcd16(2)
+.SH ADDRESS
+$9D99
+.SH DESCRIPTION
+- Converts a 16-bit binary number to a 24-bit BCD value
+
+- Number to convert in .AX
+
+- Example outputs:
+
+  - .AX = 512 --> .A = $12, .X = $05, .Y = $00
+
+  - .AX = 63 --> .A = $63, .X = $00, .Y = $00
+
+- Can be used in conjunction with the hex_num_to_string(2) function to print decimal numbers
+.SH RETURN VALUES
+- BCD Value in .AXY (lsb in .A, msb in .Y)
+

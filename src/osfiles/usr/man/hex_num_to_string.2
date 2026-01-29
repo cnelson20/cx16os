@@ -1,0 +1,18 @@
+.TH hex_num_to_string(2),System Calls Manual,hex_num_to_string(2)
+.SH ADDRESS
+$9D18
+.SH DESCRIPTION
+- Also known as `GET_HEX_NUM`
+
+- Returns the ASCII conversion of the high nybble of .A in .X and the conversion of the low nybble in .A
+
+- Example output:
+
+  - .A = $4F  -->  .X = '4', .A = 'F'
+
+- Preserves .Y
+.SH RETURN VALUES
+- .X = ASCII conversion of num's hi nybble
+
+- .A = low nybble
+

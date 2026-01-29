@@ -1,0 +1,14 @@
+.TH get_console_info(2),System Calls Manual,get_console_info(2)
+.SH ADDRESS
+$9DB4
+.SH DESCRIPTION
+- Returns values about the current console
+.SH RETURN VALUES
+- A -> current output foreground color
+
+- X -> current output background color
+
+- r0.L -> current terminal width (in characters)
+
+- r0.H -> current terminal height
+

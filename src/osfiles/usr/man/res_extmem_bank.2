@@ -1,0 +1,14 @@
+.TH res_extmem_bank(2),System Calls Manual,res_extmem_bank(2)
+.SH ADDRESS
+$9D33
+.SH DESCRIPTION
+- Get a bank to use other extmem routines with  
+
+- Can use bank, bank + 1 for calls to set_extmem_rbank(2) and set_extmem_wbank(2)
+
+- If .A = 0, returns 8K bank (A000-BFFF), if .A = 1 & program has bonk header, returns 24K bank (A000-FFFF)
+.SH RETURN VALUES
+- On success, returns a new extmem bank in .A
+
+- If no banks are available, returns 0
+

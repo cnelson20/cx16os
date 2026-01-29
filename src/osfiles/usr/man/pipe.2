@@ -1,0 +1,14 @@
+.TH pipe(2),System Calls Manual,pipe(2)
+.SH ADDRESS
+$9DBD
+.SH DESCRIPTION
+- Opens a unnamed FIFO with both a read and write end and returns a file descriptor for each
+
+- See ONLINE REFERENCE for a basic rundown on what a pipe/FIFO is
+.SH ARGUMENTS
+- None
+.SH RETURN VALUES
+- On success, return read fd in .A, write fd in .X, and 0 in .Y
+
+- On failure to open pipe, return a non-zero error code in .Y
+

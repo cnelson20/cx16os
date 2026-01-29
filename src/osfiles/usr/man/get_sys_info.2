@@ -1,0 +1,14 @@
+.TH get_sys_info(2),System Calls Manual,get_sys_info(2)
+.SH ADDRESS
+$9DAB
+.SH DESCRIPTION
+- Returns several values about the OS / kernal currently running
+.SH RETURN VALUES
+- X -> maximum RAM bank available (one of 63, 128, or 255)
+
+- Y -> X16 Kernal version number (see X16 User's Guide)
+
+- r0.L - r1.L -> VERA version number
+
+- r1.H - r2.H -> SMC version number
+

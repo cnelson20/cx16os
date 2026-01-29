@@ -1,0 +1,10 @@
+.TH getc(2),System Calls Manual,getc(2)
+.SH ADDRESS
+$9D00
+.SH DESCRIPTION
+- Reads 1 character from stdin
+
+- Mimics the CHRIN / GETIN routines of the CBM kernal, depending on the last value passed to set_stdin_read_mode(2)
+.SH RETURN VALUES
+- Char from stdin returned in .A
+

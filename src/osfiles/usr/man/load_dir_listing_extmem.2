@@ -1,0 +1,8 @@
+.TH load_dir_listing_extmem(2),System Calls Manual,load_dir_listing_extmem(2)
+.SH ADDRESS
+$9D2A
+.SH DESCRIPTION
+- Loads the current directory listing into extmem bank .A at addr $A000
+.SH RETURN VALUES
+- .AX = a ptr to the last byte of the directory listing + 1, or $FFFF on failure
+

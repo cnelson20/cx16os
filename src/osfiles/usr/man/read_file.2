@@ -1,0 +1,12 @@
+.TH read_file(2),System Calls Manual,read_file(2)
+.SH ADDRESS
+$9D24
+.SH DESCRIPTION
+- Reads up to r1 bytes into memory in bank r2.L pointed to by r0 from fd .A
+
+- r2.L being 0 signifies a read to the calling process' bank
+.SH RETURN VALUES
+- .Y = 0 on success, else error code
+
+- .AX = bytes read
+

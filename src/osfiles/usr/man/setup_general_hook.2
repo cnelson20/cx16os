@@ -1,0 +1,16 @@
+.TH setup_general_hook(2),System Calls Manual,setup_general_hook(2)
+.SH ADDRESS
+$9D7B
+.SH DESCRIPTION
+Sets up general hook # .A based on the provided arguments
+.SH ARGUMENTS
+- .A holds the hook # to setup
+
+- .X holds the bank to hold the hook's data ringbuffer
+
+- r0 holds the address of the same data ringbuffer
+
+- r1 holds the address where to hold the hook's buffer information in the calling process' bank (see above(2))
+.SH RETURN VALUES
+- .AX = size of buffer, 0 on failure (hook already in use)
+

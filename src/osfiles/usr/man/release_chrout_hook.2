@@ -1,0 +1,12 @@
+.TH release_chrout_hook(2),System Calls Manual,release_chrout_hook(2)
+.SH ADDRESS
+$9D78
+.SH DESCRIPTION
+Releases the calling program's hook on CHROUT calls, if it has one
+.SH ARGUMENTS
+- None
+.SH RETURN VALUES
+- 0 on success to release the hook in .A
+
+- On failure to release the hook, returns the pid of the process with the chrout hook (non-zero) in .A. If the hook is not being used, returns $FF.
+

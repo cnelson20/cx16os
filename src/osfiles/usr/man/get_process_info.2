@@ -1,0 +1,28 @@
+.TH get_process_info(2),System Calls Manual,get_process_info(2)
+.SH ADDRESS
+$9D0C
+.SH DESCRIPTION
+- Returns info about process with pid .A if .A != 0
+
+- If .A = 0, returns info about the process with instance id in .X
+.SH RETURN VALUES
+if .A != 0)
+
+- .A = 0 if the process is not alive, otherwise its instance id
+
+- .Y = (if .A != 0) process's priority, how much time it gets to run
+
+- r0.L = 1 if the process is the active process, 0 if not
+
+- r0.H = the process's ppid
+
+
+
+Return values (if .A = 0)
+
+
+
+- .A = $FF if the instance id is valid (>= $80)
+
+- .X = the process' return value if .A = $FF, 0 otherwise
+

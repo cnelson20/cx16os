@@ -1,0 +1,14 @@
+.TH setup_chrout_hook(2),System Calls Manual,setup_chrout_hook(2)
+.SH ADDRESS
+$9D75
+.SH DESCRIPTION
+Sets up chrout hook for calling process
+.SH ARGUMENTS
+- .A holds 0 for the program bank or an extmem bank to hold the ringbuffer ($1000 bytes)
+
+- r0 holds a pointer where to write the ringbuffer
+
+- r1 holds a pointer in a program's RAM where to write info about the ringbuffer
+.SH RETURN VALUES
+- .AX = size of buffer, 0 on failure (hook already in use)
+

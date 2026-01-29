@@ -1,0 +1,12 @@
+.TH vread_byte_extmem_y(2),System Calls Manual,vread_byte_extmem_y(2)
+.SH ADDRESS
+$9D45
+.SH DESCRIPTION
+Prepatory Routines: set_extmem_rbank(2)  
+
+- Reads into .A from extmem address `(X) + Y` on the previous set bank  
+
+- Preserves .X, .Y
+.SH RETURN VALUES
+- Returns value of memory address in .A
+

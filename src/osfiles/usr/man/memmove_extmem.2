@@ -1,0 +1,10 @@
+.TH memmove_extmem(2),System Calls Manual,memmove_extmem(2)
+.SH ADDRESS
+$9D51
+.SH DESCRIPTION
+- Moves .AX bytes from r3.r1 to r2.r0 (bank r3.L, addr r1 to bank r2.L, addr r0)  
+
+- To indicate copies to/from prog memory, r2/r3 should be 0
+.SH RETURN VALUES
+- Returns 0 if copy happened, non-zero otherwise (prog does not access to supplied banks)
+

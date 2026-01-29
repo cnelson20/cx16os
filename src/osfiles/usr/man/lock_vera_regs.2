@@ -1,0 +1,10 @@
+.TH lock_vera_regs(2),System Calls Manual,lock_vera_regs(2)
+.SH ADDRESS
+$9D93
+.SH DESCRIPTION
+If there is no existing lock on VERA registers, the calling process gets the trust-based lock on VERA's register set. The OS will preserve VERA's address registers when context switching.
+.SH ARGUMENTS
+- None
+.SH RETURN VALUES
+- .A = 0 on success, non-zero on failure
+

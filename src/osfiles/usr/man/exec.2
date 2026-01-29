@@ -1,0 +1,18 @@
+.TH exec(2),System Calls Manual,exec(2)
+.SH ADDRESS
+$9D09
+.SH DESCRIPTION
+- Starts a new process with filename pointed to by .AX, with args as subsequent null-term'd strings
+
+- .Y should contain number of args represented by string in .AX
+
+- If caller is active process & r0.L != 0, new process will become new active process
+
+- If r2.L and r2.H are valid fds in caller file table, new process stdin will be file represented by r2.L, stdout will be r2.H
+
+- The calling process should close the files passed to exec after calling the function. Formerly, the files passed to exec would be closed for the caller if exec was successful
+.SH RETURN VALUES
+- If .A != 0 -> new process has pid .A,  instance id in .X
+
+- If .A = 0 -> failure
+

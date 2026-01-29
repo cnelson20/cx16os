@@ -1,0 +1,12 @@
+.TH readf_byte_extmem_y(2),System Calls Manual,readf_byte_extmem_y(2)
+.SH ADDRESS
+$9D3F
+.SH DESCRIPTION
+Prepatory Routines: set_extmem_rbank(2), set_extmem_rptr(2)
+
+- Does the equivalent of `LDA (rptr), Y` from memory of the previously set bank (works with 16-bit index registers and accumulator)  
+
+Preserves .X, .Y
+.SH RETURN VALUES
+- Returns result of "simulated" LDA indirect instruction in .A
+

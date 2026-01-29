@@ -1,0 +1,16 @@
+.TH send_message_general_hook(2),System Calls Manual,send_message_general_hook(2)
+.SH ADDRESS
+$9D84
+.SH DESCRIPTION
+Sends a message through one of the general hooks
+.SH ARGUMENTS
+- .X holds the hook # to send a message to
+
+- .A holds the message length
+
+- r0 holds a pointer to the message
+
+- r1.L holds the bank of the message (0 means the message is in the caller's own bank)
+.SH RETURN VALUES
+- .A = 0 on success, non-zero on failure
+

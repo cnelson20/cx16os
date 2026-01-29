@@ -1,0 +1,18 @@
+.TH pread_extmem_xy(2),System Calls Manual,pread_extmem_xy(2)
+.SH ADDRESS
+$9DAB
+.SH DESCRIPTION
+Prepatory Routines: set_extmem_rbank(2)  
+
+- Reads into .A either a byte or word, from extmem address `X + Y` on the previous set bank, based on the M flag.   
+
+- Preserves .X, .Y
+.SH RETURN VALUES
+- Returns value of (.X + .Y) in .A
+
+
+
+***Note*:**
+
+- Using 16-bit index registers is highly recommended using this function. Otherwise, you will not be able to even read from extmem!
+

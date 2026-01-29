@@ -1,0 +1,14 @@
+.TH set_console_mode(2),System Calls Manual,set_console_mode(2)
+.SH ADDRESS
+$9DB7
+.SH DESCRIPTION
+- If there is no process with a hook on VERA register or the calling process has the hook, change the X16 terminal screen mode
+
+- See ONLINE REFERENCE for the possible screen modes
+.SH ARGUMENTS
+- A -> the X16 terminal screen mode to use
+
+- If .X is a power of two >= 2, set the default VERA's VSCALE register value to .X
+.SH RETURN VALUES
+- A -> 0 on success, non-zero on failure to change the screen mode
+

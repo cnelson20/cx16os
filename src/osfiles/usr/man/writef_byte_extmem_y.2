@@ -1,0 +1,10 @@
+.TH writef_byte_extmem_y(2),System Calls Manual,writef_byte_extmem_y(2)
+.SH ADDRESS
+$9D48
+.SH DESCRIPTION
+Prepatory Routines: set_extmem_wbank(2), set_extmem_wptr(2)  
+
+- Does the equivalent of `STA (wptr), Y` to memory of the previously set bank (works with 16-bit index registers and accumulator)
+.SH RETURN VALUES
+- None, all registers are preserved
+

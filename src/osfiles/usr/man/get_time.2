@@ -1,0 +1,24 @@
+.TH get_time(2),System Calls Manual,get_time(2)
+.SH ADDRESS
+$9D9F
+.SH DESCRIPTION
+- Gets the current time from the RTC
+
+- Returns time in r0-r3
+.SH RETURN VALUES
+- r0L: 	year (1900-based)
+
+- r0H: 	month (1-12)
+
+- r1L: 	day (1-31)
+
+- r1H: 	hours (0-23)
+
+- r2L: 	minutes (0-59)
+
+- r2H: 	seconds (0-59)
+
+- r3L:  jiffies (0-59)
+
+- r3H: 	weekday (0-6)
+

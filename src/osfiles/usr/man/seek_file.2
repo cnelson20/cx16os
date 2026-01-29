@@ -1,0 +1,12 @@
+.TH seek_file(2),System Calls Manual,seek_file(2)
+.SH ADDRESS
+$9DC0
+.SH DESCRIPTION
+- Sets the absolute position of the file offset of a particular file descriptor
+.SH ARGUMENTS
+- A -> file descriptor which to seek
+
+- r0-r1 -> little endian 32-bit value to set the file offset
+.SH RETURN VALUES
+- A -> 0 on a successful seek, non-zero on error
+

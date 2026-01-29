@@ -1,0 +1,12 @@
+.TH get_process_name(2),System Calls Manual,get_process_name(2)
+.SH ADDRESS
+$9D12
+.SH DESCRIPTION
+- Reads first r0 bytes of the process with pid .Y's name into memory pointed to by .AX
+
+- May not null-terminate the resulting string if .AX < the length of the process name
+.SH RETURN VALUES
+- .AX = number of bytes written
+
+- .Y = 0 on success, non-zero on failure
+

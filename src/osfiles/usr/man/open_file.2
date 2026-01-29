@@ -1,0 +1,12 @@
+.TH open_file(2),System Calls Manual,open_file(2)
+.SH ADDRESS
+$9D1E
+.SH DESCRIPTION
+- Open file with name pointed to by .AX
+
+ - .Y holds open_mode, 'R', 'W', etc. (if .Y = 0 'R' is assumed)
+.SH RETURN VALUES
+- .A = fd on success, $FF on failure
+
+- .X = 0 on success, error code on failure
+

@@ -1,0 +1,14 @@
+.TH parse_num(2),System Calls Manual,parse_num(2)
+.SH ADDRESS
+$9D15
+.SH DESCRIPTION
+- Parses the number pointed to by .AX
+
+- Automatically checks number for `0x` or `$` prefix, in which case num is treated as base-16
+
+- Otherwise base-10 is assumed
+.SH RETURN VALUES
+- .AX = the number parsed
+
+- .Y = 0 if the number was parsed successfully, non-zero otherwise
+

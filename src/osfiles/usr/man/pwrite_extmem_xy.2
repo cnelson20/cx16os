@@ -1,0 +1,18 @@
+.TH pwrite_extmem_xy(2),System Calls Manual,pwrite_extmem_xy(2)
+.SH ADDRESS
+$9DB1
+.SH DESCRIPTION
+Prepatory Routines: set_extmem_wbank(2)  
+
+- Writes either a byte or word from .A, depending on the M flag, to extmem at address `X + Y` on the previous set bank.   
+
+- Preserves .X, .Y
+.SH RETURN VALUES
+- None, all registers are preserved
+
+
+
+***Note*:**
+
+- Using 16-bit index registers is highly recommended using this function. Otherwise, you will not be able to even write to extmem, and you will probably crash the OS writing to an internal variable!
+
