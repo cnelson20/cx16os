@@ -47,7 +47,7 @@ Buffer information pointers hold 4 bytes of information about a hook's FIFO ring
 
 ---
 
-## Functions
+## Function Reference
 
 ### setup_chrout_hook
 Call Address: $9D75  

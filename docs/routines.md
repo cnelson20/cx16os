@@ -439,7 +439,7 @@ Return values:
 
 ### $9DBA: set_stdin_read_mode
 - Changes the behavior of [`getc`](#9d00-getc)/[`fgetc`](#9d60-fgetc) calls that read from the keyboard
-    - By default, input from the keyboard is buffered, waiting for a newline to be entered to return characters to a process.
+- By default, input from the keyboard is buffered, waiting for a newline to be entered to return characters to a process.
 - If a non-zero value is passed to this routine, os calls that read from the keyboard will now no longer buffer keyboard input and will return `0` if no chars are in the CBM keyboard buffer.
 - If `0` is passed, the behavior will be restored to default.
 

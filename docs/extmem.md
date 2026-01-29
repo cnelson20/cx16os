@@ -21,6 +21,8 @@ Routines to expand a program's data access beyond its allocated $2000 bytes
 | $9DAB | [`pread_extmem_xy`](#pread_extmem_xy) | .X, .Y | .A | |
 | $9DB1 | [`pwrite_extmem_xy`](#pwrite_extmem_xy) | .A, .X, .Y | | |
 
+## Function Reference
+
 ### res_extmem_bank
 - Get a bank to use other extmem routines with  
 - Can use bank, bank + 1 for calls to [set_extmem_rbank](#set_extmem_rbank) and [set_extmem_wbank](#set_extmem_wbank)
