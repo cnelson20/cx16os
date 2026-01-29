@@ -11,6 +11,7 @@
 .import clear_process_extmem_banks, setup_process_extmem_table, check_process_owns_bank, CALL_free_extmem_bank
 .import hex_num_to_string_kernal
 .import setup_system_hooks, release_all_process_hooks
+.import remove_output_chrout_buffer
 
 .import res_bank_load_proc_entry_pt
 .import CALL_close_file, CALL_read_file, CALL_open_file
@@ -493,7 +494,11 @@ nmi_kill_proc:
 	rts
 	
 	:
-	txa ; active process id now in .A
+	phx
+	; remove output in chrout buffer
+	txa
+	jsr remove_output_chrout_buffer
+	pla ; active process id now in .A
 	ldx #RETURN_NMI
 	jsr program_exit
 	rts

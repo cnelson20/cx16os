@@ -264,6 +264,46 @@ write_char_chrout_hook_buff:
 	.i8
 	rts
 
+.export remove_output_chrout_buffer
+remove_output_chrout_buffer:
+	sta KZE0 ; program output to clear
+	ldx chrout_prog_bank
+	bne :+
+	rts
+	:
+	lda atomic_action_st
+	pha
+	set_atomic_st_disc_a
+	save_p_816
+	push_zp_word RAM_BANK ; save banks
+	index_16_bit
+	.i16
+	lda chrout_extmem_bank
+	sta RAM_BANK
+	sta ROM_BANK
+
+	lda KZE0
+	ldx chrout_data_addr
+	ldy #CHROUT_BUFF_SIZE / 2
+@clear_loop:
+	cmp $01, X
+	bne :+
+	stz $00, X
+	:
+	inx
+	inx
+	dey
+	bne @clear_loop
+
+	plx
+	stx RAM_BANK ; restore RAM & ROM banks
+	restore_p_816
+	.i8
+	pla
+	sta atomic_action_st
+	rts
+
+
 ;
 ; other hooks
 ;
