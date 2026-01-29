@@ -30,6 +30,3 @@ mnt_dir/
 *.prg
 cx16os.img
 *.nvram
-
-# auto-generated manpages
-osfiles/usr/man/*.2
