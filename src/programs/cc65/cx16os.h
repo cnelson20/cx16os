@@ -2,6 +2,9 @@
  * cx16os.h
 */
 
+#ifndef _CX16OS_H_
+#define _CX16OS_H_
+
 unsigned char __fastcall__ getin();
 void __fastcall__ chrout(unsigned char ch);
 void __fastcall__ print_str(char *str);
@@ -45,3 +48,5 @@ void __fastcall__ detach_self(unsigned char);
 
 unsigned char __fastcall__ lock_vera_regs(void);
 unsigned char __fastcall__ lock_vera_regs(void);
+
+#endif
