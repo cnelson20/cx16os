@@ -10,7 +10,7 @@ BONK_L_FLAGS = -C $(INCL_DIR)/cx16os_bonk_c.cfg
 
 LLVM_FLAGS = --config mos-common.cfg -lexit-return -linit-stack
 
-PROGRAMS = ctest date wc cmp untar cowsay yes expr sort cal uniq printf column format life
+PROGRAMS = ctest date wc cmp untar cowsay yes expr sort cal uniq printf column format life tee
 
 all: bindir $(PROGRAMS)
 	cp $(PROGRAMS) $(MNT_DIR)/bin
@@ -54,41 +54,15 @@ life: curses/curses.lib life.c $(BONK_LIB_FILE)
 #
 # *nix utilities
 #
+tee: tee.c $(LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
 
 format: format.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
-
-column: column.c $(BONK_LIB_FILE)
-	cc65 $(C_FLAGS) $@.c
-	ca65 --cpu 65sc02 $@.s
-	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
-
-printf: printf.c $(BONK_LIB_FILE)
-	cc65 $(C_FLAGS) $@.c
-	ca65 --cpu 65sc02 $@.s
-	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
-
-sort: sort.c $(BONK_LIB_FILE)
-	cc65 $(C_FLAGS) $@.c
-	ca65 --cpu 65sc02 $@.s
-	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
-
-expr: expr.c $(BONK_LIB_FILE)
-	cc65 $(C_FLAGS) $@.c
-	ca65 --cpu 65sc02 $@.s
-	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
-
-uniq: uniq.c $(BONK_LIB_FILE)
-	cc65 $(C_FLAGS) $@.c
-	ca65 --cpu 65sc02 $@.s
-	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
-
-cal: cal.c $(BONK_LIB_FILE)
-	cc65 $(C_FLAGS) $@.c
-	ca65 --cpu 65sc02 $@.s
-	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
 
 date: date.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
@@ -119,3 +93,36 @@ yes: yes.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
+
+#
+# require RAM in extra X16 ROM banks
+#
+column: column.c $(BONK_LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
+
+printf: printf.c $(BONK_LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
+
+sort: sort.c $(BONK_LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
+
+expr: expr.c $(BONK_LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
+
+uniq: uniq.c $(BONK_LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
+
+cal: cal.c $(BONK_LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
