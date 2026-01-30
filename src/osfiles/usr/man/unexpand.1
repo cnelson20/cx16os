@@ -1,0 +1,22 @@
+.TH UNEXPAND(1),User Commands,UNEXPAND(1)
+
+.SH expand, unexpand — expand tabs to spaces, and vice versa
+
+.SH USAGE
+expand [-t tablist] [file ...]
+
+unexpand [-a] [file ...]
+
+.SH DESCRIPTION
+expand processes the named files or the standard input, writing the standard output with tabs changed into blanks.
+Backspace characters are preserved into the output and decrement the column count for tab calculations.
+expand is useful for pre-processing character files (before sorting, looking at specific columns, etc.) that contain tabs.
+
+unexpand puts tabs back into the data from the standard input or the named files and writes the result on the standard output.
+
+.SH OPTIONS
+
+-t tablist: tabs are set tablist spaces apart instead of the default 8. If multiple -t options are given, then the tabs are set at those specific columns.
+
+.SH EXIT STATUS
+The expand and unexpand utilities exit 0 on success, and >0 if an error occurs.

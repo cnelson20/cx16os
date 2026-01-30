@@ -10,7 +10,7 @@ BONK_L_FLAGS = -C $(INCL_DIR)/cx16os_bonk_c.cfg
 
 LLVM_FLAGS = --config mos-common.cfg -lexit-return -linit-stack
 
-PROGRAMS = ctest date wc cmp untar cowsay yes expr sort cal uniq printf column format life tee
+PROGRAMS = ctest date wc cmp untar cowsay yes expr sort cal uniq printf column format life tee expand unexpand head
 
 all: bindir $(PROGRAMS)
 	cp $(PROGRAMS) $(MNT_DIR)/bin
@@ -54,6 +54,21 @@ life: curses/curses.lib life.c $(BONK_LIB_FILE)
 #
 # *nix utilities
 #
+head: head.c $(LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
+
+expand: expand.c $(LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
+
+unexpand: unexpand.c $(LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
+
 tee: tee.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s

@@ -1,0 +1,29 @@
+.TH HEAD(1),User Commands,HEAD(1)
+
+.SH NAME
+head — display first few lines of files
+
+.SH USAGE
+head [-count | -n count] [file ...]
+
+.SH DESCRIPTION
+The head utility copies the first count lines of each specified file to the standard output. If no files are named, head copies lines from the standard input. If count is omitted, it defaults to 10.
+
+If more than one file is specified, head precedes the output of each file with the following, in order to distinguish files:
+
+==> file <==
+
+.SH OPTIONS
+-count | -n count: Copy the first count lines of each input file to the standard output. count must be a positive decimal integer.
+
+EXIT STATUS
+The head utility exits 0 on success, and >0 if an error occurs.
+
+EXAMPLES
+To display the first 500 lines of the file foo:
+
+$ head -n 500 foo
+
+head can be used in conjunction with tail(1) in the following way to, for example, display only line 500 from the file foo:
+
+$ head -n 500 foo | tail -1
