@@ -1,0 +1,36 @@
+.TH WC(1),User Commands,WC(1)
+
+.SH NAME
+wc - word, line, and byte or character count
+
+.SH SYNOPSIS
+wc 	[OPTIONS] [FILE...]
+
+.SH DESCRIPTION
+The wc utility reads one or more input text files and, by default, writes the number of lines, words, and bytes contained in each input file to the standard output.
+If more than one input file is specified, a line of cumulative count(s) for all named files is output on a separate line following the last file count.
+wc considers a word to be a maximal string of characters delimited by whitespace. Whitespace characters are the set of characters for which the isspace function returns true.
+
+If no file names are specified, the standard input is used and a file name is not output. The resulting output is one line of the requested count(s) with the cumulative sum of all files read in via standard input.
+
+By default, the standard output contains a line for each input file of the form:
+
+lines	 words	bytes	file_name
+
+The counts for lines, words, and bytes (or characters) are integers separated by spaces.
+
+.SH OPTIONS
+-c: The number of bytes in each input file is written to the standard output.
+
+-l: The number of lines in each input file is written to the standard output.
+
+-w: The number of words in each input file is written to the standard output.
+
+-L: Print the maximum display width
+
+-h: Print a help message and exit
+
+When an option is specified, wc only reports the information requested by that option. The default action is equivalent to the flags -clw having been specified.
+
+.SH EXIT STATUS
+The wc utility exits 0 on success, and >0 if an error occurs.
