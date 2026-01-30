@@ -1135,7 +1135,10 @@ close_file_int_entry:
 	plx ; pull back A after this section is done
 	
 	cpx #2 + 1
-	bcc @close_file_exit ; if stdin/stdout/stderr, don't actually need to CLOSE file
+	bcs :+
+	lda #0
+	bra @close_file_exit ; if stdin/stdout/stderr, don't actually need to CLOSE file
+	:
 	
 	cpx #$10
 	bcc @close_file_disk
