@@ -1,0 +1,44 @@
+.TH SORT(1),User Commands,SORT(1)
+
+.SH NAME
+sort - sort, merge, or sequence check text and binary files
+
+SYNOPSIS
+sort [-dfir] [-o output] [-S size] [file ...]
+
+.SH DESCRIPTION
+The sort utility sorts the lines of text files.
+A line is a record separated from the subsequent record by a newline.
+A record can contain any printable or unprintable characters.
+Comparisons are based on one or more sort keys extracted from each line according to the specified command line options.
+By default, sort uses entire lines for comparison and sorts in ascii(7) order.
+
+If no file is specified, or if file is '-', the standard input is used.
+
+.SH OPTIONS
+-o output: Write the output to the output file instead of the standard output.
+This file can be the same as one of the input files.
+
+The following options override the default ordering rules:
+
+-d: Consider only blank spaces and alphanumeric characters in comparisons.
+
+-f: Consider all lowercase characters that have uppercase equivalents to be the same for purposes of comparison.
+
+-i: Ignore all non-printable characters.
+
+-r: Sort in reverse order.
+
+Other options:
+
+--help: Print the help text and exit.
+
+.SH EXIT STATUS
+The sort utility exits with one of the following values:
+
+0: Successfully sorted the input files.
+
+>0: An error occurred.
+
+.SH SEE ALSO
+uniq(1)

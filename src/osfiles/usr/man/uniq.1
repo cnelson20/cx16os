@@ -1,0 +1,37 @@
+.TH UNIQ(1),User Commands,UNIQ(1)
+
+.SH NAME
+uniq - report or filter out repeated lines in a file
+
+.SH USAGE
+uniq [-ci] [-d | -u] [-f fields] [-s chars] [input_file [output_file]]
+
+.SH DESCRIPTION
+The uniq utility reads the standard input comparing adjacent lines and writes a copy of each unique input line to the standard output.
+The second and succeeding copies of identical adjacent input lines are not written.
+Repeated lines in the input will not be detected if they are not adjacent, so it may be necessary to sort the files first.
+
+OPTIONS:
+-c: Precede each output line with the count of the number of times the line occurred in the input, followed by a single space.
+
+-d: Only output lines which have duplicates.
+
+-f fields: Ignore the first fields in each input line when doing comparisons.
+A field is a string of non-blank characters separated from adjacent fields by blanks, with blanks considered part of the following field. Field numbers are one based, i.e., the first field is field one.
+
+-i: Regard lower and upper case ASCII characters as identical.
+
+-s chars: Ignore the first chars characters in each input line when doing comparisons.
+If specified in conjunction with the -f option, the first chars characters after the first fields fields will be ignored.
+Character numbers are one based, i.e., the first character is character one.
+
+-u: Only output lines which are unique.
+
+If additional arguments are specified on the command line, the first such argument is used as the name of an input file, the second is used as the name of an output file.
+A file name of '-' denotes the standard input or the standard output (depending on its position on the command line).
+
+.SH EXIT STATUS
+The uniq utility exits 0 on success, and >0 if an error occurs.
+
+.SH SEE ALSO
+sort(1)

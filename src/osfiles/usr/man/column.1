@@ -1,0 +1,36 @@
+.TH COLUMN(1),User Commands,COLUMN(1)
+
+.SH NAME
+column - columnate lists
+
+.SH USAGE
+column 	[-tx] [-c columns] [-s sep] [file ...]
+
+.SH DESCRIPTION
+The column utility formats its input into multiple columns. Each input line provides the text for one output cell.
+Columns are filled before rows.
+
+The column width is determined by the longest input line rounded up to the nearest tabstop;
+tabstops are assumed to be at multiples of eight. Output uses tab characters to advance to the next column.
+The number of columns is chosen to fill the terminal width.
+
+Input is taken from file operands or, by default, from the standard input.
+Empty lines and lines containing only whitespace are ignored.
+
+.SH OPTIONS
+-c columns: Output is formatted for a display columns wide.
+
+-s sep: Specify a set of characters to delimit columns for the -t option. It defaults to space and tab.
+
+-t: Table mode. Each input line provides the text for one output row. It is split into cells using the -s option.
+Leading, trailing, and multiple adjacent delimiters are ignored.
+Each column is as wide as the widest cell in it. Columns are separated by two spaces.
+
+-x: Fill rows before filling columns.
+
+.SH COLUMNS
+    If set to a positive integer, output is formatted to the given width in display columns.
+	Otherwise, column defaults to the terminal width, or 80 columns if the output is not a terminal.
+
+.SH EXIT STATUS
+The column utility exits 0 on success, and >0 if an error occurs.
