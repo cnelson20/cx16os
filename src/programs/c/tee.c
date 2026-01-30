@@ -148,7 +148,7 @@ main(int argc, char *argv[])
 	}
 
 	for (i = 0; i < out_fds_size; ++i) {
-		if (close(out_fds[i];) == -1) {
+		if (close(out_fds[i]) == -1) {
 			warn("%s", out_file_names[i]);
 			exitval = 1;
 		}
