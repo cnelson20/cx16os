@@ -34,6 +34,7 @@ CURSOR_UP = $91
 CURSOR_DOWN = $11
 
 BACKSPACE = 8
+TAB = 9
 CARRIAGE_RETURN = $0D
 LINE_FEED = $0A
 NEWLINE = LINE_FEED
@@ -49,6 +50,8 @@ vera_addri := $9F22
 vera_data0 := $9F23
 vera_data1 := $9F24
 vera_ctrl := $9F25
+
+TAB_WIDTH = 8
 
 TERMS_VRAM_OFFSET = $B0
 
@@ -248,7 +251,7 @@ setup_term_window:
 	:
 	sta terms_y_offset, X
 	sta terms_y_begin, X
-		
+	
 	bra @position_terms_loop
 @end_position_terms_loop:
 	sec ; making assumption here that pseudo-term 0 is active
@@ -711,15 +714,15 @@ flush_char_actions:
 @not_cursor_right:
 	
 	cmp #CARRIAGE_RETURN
-	bne :+
+	bne @not_carriage_return
 	ldx prog_printing
 	lda prog_term_use, X
 	tax
 	lda terms_x_begin, X
 	sta terms_x_offset, X
 	bra @return
-	:
-	
+@not_carriage_return:
+
 	; shouldn't get to this point, but we can just fall back & return with no harm done
 @return:	
 	rep #$10
@@ -837,6 +840,7 @@ write_line_screen:
 	cmp #NEWLINE ; newline
 	bne @not_newline
 
+@newline:
 	inc temp_term_y_offset
 	lda temp_term_y_offset
 	cmp temp_term_y_end
@@ -864,6 +868,17 @@ write_line_screen:
 	:
 	jmp @dont_draw_char
 @not_backspace:
+	cmp #TAB
+	bne @not_tab
+	txa
+	and #$FF ^ (TAB_WIDTH - 1) ; keep higher bits in byte
+	clc
+	adc #TAB_WIDTH
+	cmp temp_term_x_end
+	bcs @newline
+	tax
+	jmp @dont_draw_char
+@not_tab:
 	cmp #$93 ; clear screen
 	bne @not_clr_screen
 
