@@ -1,0 +1,24 @@
+.TH ECHO(1),User Commands,ECHO(1)
+
+.SH NAME
+echo - write arguments to the standard output
+
+.SH SYNOPSIS
+echo [-n] [string ...]
+
+.SH DESCRIPTION
+The echo utility writes any specified operands, separated by single blank (' ')
+characters and followed by a newline ('\n') character, to the standard output.
+
+When no operands are given, only the newline is written.
+The -- operand, which generally denotes an end to option processing, is treated as part of string.
+
+.SH OPTIONS
+
+-n: Do not print the trailing newline character.
+
+.SH EXIT STATUS
+The echo utility exits 0 on success, and >0 if an error occurs.
+
+.SH SEE ALSO
+printf(1)
