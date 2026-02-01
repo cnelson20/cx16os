@@ -1534,6 +1534,8 @@ exec_error:
 	jsr close_file
 	stz new_stdout_fileno
 @new_stdout_file_zero:
+	jsr get_args
+	jsr print_str
 	
 	lda #<exec_error_p1_message
 	ldx #>exec_error_p1_message
@@ -2349,7 +2351,7 @@ welcome_string:
 	.byte "Commander X16 OS Shell"
 	.byte NEWLINE, $00
 exec_error_p1_message:
-	.asciiz "Error in exec '"
+	.asciiz ": error in exec '"
 exec_error_p2_message:
 	.asciiz "': "
 
