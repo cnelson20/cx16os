@@ -286,14 +286,14 @@ print_file_matches:
 	bra @newline
 @out_bytes:
 	stz @still_read
-	cpy #temp_buff
+	cpy #0
 	bne :+
 	jmp @end_loop_iteration
 	:
 @newline:
 	lda #0
 	sta temp_buff, Y
-	cpy #temp_buff
+	cpy #0
 	beq :+
 	dey
 	lda temp_buff, Y
@@ -557,10 +557,10 @@ check_regex:
 	ldy #temp_buff
 	lda $00, X
 	cmp #'^'
-	bne :+
+	bne @no_caret
 	inx
-	bra :++
-	:
+	bra @after_prefix
+@no_caret:
 	lda #'\'
 	sta $00, Y
 	iny
@@ -570,7 +570,7 @@ check_regex:
 	lda #'*'
 	sta $00, Y
 	iny
-	:
+@after_prefix:
 	sty ptr1
 	phx
 	jsr strlen
@@ -586,17 +586,18 @@ check_regex:
 	cmp #'$'
 	bne @not_dollar_term
 	ldx #0
-	bra :++
-	:
+	bra @bs_check_bounds
+@bs_check_char:
 	lda $00, Y
 	cmp #'\'
-	bne :++
+	bne @bs_done_counting
 	inx
-	:
-	dey
+@bs_check_bounds:
 	cpy ptr1
-	bcs :--
-	:
+	beq @bs_done_counting
+	dey
+	bra @bs_check_char
+@bs_done_counting:
 	txa
 	and #1
 	bne @not_dollar_term
@@ -1048,8 +1049,17 @@ match_whitespace:
 	bne :+
 	rts
 	:
-	jmp match_dot ; if not one of these, just see if the line breaks match
-	
+	cmp #CARRIAGE_RETURN
+	bne :+
+	rts
+	:
+	cmp #LINE_FEED
+	bne :+
+	rts
+	:
+	lda #0
+	rts
+
 match_not_whitespace:
 	jsr match_whitespace
 invert_match:
