@@ -84,7 +84,7 @@ prog_args_loop:
 	bra prog_args_loop
 	:
 
-	jmp prog_args_loop
+	bra prog_args_error
 prog_no_args_error:
 	rep #$20
 	dec ptr0
@@ -115,9 +115,6 @@ prog_args_error:
 	ldx #>prog_args_error_str
 	jsr print_str
 
-	lda #SINGLE_QUOTE
-	jsr CHROUT
-	
 	lda ptr0
 	ldx ptr0 + 1
 	jsr print_str
@@ -132,7 +129,7 @@ prog_args_error:
 no_prog_args_error_str:
 	.asciiz "no command provided: "
 prog_args_error_str:
-	.asciiz "invalid argument"
+	.asciiz "shell: invalid argument '"
 
 home_dir_path:
 	.asciiz "~/home"
@@ -211,8 +208,8 @@ new_line:
 	lda last_background_pid
 	jsr get_process_info
 	cmp last_background_instance
-	bne :+
-	
+	beq :+
+
 	stz last_background_alive
 	:
 	
@@ -1970,14 +1967,15 @@ hex_digit_to_byte:
 	bcs :+
 	sec
 	sbc #'A' - 10
+	rts
 	:
 	cmp #'a'
-	bcc :+
+	bcc @invalid
 	cmp #'z' + 1
-	bcs :+
+	bcs @invalid
 	sec
 	sbc #'a' - 10
-	:
+	rts
 @invalid:
 	lda #$FF
 	rts
