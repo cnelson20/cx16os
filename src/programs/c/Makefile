@@ -10,7 +10,9 @@ BONK_L_FLAGS = -C $(INCL_DIR)/cx16os_bonk_c.cfg
 
 LLVM_FLAGS = --config mos-common.cfg -lexit-return -linit-stack
 
-PROGRAMS = ctest date wc cmp untar cowsay yes expr sort cal uniq printf column format life tee expand unexpand head
+PROGRAMS = ctest date wc cmp untar cowsay yes expr \
+	sort cal uniq printf column format life tee expand \
+	unexpand head
 
 all: bindir $(PROGRAMS)
 	cp $(PROGRAMS) $(MNT_DIR)/bin
