@@ -324,7 +324,7 @@ hook_info_addrs_hi:
 	.res NUM_OTHER_HOOKS
 
 reset_other_hooks:
-	ldx #NUM_OTHER_HOOKS
+	ldx #NUM_OTHER_HOOKS - 1
 	:
 	stz hook_prog_banks, X
 	dex
@@ -388,7 +388,7 @@ CALL_setup_general_hook:
 	bra @return
 @return_failure:
 	lda #0
-	lda #0
+	tax
 @return:
 	restore_p_816
 	rts
