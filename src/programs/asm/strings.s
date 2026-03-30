@@ -108,6 +108,10 @@ outer_file_open:
 	jmp file_out_bytes
 	:
 	
+	inc file_offset
+	bne :+
+	inc file_offset + 1
+	:
 	jsr is_printable_x
 	rep #$10
 	.i16
@@ -243,13 +247,13 @@ print_file_offset:
 	
 	; base 16
 	lda file_offset
-	clc
+	sec
 	sbc string_len
 	php
 	jsr GET_HEX_NUM
 	stx @temp
 	sta @temp + 1
-	
+
 	plp
 	lda file_offset + 1
 	sbc string_len + 1
@@ -262,14 +266,15 @@ print_file_offset:
 	
 @base_10:
 	lda file_offset
-	clc
+	sec
 	sbc string_len
 	pha
 	lda file_offset + 1
 	sbc string_len + 1
 	tax
+	pla
 	jsr bin_to_bcd16
-	
+
 	phy
 	phx
 	jsr GET_HEX_NUM
