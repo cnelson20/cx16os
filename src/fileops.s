@@ -339,7 +339,7 @@ get_dir_filename_ext:
 	cmp #'/'
 	beq :+
 	cmp #0
-	bne :+
+	bne @not_home_pathing
 	:
 	; Replace ~ with base_dir
 	ldax_addr base_dir
@@ -894,17 +894,17 @@ open_stream:
 	bne @invalid_open_mode
 	lda STORE_PROG_STDIN_VAL
 	cmp #NO_FILE
-	beq @return_err
+	beq @stream_not_found
 	jsr find_proc_fd
 	cmp #NO_FILE
-	beq @return_err
+	beq @stream_not_found
 	ldx STORE_PROG_CHRIN_MODE
 	beq @return_success
 	ldx #1
 	stx STORE_PROG_CHRIN_MODE
 	bra @return_success
 	:
-	
+
 	ldax_addr @stdout_name
 	stax_word KZE0
 	jsr strcmp_banks_ext
@@ -915,13 +915,13 @@ open_stream:
 	beq @invalid_open_mode
 	lda STORE_PROG_STDOUT_VAL
 	cmp #NO_FILE
-	beq @return_err
+	beq @stream_not_found
 	jsr find_proc_fd
 	cmp #NO_FILE
-	beq @return_err
+	beq @stream_not_found
 	bra @return_success
 	:
-	
+
 	ldax_addr @stderr_name
 	stax_word KZE0
 	jsr strcmp_banks_ext
@@ -931,11 +931,14 @@ open_stream:
 	lda #2 ; Returns fd to read from keyboard
 	jsr find_proc_fd
 	cmp #NO_FILE
-	beq @return_err
+	beq @stream_not_found
 	bra @return_success
 	:
 	
 	ldx #NO_SUCH_FILE ; no such stream
+	bra @return_err
+@stream_not_found:
+	ldx #NO_SUCH_FILE
 @return_err:
 	lda #NO_FILE
 	rts
@@ -1383,11 +1386,14 @@ try_read_slow:
 	bne :+
 	inc KZE0 + 1
 	:
-	dec KZE1
+	lda KZE1
 	bne :+
 	dec KZE1 + 1
-	bne @no_more_bytes
 	:
+	dec KZE1
+	lda KZE1
+	ora KZE1 + 1
+	beq @no_more_bytes
 	
 	jsr READST
 	cmp #0
@@ -1429,6 +1435,8 @@ read_stdin:
 	lda r2
 	bne :+
 	lda current_program_id ; if r2 = 0, set it to current_program_id
+	bra :++
+	:
 	cmp current_program_id
 	beq :+
 	jsr check_process_owns_bank
@@ -1665,7 +1673,7 @@ write_stdout:
 	
 	lda KZES4
 	ldx KZES4 + 1
-	ply_word KZE1
+	ply_word KZES4
 	ldy #0
 	rts
 
@@ -1694,8 +1702,8 @@ CALL_move_fd:
 	lda PV_OPEN_TABLE, Y
 	cmp #$FF
 	beq @return_failure
-	ldx KZE0
-	lda PV_OPEN_TABLE, Y
+	ldx KZE1
+	lda PV_OPEN_TABLE, X
 
 	dec RAM_BANK
 	cmp #$FF
