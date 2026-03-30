@@ -1,0 +1,41 @@
+.TH TR(1),User Commands,TR(1)
+
+.SH tr - translate or delete characters
+
+.SH SYNOPSIS
+tr [OPTION] SET1 [SET2]
+
+.SH DESCRIPTION
+Translate, squeeze, or delete characters from standard input, writing to standard output.
+
+.SH OPTIONS
+
+-d: Delete characters in SET1, do not translate
+
+-s: Squeeze repeated occurrences of output characters into a single character
+
+-h: Display help
+
+.SH SET SYNTAX
+
+a-z: Character range (e.g., a-z, A-Z, 0-9)
+
+\n: Newline
+
+\t: Tab
+
+\\: Backslash
+
+.SH EXAMPLES
+
+echo hello | tr a-z A-Z
+Converts to uppercase: HELLO
+
+echo hello | tr -d l
+Deletes all 'l' characters: heo
+
+echo aabbcc | tr -s a-z
+Squeezes repeated characters: abc
+
+echo hello | tr a-z n-za-m
+ROT13 encoding: uryyb
