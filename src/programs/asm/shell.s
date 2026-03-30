@@ -638,11 +638,22 @@ seperate_words_loop:
 	lda input, Y
 	beq end_loop
 	cmp #'"' ; double quote
+	beq @is_quote
+	cmp #$27 ; single quote
 	bne char_not_quote
-	; if in quotes, toggle quoted mode and dont include in command 
+@is_quote:
+	pha               ; save quote char
 	lda in_quotes
-	eor #$FF
-	sta in_quotes
+	beq @open_quote   ; not currently in quotes, open
+	pla
+	cmp in_quotes     ; does this match the opening quote?
+	bne char_not_quote ; no, treat as literal character (A=quote, X=output idx)
+	stz in_quotes     ; yes, close quotes
+	iny
+	jmp seperate_words_loop
+@open_quote:
+	pla
+	sta in_quotes     ; store the quote character as the flag
 	iny
 	jmp seperate_words_loop
 char_not_quote:
