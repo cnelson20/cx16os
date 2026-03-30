@@ -471,12 +471,10 @@ wait_process:
 	
 	jmp @wait_loop
 @end:
-	stx KZE0
-	
 	lda KZE1 ; restore priority
 	ldx current_program_id
 	sta process_priority_table, X
-	
+
 	lda #$00
 	ldx KZE2
 	jsr CALL_get_process_info
