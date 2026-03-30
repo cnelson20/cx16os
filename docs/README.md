@@ -32,3 +32,5 @@
 [system hooks](system_hooks.md)
 
 [display](display.md)
+
+[zero page usage](zeropage.md)
