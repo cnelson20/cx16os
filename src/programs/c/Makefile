@@ -12,7 +12,7 @@ LLVM_FLAGS = --config mos-common.cfg -lexit-return -linit-stack
 
 PROGRAMS = ctest date wc cmp untar cowsay yes expr \
 	sort cal uniq printf column format life tee expand \
-	unexpand head
+	unexpand head tail
 
 all: bindir $(PROGRAMS)
 	cp $(PROGRAMS) $(MNT_DIR)/bin
@@ -57,6 +57,11 @@ life: curses/curses.lib life.c $(BONK_LIB_FILE)
 # *nix utilities
 #
 head: head.c $(LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
+
+tail: tail.c $(LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(L_FLAGS) $@.o $(INCL_DIR)/cx16os.lib
