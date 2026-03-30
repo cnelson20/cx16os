@@ -1,0 +1,29 @@
+.TH TAIL(1),User Commands,TAIL(1)
+
+.SH NAME
+tail - display last few lines of files
+
+.SH SYNOPSIS
+tail [-count | -n count] [file ...]
+
+.SH DESCRIPTION
+The tail utility copies the last count lines of each specified file to the standard output. If no files are named, tail copies lines from the standard input. If count is omitted, it defaults to 10.
+
+If more than one file is specified, tail precedes the output of each file with the following, in order to distinguish files:
+
+==> file <==
+
+.SH OPTIONS
+-count | -n count: Copy the last count lines of each input file to the standard output. count must be a positive decimal integer. Maximum 256.
+
+.SH EXIT STATUS
+The tail utility exits 0 on success, and >0 if an error occurs.
+
+.SH EXAMPLES
+To display the last 20 lines of the file foo:
+
+$ tail -n 20 foo
+
+To display the last 5 lines:
+
+$ tail -5 foo

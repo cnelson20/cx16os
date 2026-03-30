@@ -1,0 +1,55 @@
+.TH AWK(1),User Commands,AWK(1)
+
+.SH NAME
+awk - pattern scanning and processing language
+
+.SH SYNOPSIS
+awk [OPTIONS] 'program' [FILE ...]
+awk [OPTIONS] -f progfile [FILE ...]
+
+.SH DESCRIPTION
+The awk utility reads input line by line, splits each line into fields, and executes the specified program for each line. If no files are specified, awk reads from standard input.
+
+Fields are accessed as $0 (entire line), $1 through $9 (individual fields). By default, fields are separated by whitespace.
+
+.SH OPTIONS
+-F fs: Use fs as the field separator. Supports \t for tab and \n for newline.
+
+-f file: Read the program from file instead of the command line.
+
+-h: Display help information and exit.
+
+.SH PROGRAM SYNTAX
+Programs are enclosed in braces. The following actions are supported:
+
+{print}              Print entire line ($0)
+
+{print $N}           Print field N (1-9)
+
+{print $1, $2}       Print fields separated by space
+
+{print $1 $2}        Print fields concatenated
+
+{print NR}           Print record (line) number
+
+{print NF}           Print number of fields
+
+{print "text"}       Print literal string
+
+Escape sequences in strings: \t for tab, \n for newline.
+
+.SH EXIT STATUS
+The awk utility exits 0 on success, and >0 if an error occurs.
+
+.SH EXAMPLES
+Print the first field of each line:
+
+$ awk '{print $1}' file.txt
+
+Print fields 1 and 3, colon-separated input:
+
+$ awk -F: '{print $1, $3}' /etc/passwd
+
+Number each line:
+
+$ awk '{print NR, $0}' file.txt
