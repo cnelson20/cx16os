@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <unistd.h>
 
 int errno;
 
@@ -22,11 +23,12 @@ int errno;
  * Circular buffer of line start offsets.
  * We store all input into a flat buffer and track where each line starts.
  */
-#define MAX_LINES 256
-#define BUF_SIZE  4096
+#define MAX_LINES 128
+#define BUF_SIZE  768
 
 static char buf[BUF_SIZE];
-static unsigned int line_starts[MAX_LINES];
+static unsigned char line_starts_lo[MAX_LINES];
+static unsigned char line_starts_hi[MAX_LINES];
 static unsigned int line_count;
 static unsigned int buf_pos;
 
@@ -104,7 +106,8 @@ tail_file(const char *path, long count, int need_header)
 	/* Read entire file into circular buffer, tracking line starts */
 	buf_pos = 0;
 	line_count = 0;
-	line_starts[0] = 0;
+	line_starts_lo[0] = 0;
+	line_starts_hi[0] = 0;
 
 	while ((ch = getc(fp)) != EOF) {
 		if (buf_pos < BUF_SIZE - 1) {
@@ -112,8 +115,10 @@ tail_file(const char *path, long count, int need_header)
 			buf_pos++;
 			if (ch == '\n') {
 				line_count++;
-				if (line_count < MAX_LINES)
-					line_starts[line_count] = buf_pos;
+				if (line_count < MAX_LINES) {
+					line_starts_lo[line_count] = buf_pos & 0xFF;
+					line_starts_hi[line_count] = buf_pos >> 8;
+				}
 			}
 		}
 	}
@@ -130,7 +135,7 @@ tail_file(const char *path, long count, int need_header)
 		else
 			start_line = line_count - (unsigned int)count;
 
-		start_pos = line_starts[start_line];
+		start_pos = line_starts_lo[start_line] | (line_starts_hi[start_line] << 8);
 		fputs(buf + start_pos, stdout);
 	} else if (buf_pos > 0) {
 		/* No newlines at all, just print everything */
