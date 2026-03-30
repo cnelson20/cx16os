@@ -498,6 +498,7 @@ memcpy_ext:
 	adc KZE2
 	tax
 	tya
+	clc
 	adc KZE2
 	tay
 	lda KZE2
