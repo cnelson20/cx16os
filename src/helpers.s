@@ -87,7 +87,8 @@ parse_num_radix_kernal:
 	stx KZE0 + 1
 	
 	cpy #16 ; hexadecimal
-	beq parse_hex
+	bne parse_decimal
+	jmp parse_hex
 parse_decimal:
 	; .AX already contains string
 	jsr strlen
@@ -95,12 +96,14 @@ parse_decimal:
 	dey
 	; y + kzps4 = last byte of string
 	
-	stz KZE2 
+	stz KZE2
 	stz KZE2 + 1
+	stz KZES4		; high 16 of accumulator
+	stz KZES4 + 1
 	ldx #0
 @parse_decimal_loop:
 	lda (KZE0), Y
-	sec 
+	sec
 	sbc #$30
 	bcs :+
 	; if character < $30, not a digit
@@ -112,9 +115,11 @@ parse_decimal:
 	:
 	sta KZE1
 	stz KZE1 + 1
-	
+	stz KZE3		; high 16 of digit value
+	stz KZE3 + 1
+
 	jsr @mult_pow_10
-	
+
 	clc
 	lda KZE1
 	adc KZE2
@@ -122,17 +127,27 @@ parse_decimal:
 	lda KZE1 + 1
 	adc KZE2 + 1
 	sta KZE2 + 1
+	lda KZE3
+	adc KZES4
+	sta KZES4
+	lda KZE3 + 1
+	adc KZES4 + 1
+	sta KZES4 + 1
 @end_of_loop:
 	inx
 	dey
 	bmi @end_parse_decimal
-	jmp @parse_decimal_loop	
+	jmp @parse_decimal_loop
 @end_parse_decimal:
+	lda KZES4
+	sta r0
+	lda KZES4 + 1
+	sta r0 + 1
 	lda KZE2
 	ldx KZE2 + 1
 	ldy #0
 	rts
-	
+
 @mult_pow_10:
 	phy
 	phx
@@ -144,30 +159,49 @@ parse_decimal:
 	bne :-
 	:
 	plx
-	ply	
-	rts 
+	ply
+	rts
 @mult_10:
+	; 32-bit multiply by 10: val*10 = (val*4 + val) * 2
+	; val in KZE1 (low 16) + KZE3 (high 16)
+	; save original
 	lda KZE1
-	ldy KZE1 + 1
-	
+	sta KZES5
+	lda KZE1 + 1
+	sta KZES5 + 1
+	lda KZE3
+	sta KZES6
+	lda KZE3 + 1
+	sta KZES6 + 1
+	; val *= 4
 	asl KZE1
 	rol KZE1 + 1
+	rol KZE3
+	rol KZE3 + 1
 	asl KZE1
 	rol KZE1 + 1
-	
+	rol KZE3
+	rol KZE3 + 1
+	; val = val*4 + original = val*5
 	clc
-	adc KZE1
-	pha
-	tya
-	adc KZE1 + 1
-	sta KZE1 + 1
-	
-	pla
-	asl A
+	lda KZE1
+	adc KZES5
 	sta KZE1
+	lda KZE1 + 1
+	adc KZES5 + 1
+	sta KZE1 + 1
+	lda KZE3
+	adc KZES6
+	sta KZE3
+	lda KZE3 + 1
+	adc KZES6 + 1
+	sta KZE3 + 1
+	; val *= 2 = val*10
+	asl KZE1
 	rol KZE1 + 1
-	
-	rts 
+	rol KZE3
+	rol KZE3 + 1
+	rts
 	
 parse_hex:
 	ldy #0
@@ -181,7 +215,9 @@ parse_hex:
 	
 	stz KZE1
 	stz KZE1 + 1
-	
+	stz KZE3		; high 16 of result
+	stz KZE3 + 1
+
 	lda (KZE0), Y
 	jsr get_hex_digit
 	sta KZE1
@@ -194,7 +230,7 @@ parse_hex:
 	sta KZE1
 	dey
 	bmi @end
-	
+
 	lda (KZE0), Y
 	jsr get_hex_digit
 	sta KZE1 + 1
@@ -205,7 +241,38 @@ parse_hex:
 	jsr @mult_16
 	ora KZE1 + 1
 	sta KZE1 + 1
+	dey
+	bmi @end
+
+	; digits 4-7 go into KZE3 (high 16 bits)
+	lda (KZE0), Y
+	jsr get_hex_digit
+	sta KZE3
+	dey
+	bmi @end
+	lda (KZE0), Y
+	jsr get_hex_digit
+	jsr @mult_16
+	ora KZE3
+	sta KZE3
+	dey
+	bmi @end
+
+	lda (KZE0), Y
+	jsr get_hex_digit
+	sta KZE3 + 1
+	dey
+	bmi @end
+	lda (KZE0), Y
+	jsr get_hex_digit
+	jsr @mult_16
+	ora KZE3 + 1
+	sta KZE3 + 1
 @end:
+	lda KZE3
+	sta r0
+	lda KZE3 + 1
+	sta r0 + 1
 	lda KZE1
 	ldx KZE1 + 1
 	ldy #0

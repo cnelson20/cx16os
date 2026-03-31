@@ -11,7 +11,7 @@
 | $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .Y, r0 | .X | &cross; |
 | $9D0F | [`get_args`](#9d0f-get_args) | | .AX, .Y | | &mdash; |
 | $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | | | &cross; |
-| $9D15 | [`parse_num`](#9d15-parse_num) | .AX | .AX | .Y | &check; |
+| $9D15 | [`parse_num`](#9d15-parse_num) | .AX | .AX, r0 | .Y | &check; |
 | $9D18 | [`hex_num_to_string / GET_HEX_NUM`](#9d18-hex_num_to_string) | .A | .A, .X | | &check; |
 | $9D1B | [`kill_process`](#9d1b-kill_process) | .A | .A, .X | | &check; |
 | $9D1E | [`open_file`](#9d1e-open_file) | .AX, .Y | .A, .X | | &mdash; |
@@ -155,9 +155,11 @@ Return values:
 - Parses the number pointed to by .AX
 - Automatically checks number for `0x` or `$` prefix, in which case num is treated as base-16
 - Otherwise base-10 is assumed
+- Up to 32-bit values
 
 Return values:
-- .AX = the number parsed
+- .AX = low 16 bits of the number parsed
+- r0 = high 16 bits of the number parsed (zero for values <= $FFFF)
 - .Y = 0 if the number was parsed successfully, non-zero otherwise
 
 ---

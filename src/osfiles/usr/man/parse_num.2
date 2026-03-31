@@ -7,8 +7,12 @@ $9D15
 - Automatically checks number for `0x` or `$` prefix, in which case num is treated as base-16
 
 - Otherwise base-10 is assumed
+
+- Up to 32-bit values
 .SH RETURN VALUES
-- .AX = the number parsed
+- .AX = low 16 bits of the number parsed
+
+- r0 = high 16 bits of the number parsed (zero for values <= $FFFF)
 
 - .Y = 0 if the number was parsed successfully, non-zero otherwise
 
