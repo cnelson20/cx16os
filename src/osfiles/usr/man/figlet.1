@@ -1,0 +1,25 @@
+.TH FIGLET(1),User Commands,FIGLET(1)
+
+.SH figlet - display text as large ASCII art
+
+.SH SYNOPSIS
+figlet <text>
+
+.SH DESCRIPTION
+Renders text as 5-line-tall block ASCII art using # characters. Multiple words can be passed as separate arguments and will be joined with spaces.
+
+Lowercase input is converted to uppercase automatically. Unsupported characters are ignored.
+
+.SH NOTES
+figlet does not wrap long input. If the text is too wide for the terminal, output will overflow past the right edge of the screen. Keep input short enough to fit — each character is roughly 5-6 columns wide including spacing.
+
+.SH EXAMPLES
+
+$ figlet HELLO
+ ## # # #    #    ###
+#   # # #    #    # #
+##  ### #    #    # #
+  # # # #    #    # #
+### # # #### #### ###
+
+$ figlet HI MOM

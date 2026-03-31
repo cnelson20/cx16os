@@ -8,7 +8,8 @@ FLAGS = -t none --cfg-path $(INCL_DIR) --asm-include-dir $(INCL_DIR) -C $(INCL_D
 PROGRAMS = shell echo ps kill looptest args cat xxd clear ls pwd ed \
 	rm mv cp mkdir rmdir guiterm gui sendmsg crshmon strings cron swapterm \
 	asm neofetch dirname basename scripter font more less fastterm grep time \
-	sleep true false stripcmds prnfnt man testprog beep splitterm awk
+	sleep true false stripcmds prnfnt man testprog beep splitterm awk tr fortune \
+	factor figlet sl
 
 all: bindir $(PROGRAMS)
 	cp $(PROGRAMS) $(MNT_DIR)/bin
@@ -62,6 +63,21 @@ testprog: testprog.s $(INCL_DIR)/routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
 
 awk: awk.s $(INCL_DIR)/routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
+
+tr: tr.s $(INCL_DIR)/routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
+
+fortune: fortune.s $(INCL_DIR)/routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
+
+sl: sl.s $(INCL_DIR)/routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
+
+factor: factor.s $(INCL_DIR)/routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
+
+figlet: figlet.s $(INCL_DIR)/routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
 
 man: man.s $(INCL_DIR)/routines.inc
