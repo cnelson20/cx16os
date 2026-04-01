@@ -1,0 +1,28 @@
+.TH MORSE(1),User Commands,MORSE(1)
+
+.SH NAME
+morse - translate text to morse code
+
+.SH SYNOPSIS
+morse [file ...]
+
+.SH DESCRIPTION
+The morse utility reads text from the specified files (or standard input if none are given) and prints the morse code equivalent to standard output.
+
+Letters are separated by a single space. Words are separated by three spaces. Each input line produces one output line.
+
+Supported characters: A-Z (case insensitive), 0-9, and the punctuation marks . , ? ! / = + -
+
+Unrecognized characters are silently ignored.
+
+.SH EXIT STATUS
+The morse utility exits 0 on success, and >0 if an error occurs.
+
+.SH EXAMPLES
+Encode a string:
+
+$ echo "hello world" | morse
+
+Encode a file:
+
+$ morse message.txt

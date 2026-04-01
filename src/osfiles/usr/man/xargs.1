@@ -1,0 +1,33 @@
+.TH XARGS(1),User Commands,XARGS(1)
+
+.SH NAME
+xargs - build and execute command lines from standard input
+
+.SH SYNOPSIS
+xargs [-n maxargs] [command [arg ...]]
+
+.SH DESCRIPTION
+The xargs utility reads whitespace-delimited tokens from standard input and executes the given command with those tokens appended as arguments. If no command is given, echo is used.
+
+xargs runs the command repeatedly until all tokens from stdin have been consumed.
+
+The total argument buffer is limited to 192 bytes. If this limit is reached mid-token-list, the command is flushed and restarted with the base command arguments.
+
+.SH OPTIONS
+-n maxargs: Run the command after at most maxargs tokens have been read from stdin, even if more tokens remain.
+
+.SH EXIT STATUS
+The xargs utility exits 0 on success, and >0 if an error occurs.
+
+.SH EXAMPLES
+Run echo with all tokens from stdin:
+
+$ echo "one two three" | xargs echo
+
+Delete a list of files:
+
+$ cat filelist.txt | xargs rm
+
+Process two files at a time:
+
+$ cat filelist.txt | xargs -n 2 process

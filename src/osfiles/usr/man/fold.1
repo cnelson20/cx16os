@@ -1,0 +1,29 @@
+.TH FOLD(1),User Commands,FOLD(1)
+
+.SH NAME
+fold - wrap input lines to fit in specified width
+
+.SH SYNOPSIS
+fold [-bs] [-w width] [file ...]
+
+.SH DESCRIPTION
+The fold utility wraps each line of the specified files to fit within the specified column width (default 80). If no files are given, standard input is read.
+
+.SH OPTIONS
+-b: Count bytes instead of characters. On this platform, bytes and characters are equivalent.
+
+-s: Break lines at the last space character before the width limit, rather than at exactly the width. This avoids splitting words.
+
+-w width: Wrap at width columns (default 80, max 255).
+
+.SH EXIT STATUS
+The fold utility exits 0 on success, and >0 if an error occurs.
+
+.SH EXAMPLES
+Wrap stdin at 40 columns:
+
+$ fold -w 40
+
+Wrap a file at 72 columns, breaking at spaces:
+
+$ fold -s -w 72 file.txt
