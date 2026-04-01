@@ -94,7 +94,7 @@ Return values:
 
 ---
 
-### $9D09: exec
+### $9D06: exec
 - Starts a new process with filename pointed to by .AX, with args as subsequent null-term'd strings
 - .Y should contain number of args represented by string in .AX
 - If caller is active process & r0.L != 0, new process will become new active process
@@ -107,7 +107,7 @@ Return values:
 
 ---
 
-### $9D06: print_str
+### $9D09: print_str
 - Prints the null-terminated string at address .AX
 
 Return values:
