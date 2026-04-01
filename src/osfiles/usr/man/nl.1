@@ -1,0 +1,67 @@
+.TH NL(1),User Commands,NL(1)
+
+.SH NAME
+nl - line numbering filter
+
+.SH SYNOPSIS
+nl [-p] [-b type] [-d delim] [-f type] [-h type] [-i incr] [-l num] [-n format] [-s sep] [-v startnum] [-w width] [file]
+
+.SH DESCRIPTION
+The nl utility reads lines from the named file, applies a configurable line numbering filter operation, and writes the result to the standard output. If file is a single dash (-) or absent, nl reads from the standard input.
+
+nl treats the text it reads in terms of logical pages. Unless specified otherwise, line numbering is reset at the start of each logical page. A logical page consists of a header, a body and a footer section; empty sections are valid. Different line numbering options are independently available for header, body and footer sections.
+
+The starts of logical page sections are signaled by input lines containing nothing but one of the following sequences of delimiter characters:
+
+    \:\:\:    header
+    \:\:      body
+    \:        footer
+
+If the input does not contain any logical page section signaling directives, the text being read is assumed to consist of a single logical page body.
+
+.SH OPTIONS
+-b type: Specify the logical page body lines to be numbered. Recognized type arguments are:
+
+    a: Number all lines.
+    t: Number only non-empty lines. (default)
+    n: No line numbering.
+
+-d delim: Specify the delimiter characters used to indicate the start of a logical page section. At most two characters may be specified; if only one is given, the first character is replaced and the second remains unchanged. Default is \:.
+
+-f type: Same as -b type but for logical page footer lines. Default type is n.
+
+-h type: Same as -b type but for logical page header lines. Default type is n.
+
+-i incr: Specify the increment value used to number logical page lines. Default is 1.
+
+-l num: When numbering all lines (-b a, -f a, or -h a), specify the number of adjacent blank lines to be considered as one. For example, -l 2 results in only the second adjacent blank line being numbered. Default is 1.
+
+-n format: Specify the line numbering output format. Recognized format arguments are:
+
+    ln: Left justified.
+    rn: Right justified, leading zeros suppressed. (default)
+    rz: Right justified, leading zeros kept.
+
+-p: Do not restart line numbering at logical page delimiters.
+
+-s sep: Specify the characters used to separate the line number from the text line. Default is a single tab character.
+
+-v startnum: Specify the initial value used to number logical page lines. Default is 1.
+
+-w width: Specify the number of characters to be occupied by the line number. Default is 6.
+
+.SH EXIT STATUS
+The nl utility exits 0 on success, and >0 if an error occurs.
+
+.SH EXAMPLES
+Number all non-empty lines of a file:
+
+$ nl foo
+
+Number all lines including blank lines:
+
+$ nl -b a foo
+
+Number lines with left-justified format and a colon separator:
+
+$ nl -n ln -s : foo

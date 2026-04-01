@@ -1,0 +1,41 @@
+.TH CUT(1),User Commands,CUT(1)
+
+.SH NAME
+cut - select portions of each line of a file
+
+.SH SYNOPSIS
+cut -b list [-n] [file ...]
+cut -c list [file ...]
+cut -f list [-s] [-d delim] [file ...]
+
+.SH DESCRIPTION
+The cut utility selects portions of each line (as specified by list) from each file and writes them to the standard output. If no file arguments are specified, or a file argument is a single dash (-), cut reads from the standard input.
+
+The items specified by list can be in terms of column position or in terms of fields delimited by a special character. Column and field numbering starts from 1; output is in the same order as input, not in the order selected.
+
+list is a comma or whitespace separated set of numbers and/or number ranges. Number ranges consist of a number, a dash (-), and a second number which select the fields or columns from the first number to the second, inclusive. Numbers or number ranges may be preceded by a dash, which selects all fields or columns from 1 to the first number. Numbers or number ranges may be followed by a dash, which selects all fields or columns from the last number to the end of the line. Numbers and number ranges may be repeated, overlapping, and in any order. It is not an error to select fields or columns not present in the input line.
+
+.SH OPTIONS
+-b list: The list specifies byte positions.
+
+-c list: The list specifies character positions.
+
+-d delim: Use the first character of delim as the field delimiter character. The default is the TAB character.
+
+-f list: The list specifies fields, separated by the field delimiter character. The selected fields are output, separated by the field delimiter character.
+
+-n: Do not split multi-byte characters. (No effect on this platform; all characters are single-byte.)
+
+-s: Suppress lines with no field delimiter characters. Unless specified, lines with no delimiters are passed through unmodified.
+
+.SH EXIT STATUS
+The cut utility exits 0 if all input files are output successfully, and >0 if an error occurs.
+
+.SH EXAMPLES
+Extract login names and shells from the passwd file as "name:shell" pairs:
+
+$ cut -d : -f 1,7 /etc/passwd
+
+Show characters 1-8 and 18-30 of each line:
+
+$ cut -c 1-8,18-30 file
