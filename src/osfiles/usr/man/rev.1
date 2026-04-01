@@ -1,0 +1,22 @@
+.TH REV(1),User Commands,REV(1)
+
+.SH NAME
+rev - reverse lines of a file
+
+.SH SYNOPSIS
+rev [file ...]
+
+.SH DESCRIPTION
+The rev utility copies the specified files to the standard output, reversing the order of characters in every line. If no files are specified, the standard input is read.
+
+.SH EXIT STATUS
+The rev utility exits 0 on success, and >0 if an error occurs.
+
+.SH EXAMPLES
+Reverse the characters of each line in a file:
+
+$ rev foo
+
+Reverse input from a pipe:
+
+$ echo "hello" | rev

@@ -1,0 +1,33 @@
+.TH SEQ(1),User Commands,SEQ(1)
+
+.SH NAME
+seq - print sequences of numbers
+
+.SH SYNOPSIS
+seq [-w] [-f format] [-s string] [first [incr]] last
+
+.SH DESCRIPTION
+The seq utility prints a sequence of numbers, one per line (by default), from first (default 1) to last, in steps of incr (default 1). If first is larger than last, the default incr is -1.
+
+.SH OPTIONS
+-f format: Use a printf-style format string to print each number. The format must contain exactly one integer conversion (d, i, u, o, x, or X), optionally with an l length modifier. Default is %ld.
+
+-s string: Use string as the separator between numbers. Default is a newline.
+
+-w: Equalize the width of all numbers by padding with leading zeros or spaces.
+
+.SH EXIT STATUS
+The seq utility exits 0 on success, and >0 if an error occurs.
+
+.SH EXAMPLES
+Print 1 to 5:
+
+$ seq 5
+
+Print 0 to 10 in steps of 2:
+
+$ seq 0 2 10
+
+Print 1 to 3 with a comma separator:
+
+$ seq -s , 3

@@ -1,0 +1,40 @@
+.TH TIMEOUT(1),User Commands,TIMEOUT(1)
+
+.SH NAME
+timeout - run a command with a time limit
+
+.SH SYNOPSIS
+timeout [-fp] [-k time] [-s signal] duration command [arg ...]
+
+.SH DESCRIPTION
+The timeout utility runs the given command with the supplied arguments. If the command has not exited after duration seconds, it is killed.
+
+The duration argument is a non-negative integer, optionally followed by a unit suffix:
+
+    s: seconds (default)
+    m: minutes
+    h: hours
+    d: days
+
+timeout exits with the exit status of the command. If the command timed out, timeout exits with status 124.
+
+.SH OPTIONS
+-f: Foreground mode. Accepted but has no effect on this platform.
+
+-k time: After the main timeout kills the command, wait time more seconds and send SIGKILL if still running. Accepted but has no effect on this platform.
+
+-p: Preserve the exit status of the command even if it timed out. Accepted but has no effect on this platform.
+
+-s signal: Send signal instead of SIGTERM on timeout. Accepted but has no effect on this platform.
+
+.SH EXIT STATUS
+124 if the command timed out, otherwise the exit status of the command.
+
+.SH EXAMPLES
+Run a command with a 10 second limit:
+
+$ timeout 10 myprogram
+
+Run with a 2 minute limit:
+
+$ timeout 2m myprogram arg1
