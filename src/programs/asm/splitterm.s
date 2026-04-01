@@ -1,4 +1,5 @@
 .include "routines.inc"
+.macpack longbranch
 .segment "CODE"
 
 .macro pha_byte addr
@@ -296,7 +297,8 @@ print_loop:
 
 	stz prog_printing
 	jsr check_dead_processes
-	
+	jsr flush_all_buffers
+
 	jsr surrender_process_time
 	jmp print_loop
 @process_messages_in_buffer:
@@ -568,6 +570,51 @@ check_dead_processes:
 	.i16
 	rts
 
+FLUSH_SLICE_SIZE = 16
+
+;
+; flush_all_buffers - flush a slice of non-empty prog buffers per idle cycle,
+; advancing flush_scan_index so successive calls cover different processes
+;
+flush_all_buffers:
+	php
+	sep #$30
+	.i8
+
+	ldx flush_scan_index
+	ldy #FLUSH_SLICE_SIZE
+@loop:
+	lda prog_buff_lengths, X
+	beq @iter
+
+	phx
+	phy
+	lda prog_printing
+	pha
+	stx prog_printing
+	jsr calc_offset
+	jsr write_line_screen
+	pla
+	sta prog_printing
+	ply
+	plx
+@iter:
+	inx
+	cpx #128
+	bcc :+
+	ldx #0
+	:
+	dey
+	bne @loop
+
+	stx flush_scan_index
+	plp
+	.i16
+	rts
+
+flush_scan_index:
+	.byte 0
+
 calc_offset:
 	.assert PROG_BUFF_MAXSIZE = $40, error, "PROG_BUFF_MAXSIZE changed"
 	rep #$20
@@ -594,7 +641,15 @@ process_char:
 
 	; multiply by PROG_BUFF_MAXSIZE
 	jsr calc_offset
-	
+
+	; if previous char was PLOT_X/Y, the current char is the position value —
+	; bypass the flush table so it always gets stored in the buffer as-is
+	lda plot_pending
+	beq :+
+	stz plot_pending
+	jmp @normal_char_no_plot
+	:
+
 	; if char == 0, flush the buffer ;
 	lda char_printed
 	and #$7F
@@ -614,7 +669,24 @@ process_char:
 	jmp flush_char_actions
 	:
 @normal_char:
-	
+	; if this is PLOT_X or PLOT_Y, mark that the next char is the position value
+	lda char_printed
+	cmp #$0B
+	beq :+
+	cmp #$0C
+	bne @normal_char_no_plot
+	:
+	sta plot_pending
+	; PLOT byte + value must land in the same buffer flush; preemptively
+	; flush now if fewer than 2 slots remain so they're never split
+	ldx prog_printing
+	lda prog_buff_lengths, X
+	cmp #PROG_BUFF_MAXSIZE - 1
+	bcc @normal_char_no_plot
+	jsr check_dead_processes
+	jsr write_line_screen
+@normal_char_no_plot:
+
 	ldx prog_printing
 	lda prog_buff_lengths, X
 	cmp #PROG_BUFF_MAXSIZE
@@ -879,6 +951,38 @@ write_line_screen:
 	tax
 	jmp @dont_draw_char
 @not_tab:
+	cmp #$0B ; PLOT_X
+	bne @not_plot_x
+	iny
+	cpy ptr0
+	jcs @dont_draw_char
+	jsr readf_byte_extmem_y
+	clc
+	adc temp_term_x_begin
+	cmp temp_term_x_end
+	bcc :+
+	lda temp_term_x_end
+	dec A
+	:
+	tax
+	jmp @dont_draw_char
+@not_plot_x:
+	cmp #$0C ; PLOT_Y
+	bne @not_plot_y
+	iny
+	cpy ptr0
+	jcs @dont_draw_char
+	jsr readf_byte_extmem_y
+	clc
+	adc temp_term_y_begin
+	cmp temp_term_y_end
+	bcc :+
+	lda temp_term_y_end
+	dec A
+	:
+	sta temp_term_y_offset
+	jmp @dont_draw_char
+@not_plot_y:
 	cmp #$93 ; clear screen
 	bne @not_clr_screen
 
@@ -1297,6 +1401,9 @@ terms_y_begin:
 	.res 4, 0
 terms_y_end:
 	.res 4, 0
+
+plot_pending:
+	.byte 0
 
 args_ptr:
 	.word 0
