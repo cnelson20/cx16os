@@ -9,7 +9,7 @@ PROGRAMS = shell echo ps kill looptest args cat xxd clear ls pwd ed \
 	rm mv cp mkdir rmdir guiterm gui sendmsg crshmon strings cron swapterm \
 	asm neofetch dirname basename scripter font more less fastterm grep time \
 	sleep true false stripcmds prnfnt man testprog beep splitterm awk tr fortune \
-	factor figlet sl
+	factor figlet sl tkfe
 
 all: bindir $(PROGRAMS)
 	cp $(PROGRAMS) $(MNT_DIR)/bin
@@ -72,6 +72,9 @@ fortune: fortune.s $(INCL_DIR)/routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
 
 sl: sl.s $(INCL_DIR)/routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
+
+tkfe: tkfe.s $(INCL_DIR)/routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
 
 factor: factor.s $(INCL_DIR)/routines.inc
