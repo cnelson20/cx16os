@@ -454,15 +454,13 @@ getchar_from_keyboard:
 	bne @echo_input
 	
 @raw_getin:
-	set_atomic_st_disc_a
-	:
 	cpy active_process ; .Y = current_program_id
 	beq :+
-	jsr surrender_process_time
-	bra :-
+	lda #0
+	bra :++
 	:
 	jsr GETIN
-	clear_atomic_st
+	:
 	ldx #0
 	rts
 	

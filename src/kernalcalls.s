@@ -293,14 +293,15 @@ CALL_print_str:
 	rts
 
 ;
-; returns info about the process using bank .A 
+; returns info about the process using bank .A
 ;
-; return values: 
+; return values:
 ; .A = alive (non-zero)/ dead (zero)
 ; .X = return value
 ; .Y = priority value
 ; r0.L = active process or not
 ; r0.H = parent id
+; r1.L = number of extmem banks in use by process
 ;
 CALL_get_process_info:
 	save_p_816_8bitmode
@@ -322,13 +323,35 @@ CALL_get_process_info:
 
 	:
 	stz r0 ; zero r0
-	cmp active_process
+	cpx active_process
 	bne @not_active_process
 	; active ;
 	inc r0 ; r0 now 1 if process is active
 @not_active_process:
 	lda process_priority_table, X
 	tay
+	; count extmem banks owned by this process
+	pha_byte RAM_BANK       ; save current RAM_BANK
+	phx                     ; save process bank
+	phy                     ; save priority
+	txa
+	inc A                   ; bank + 1 holds the process's extmem table
+	sta RAM_BANK
+	lda #0
+	sta r1
+	stz r1 + 1
+	ldx #FIRST_PROGRAM_BANK
+@count_extmem_loop:
+	lda process_extmem_table, X
+	beq :+
+	inc r1
+	:
+	inx
+	inx
+	bne @count_extmem_loop
+	ply                     ; restore priority
+	plx                     ; restore process bank
+	pla_byte RAM_BANK       ; restore RAM_BANK
 	lda process_table, X
 	xba
 	lda #0

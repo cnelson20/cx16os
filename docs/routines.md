@@ -8,7 +8,7 @@
 | $9D03 | [`putc / CHROUT`](#9d03-putc) | .A | | r0, r1 | &check; |
 | $9D06 | [`exec`](#9d06-exec) | .AX, .Y, r0, r2 | .A, .X | r1 | &cross; |
 | $9D09 | [`print_str`](#9d09-print_str) | .AX | | .Y, r0, r1 | &check; |
-| $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .Y, r0 | .X | &cross; |
+| $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .Y, r0, r1 | .X | &cross; |
 | $9D0F | [`get_args`](#9d0f-get_args) | | .AX, .Y | | &mdash; |
 | $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | | | &cross; |
 | $9D15 | [`parse_num`](#9d15-parse_num) | .AX | .AX, r0 | .Y | &check; |
@@ -124,6 +124,7 @@ Return values (if .A != 0):
 - .Y = (if .A != 0) process's priority, how much time it gets to run
 - r0.L = 1 if the process is the active process, 0 if not
 - r0.H = the process's ppid
+- r1.L = number of extmem banks the process is currently using
 
 Return values (if .A = 0):
 
