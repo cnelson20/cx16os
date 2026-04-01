@@ -6,8 +6,8 @@
 |---------|---------------|--------------------|------------------|--------------------|:----------------------:|
 | $9D00 | [`getc / GETIN`](#9d00-getc) | | .A | .Y, r0, r1, r2 | &check; |
 | $9D03 | [`putc / CHROUT`](#9d03-putc) | .A | | r0, r1 | &check; |
-| $9D06 | [`exec`](#9d09-exec) | .AX, .Y, r0, r2 | .A, .X | r1 | &cross; |
-| $9D09 | [`print_str`](#9d06-print_str) | .AX | | .Y, r0, r1 | &check; |
+| $9D06 | [`exec`](#9d06-exec) | .AX, .Y, r0, r2 | .A, .X | r1 | &cross; |
+| $9D09 | [`print_str`](#9d09-print_str) | .AX | | .Y, r0, r1 | &check; |
 | $9D0C | [`get_process_info`](#9d0c-get_process_info) | .A | .A, .Y, r0 | .X | &cross; |
 | $9D0F | [`get_args`](#9d0f-get_args) | | .AX, .Y | | &mdash; |
 | $9D12 | [`get_process_name`](#9d12-get_process_name) | .AX, .Y, r0 | | | &cross; |
@@ -94,7 +94,7 @@ Return values:
 
 ---
 
-### $9D09: exec
+### $9D06: exec
 - Starts a new process with filename pointed to by .AX, with args as subsequent null-term'd strings
 - .Y should contain number of args represented by string in .AX
 - If caller is active process & r0.L != 0, new process will become new active process
@@ -107,7 +107,7 @@ Return values:
 
 ---
 
-### $9D06: print_str
+### $9D09: print_str
 - Prints the null-terminated string at address .AX
 
 Return values:
