@@ -31,4 +31,4 @@
 
 [display](display.md)
 
-[zero page usage](zeropage.md)
+[program considerations](program_considerations.md)
