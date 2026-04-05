@@ -5,7 +5,7 @@ MNT_DIR = ../../mnt
 
 FLAGS = -t none --cfg-path $(INCL_DIR) --asm-include-dir $(INCL_DIR) -C $(INCL_DIR)/cx16os_asm.cfg
 
-PROGRAMS = shell echo ps kill looptest args cat xxd clear ls pwd ed \
+PROGRAMS = shell echo ps kill looptest args cat xxd clear ls pwd ed vi \
 	rm mv cp mkdir rmdir guiterm gui sendmsg crshmon strings cron swapterm \
 	asm neofetch dirname basename scripter font more less fastterm grep time \
 	sleep true false stripcmds prnfnt man testprog beep splitterm awk tr fortune \
@@ -99,6 +99,9 @@ prnfnt: prnfnt.s $(INCL_DIR)/routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
 
 ed: ed.s $(INCL_DIR)/routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
+
+vi: vi.s $(INCL_DIR)/routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
 
 stripcmds: stripcmds.s $(INCL_DIR)/routines.inc
