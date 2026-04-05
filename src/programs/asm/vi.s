@@ -2170,11 +2170,8 @@ cmd_enter_cmdline:
     stz cmdline_len
     stz cmdline_buf
 
-    ;;; Print ':' in status bar
-    lda term_height
-    dec A
-    ldx #0
-    jsr set_cursor_pos
+    ;;; Clear and print ':' in status bar
+    jsr clear_status_line
     lda #':'
     jsr CHROUT
     rts
@@ -2236,24 +2233,50 @@ dispatch_cmdline:
     jmp reposition_cursor
 
 ;;; exec_cmdline: parse and execute the command in cmdline_buf
+;;; Supports: [N][,M]d  N[,M] (goto)  :q :q! :w [:wq] :x :e file
 exec_cmdline:
-    ;;; Check for empty command
     lda cmdline_len
     jeq @done
 
-    ;;; Numeric? → goto line
-    lda cmdline_buf
+    ldy #0
+
+    ;;; Does it start with a digit?
+    lda cmdline_buf, Y
     cmp #'0'
-    bcc @not_num
+    jcc @no_leading_num
     cmp #'9' + 1
-    bcs @not_num
-    ;;; Parse number
-    lda #<cmdline_buf
-    ldx #>cmdline_buf
-    jsr parse_num
+    jcs @no_leading_num
+
+    ;;; Parse first number → range_start
+    jsr parse_decimal_y
+    sta range_start
+    stx range_start + 1
+    ;;; range_end defaults to range_start
+    sta range_end
+    stx range_end + 1
+
+    ;;; Comma → parse second number into range_end
+    lda cmdline_buf, Y
+    cmp #','
+    bne @no_comma
+    iny
+    jsr parse_decimal_y
+    sta range_end
+    stx range_end + 1
+@no_comma:
+
+    ;;; Check for command char
+    lda cmdline_buf, Y
+    beq @range_goto
+    cmp #'d'
+    beq @range_delete
+    jmp @done           ; unknown command after range
+
+@range_goto:
+    lda range_end
     sta cursor_lineno
-    stx cursor_lineno + 1
-    ;;; Clamp to [1, line_count]
+    lda range_end + 1
+    sta cursor_lineno + 1
     lda cursor_lineno
     ora cursor_lineno + 1
     bne :+
@@ -2275,9 +2298,74 @@ exec_cmdline:
     sta cursor_lineno + 1
 @goto_ok:
     stz cursor_col
-    jmp check_viewport_scroll_only
+    jsr update_viewport
+    jmp render_full_screen
 
-@not_num:
+@range_delete:
+    ;;; Clamp range_start to [1, line_count]
+    lda range_start
+    ora range_start + 1
+    bne :+
+    lda #1
+    sta range_start
+    stz range_start + 1
+    :
+    ;;; Clamp range_end to line_count
+    lda range_end + 1
+    cmp line_count + 1
+    bcc :+
+    bne @clamp_end
+    lda range_end
+    cmp line_count
+    bcc :+
+    beq :+
+@clamp_end:
+    lda line_count
+    sta range_end
+    lda line_count + 1
+    sta range_end + 1
+    :
+    lda range_start
+    sta input_begin_lineno
+    lda range_start + 1
+    sta input_begin_lineno + 1
+    lda range_end
+    sta input_end_lineno
+    lda range_end + 1
+    sta input_end_lineno + 1
+    jsr delete_lines        ; also calls reorder_lines internally
+    ;;; Move cursor to range_start (clamp to [1, line_count])
+    lda range_start
+    sta cursor_lineno
+    lda range_start + 1
+    sta cursor_lineno + 1
+    lda cursor_lineno + 1
+    cmp line_count + 1
+    bcc :+
+    bne @del_clamp_cur
+    lda cursor_lineno
+    cmp line_count
+    bcc :+
+    beq :+
+@del_clamp_cur:
+    lda line_count
+    sta cursor_lineno
+    lda line_count + 1
+    sta cursor_lineno + 1
+    :
+    lda cursor_lineno
+    ora cursor_lineno + 1
+    bne :+
+    lda #1
+    sta cursor_lineno
+    :
+    stz cursor_col
+    lda #1
+    sta modified_flag
+    jsr update_viewport
+    jmp render_full_screen
+
+@no_leading_num:
     ;;; Check :q!
     lda cmdline_buf
     cmp #'q'
@@ -2289,12 +2377,10 @@ exec_cmdline:
     sta exit_flag_zp
     rts
 @check_q_plain:
-    ;;; :q - only if not modified
     lda cmdline_buf + 1
-    bne @not_q          ; extra chars after q? ignore
+    bne @not_q
     lda modified_flag
     beq @quit
-    ;;; Print warning
     lda term_height
     dec A
     ldx #0
@@ -2313,7 +2399,6 @@ exec_cmdline:
     lda cmdline_buf
     cmp #'w'
     bne @not_w
-    ;;; If next char is space, copy rest as new filename
     lda cmdline_buf + 1
     cmp #' '
     bne @w_no_arg
@@ -2343,13 +2428,11 @@ exec_cmdline:
     rts
 
 @not_x:
-    ;;; Check :e filename or :set nu / :set nonu (not implemented, ignore)
     cmp #'e'
     bne @done
     lda cmdline_buf + 1
     cmp #' '
     bne @done
-    ;;; Load new file from cmdline_buf + 2
     ldx #0
 @copy_new_fn:
     lda cmdline_buf + 2, X
@@ -2362,22 +2445,69 @@ exec_cmdline:
 @done:
     rts
 
+;;; parse_decimal_y: parse decimal from cmdline_buf[Y..]
+;;; Returns AX = value, Y advanced past last digit
+parse_decimal_y:
+    stz @res
+    stz @res + 1
+@pd_loop:
+    lda cmdline_buf, Y
+    cmp #'0'
+    bcc @pd_done
+    cmp #'9' + 1
+    bcs @pd_done
+    sec
+    sbc #'0'
+    pha
+    ;;; @res = @res*8 + @res*2 + digit
+    lda @res
+    asl A
+    sta @tmp
+    lda @res + 1
+    rol A
+    sta @tmp + 1
+    asl @res
+    rol @res + 1
+    asl @res
+    rol @res + 1
+    asl @res
+    rol @res + 1
+    clc
+    lda @res
+    adc @tmp
+    sta @res
+    lda @res + 1
+    adc @tmp + 1
+    sta @res + 1
+    pla
+    clc
+    adc @res
+    sta @res
+    lda @res + 1
+    adc #0
+    sta @res + 1
+    iny
+    bra @pd_loop
+@pd_done:
+    lda @res
+    ldx @res + 1
+    rts
+@res: .word 0
+@tmp: .word 0
+
 ;;; ============================================================
 ;;; Search
 ;;; ============================================================
 cmd_begin_search:
-    ;;; Read pattern from status bar
-    lda term_height
-    dec A
-    ldx #0
-    jsr set_cursor_pos
+    jsr clear_status_line
     lda #'/'
     jsr CHROUT
 
     stz search_pattern
-    ldy #0
+    stz srch_pat_idx        ; use BSS index — get_char/CHROUT both clobber Y
 @read_pat:
-    jsr get_char
+    jsr get_char            ; A = char; clobbers X, Y
+    ldy srch_pat_idx        ; reload index
     cmp #$0D
     beq @done_pat
     cmp #$0A
@@ -2389,17 +2519,22 @@ cmd_begin_search:
     cmp #BS_KEY
     beq @del_pat
     cpy #63
-    bcs @read_pat   ; pattern full
-    sta search_pattern, Y
+    bcs @read_pat           ; pattern full, discard
+    sta search_pattern, Y   ; store char
+    pha                     ; save char for CHROUT
     iny
+    sty srch_pat_idx        ; save incremented index
     lda #0
-    sta search_pattern, Y
-    jsr CHROUT
+    sta search_pattern, Y   ; null-terminate
+    pla
+    jsr CHROUT              ; print char (clobbers Y; index saved in BSS)
     bra @read_pat
 @del_pat:
+    ldy srch_pat_idx
     cpy #0
     beq @read_pat
     dey
+    sty srch_pat_idx
     lda #0
     sta search_pattern, Y
     lda #$9D        ; cursor left
@@ -2826,27 +2961,27 @@ print_line_number_newline:
     jsr CHROUT
     rts
 
-render_status_bar:
+clear_status_line:
     lda term_height
     dec A
     ldx #0
     jsr set_cursor_pos
-
-    ;;; Clear status line with spaces (term_width-1 to avoid scroll at last col)
     lda term_width
     dec A
     sta status_clear_ctr
-@clear_status:
+@clear_sl:
     lda #' '
     jsr CHROUT
     dec status_clear_ctr
-    bne @clear_status
-
-    ;;; Reposition to start of status line
+    bne @clear_sl
     lda term_height
     dec A
     ldx #0
     jsr set_cursor_pos
+    rts
+
+render_status_bar:
+    jsr clear_status_line
 
     lda vi_mode
     cmp #MODE_INSERT
@@ -3969,6 +4104,9 @@ rlar_row:           .byte 0
 status_clear_ctr:   .byte 0     ; loop counter for render_status_bar clear
 
 ;;; Search temporaries (BSS to avoid cross-routine @label issues)
+range_start:        .word 0
+range_end:          .word 0
+srch_pat_idx:       .byte 0     ; index into search_pattern during input
 srch_start_line:    .word 0
 srch_found:         .byte 0
 srch_found_this:    .byte 0
