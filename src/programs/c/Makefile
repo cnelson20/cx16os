@@ -12,7 +12,8 @@ LLVM_FLAGS = --config mos-common.cfg -lexit-return -linit-stack
 
 PROGRAMS = ctest date wc cmp untar cowsay yes expr \
 	sort cal uniq printf column format life tee expand \
-	unexpand head tail nl cut rev seq timeout fold morse xargs
+	unexpand head tail nl cut rev seq timeout fold morse xargs \
+	diff
 
 all: bindir $(PROGRAMS)
 	cp $(PROGRAMS) $(MNT_DIR)/bin
@@ -185,6 +186,11 @@ seq: seq.c $(BONK_LIB_FILE)
 	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
 
 rev: rev.c $(BONK_LIB_FILE)
+	cc65 $(C_FLAGS) $@.c
+	ca65 --cpu 65sc02 $@.s
+	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
+
+diff: diff.c $(BONK_LIB_FILE)
 	cc65 $(C_FLAGS) $@.c
 	ca65 --cpu 65sc02 $@.s
 	ld65 -o $@ $(BONK_L_FLAGS) $@.o $(INCL_DIR)/cx16os_bonk.lib
