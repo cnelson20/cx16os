@@ -111,7 +111,7 @@ main:
 ```
 OR...
 ```asm
-exit:
+exit: ; pass exit code through .A
     tax
     lda #>$01FD
 	xba
