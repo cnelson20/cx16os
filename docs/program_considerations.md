@@ -109,6 +109,17 @@ main:
     lda #0      ; exit code 0 = success
     rts
 ```
+OR...
+```asm
+exit:
+    tax
+    lda #>$01FD
+	xba
+	lda #<$01FD
+	tcs
+    txa
+	rts
+```
 
 ### C (cc65)
 
