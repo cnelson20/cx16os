@@ -19,7 +19,9 @@ int main(int argc, char *argv[]) {
 			putchar(' ');
 			++temp_argv;
 		}
-		putchar('\n');
+		if (write(STDOUT_FILENO, "\n", 1) != 1) {
+			return 1;
+		}
 	}
 	return 0;
 }
