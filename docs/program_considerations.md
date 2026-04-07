@@ -174,12 +174,13 @@ The argument block is a contiguous sequence of null-terminated strings. The firs
 
 ## Standard I/O
 
-Programs start with two implicit file descriptors:
+Programs start with three implicit file descriptors:
 
 | fd | Meaning |
 |----|---------|
 | 0 | stdin — keyboard by default, can be redirected via pipe |
 | 1 | stdout — terminal by default, can be redirected via pipe |
+| 2 | stderr — terminal by default, typically not redirected by pipe |
 
 `getc` / `GETIN` reads from fd 0. `putc` / `CHROUT` writes to fd 1.
 
