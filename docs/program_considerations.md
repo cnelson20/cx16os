@@ -65,14 +65,14 @@ The hardware stack (`$0180`-`$01FF`, 128 bytes) is saved and restored here on ev
 
 Program code, read-only data, BSS, and heap all occupy this region. The top of the region is reserved for the cc65 software stack (used for C function call frames).
 
-#### Non-bonk programs (`cx16os.lib`)
+#### Non-bonk C programs (`cx16os.lib`)
 
 | Region | Range | Size |
 |--------|-------|------|
 | Code / data / heap | `$A300` - `$BEFD` | ~7KB |
 | cc65 software stack | `$BF00` - `$BFFF` | 256 bytes |
 
-#### Bonk programs (`cx16os_bonk.lib`)
+#### Bonk C programs (`cx16os_bonk.lib`)
 
 Bonk programs are loaded into a bank that has RAM in both the RAM slot (`$A000`-`$BFFF`) and the ROM slot (`$C000`-`$FFFF`) via the RAM expansion cartridge. This nearly triples the available program space.
 
@@ -82,8 +82,6 @@ Bonk programs are loaded into a bank that has RAM in both the RAM slot (`$A000`-
 | cc65 software stack | `$FE00` - `$FEFF` | 256 bytes |
 
 A bonk program signals its support for this mode by having a two-byte `$EA $EA` header at `$A300`, which the kernel checks when `res_extmem_bank` is called with argument 1 (requesting a bonk-style large bank).
-
-Use bonk when your program needs significant heap space (e.g., buffering lines for `sort`, `diff`, `column`). Programs that only do streaming I/O generally do not need it.
 
 ---
 
