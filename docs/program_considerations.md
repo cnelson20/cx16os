@@ -89,10 +89,9 @@ A bonk program signals its support for this mode by having a two-byte `$EA $EA` 
 
 cx16os runs the 65C816 in **native mode** throughout — not emulation mode. Programs inherit this state.
 
-- Accumulator and index registers start in **8-bit mode** (M=1, X=1). Do not assume they are wide on entry.
-- Use `REP`/`SEP` if you need 16-bit registers temporarily, but restore 8-bit mode before calling any system routine unless the routine's documentation explicitly states 16-bit support.
+- Accumulator and index registers start in **8-bit mode** (M=1, X=1).
 - Several extmem routines (`readf_byte_extmem_y`, `writef_byte_extmem_y`, `vread_byte_extmem_y`, `pread_extmem_xy`, `pwrite_extmem_xy`) operate correctly in either 8-bit or 16-bit mode. Using 16-bit index registers (`REP #$10`) is **strongly recommended** with `pread_extmem_xy` and `pwrite_extmem_xy`; 8-bit X/Y will likely produce wrong addresses or crash.
-- **Never use `TXS` in 8-bit native mode.** It will zero the high byte of the stack pointer, pointing the stack into page 0 and almost certainly crashing the OS. The hardware stack lives at `$0100`–`$01FF` and the high byte must stay `$01`.
+- **Never use `TXS` in 8-bit with .X=1.** It will zero the high byte of the stack pointer, pointing the stack into page 0 and almost certainly crashing the OS. The hardware stack lives at `$0100`–`$01FF` and the high byte must stay `$01`.
 
 ---
 
@@ -100,7 +99,7 @@ cx16os runs the 65C816 in **native mode** throughout — not emulation mode. Pro
 
 ### Assembly
 
-- The assembler entry point is the label `main:`. Execution begins there with A, X, Y, and the stack in a defined state (see Calling Conventions below).
+- There is no set assembler entry point, but most existing programs use the label `main:`. Execution begins there with A, X, Y, and the stack in a defined state (see Calling Conventions below).
 - Exit by executing `RTS` with the return code in `.A`. Return code `0` conventionally means success; non-zero is an error.
 - The program bank is still mapped when `main` returns; the OS reclaims it after `rts`.
 
