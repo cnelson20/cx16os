@@ -934,7 +934,7 @@ write_line_screen:
 	cmp #CURSOR_LEFT ; backspace
 	bne @not_backspace
 	:
-	cpx temp_term_y_begin
+	cpx temp_term_x_begin
 	beq :+
 	dex
 	:
