@@ -23,6 +23,7 @@ C_LABEL = 1
 C_DIRECTIVE = 2
 
 C_DIRECTIVE_PROCESSED = 3
+C_DIRECTIVE_RES = 4
 
 ; format for C_DIRECTIVE_PROCESSED
 ; C_DIRECTIVE_PROCESSED | 2 bytes SIZE | SIZE bytes DATA |
@@ -136,6 +137,18 @@ parse_args:
 	bne :+
 	jmp print_usage
 	:
+	ldx ptr0
+	inx
+	lda $00, X
+	cmp #'v'
+	bne :+
+	inx
+	lda $00, X
+	bne :+
+	lda #1
+	sta verbose_flag
+	jmp parse_args
+	:
 
 @invalid_flag_error:
 	lda #<invalid_flag_err_str
@@ -200,8 +213,11 @@ end_parse_args:
 	inc A
 	sta last_extmem_data_bank
 
+	lda verbose_flag
+	beq :+
 	lda #1
 	jsr print_parse_msg
+	:
 first_parse:
 	jsr get_next_line_input
 	
@@ -451,12 +467,10 @@ first_parse:
 	cmp #1
 	bne @not_accum_addressing
 
+	jsr makeupper
 	lda $00, X
 	cmp #'A'
-	beq :+
-	cmp #'a'
 	bne @not_accum_addressing
-	:
 
 	inx
 	stx ptr1
@@ -501,8 +515,12 @@ first_parse:
 	; no such addr mode ;
 	jmp first_parse_error
 @found_addr_mode:
-	lda #'$'
-	jsr CHROUT
+	lda verbose_flag
+	beq :+
+
+	lda #<@verbose_instr_str
+	ldx #>@verbose_instr_str
+	jsr print_str
 
 	lda @curr_instr_num
 	jsr GET_HEX_NUM
@@ -510,21 +528,19 @@ first_parse:
 	txa
 	jsr CHROUT
 
-	lda #' '
-	jsr CHROUT
-	lda #'$'
-	jsr CHROUT
-	
+	lda #<@verbose_mode_str
+	ldx #>@verbose_mode_str
+	jsr print_str
+
 	lda @curr_instr_mode
 	jsr GET_HEX_NUM
 	jsr CHROUT
 	txa
 	jsr CHROUT
 
-	lda #' '
-	jsr CHROUT
-	lda #'"'
-	jsr CHROUT
+	lda #<@verbose_op_str
+	ldx #>@verbose_op_str
+	jsr print_str
 
 	lda ptr1
 	ldx ptr1 + 1
@@ -534,6 +550,7 @@ first_parse:
 	jsr CHROUT
 	lda #NEWLINE
 	jsr CHROUT
+	:
 
 	ldx ptr1
 	jsr strlen
@@ -587,10 +604,44 @@ first_parse:
 	.byte 0
 @curr_instr_mode:
 	.byte 0
+@verbose_instr_str:
+	.byte "  instr=$", 0
+@verbose_mode_str:
+	.byte " mode=$", 0
+@verbose_op_str:
+	.byte " op=", '"', 0
+
+read_directive_to_line_buf:
+	ldx #line_buf
+	ldy #1
+	:
+	jsr readf_byte_extmem_y
+	sta $00, X
+	cmp #0
+	beq :+
+	inx
+	iny
+	bne :-
+	:
+	inx
+	iny ; skip null so second string isn't appended to first
+	:
+	jsr readf_byte_extmem_y
+	sta $00, X
+	cmp #0
+	beq :+
+	inx
+	iny
+	bne :-
+	:
+	rts
 
 second_parse:
+	lda verbose_flag
+	beq :+
 	lda #2
 	jsr print_parse_msg
+	:
 
 	ldx starting_pc
 	stx current_pc
@@ -674,30 +725,7 @@ second_parse:
 	jmp @end_second_parse_loop_iter
 
 @second_parse_directive:
-	; decipher if directive has data
-	; first copy data to prog mem to make stuff easier ;
-	ldx #line_buf
-	ldy #1
-	:
-	jsr readf_byte_extmem_y
-	sta $00, X
-	cmp #0
-	beq :+
-	inx
-	iny
-	bne :-
-	:
-	inx
-	iny ; increment .X & .Y so string isn't appended
-	:
-	jsr readf_byte_extmem_y
-	sta $00, X
-	cmp #0
-	beq :+
-	inx
-	iny
-	bne :-
-	:
+	jsr read_directive_to_line_buf
 
 	ldx #line_buf
 	jsr get_directive_num
@@ -879,13 +907,86 @@ second_parse:
 	pla ; pull data size back off stack
 	jsr memmove_extmem
 	
-	bra @end_second_parse_loop_iter
+	jmp @end_second_parse_loop_iter
 
 @not_str_directive:
 	cmp #DIR_RES
 	bne @not_res_directive
-	
-	bra @end_second_parse_loop_iter
+
+	; parse N from argument (after directive name in line_buf)
+	ldx #line_buf
+	jsr strlen       ; Y = address of null terminator
+	tyx
+	inx              ; X -> argument string
+	jsr determine_symbol_value ; X = N (16-bit)
+	stx ptr3         ; save N
+
+	; advance current_pc by N
+	rep #$20
+	.a16
+	txa
+	clc
+	adc current_pc
+	sta current_pc
+	sep #$20
+	.a8
+
+	; allocate 3 bytes: [C_DIRECTIVE_RES][N_lo][N_hi]
+	lda #3
+	jsr alloc_extmem_data_space
+	stx ptr2
+	sta r2           ; save dest bank
+	pha              ; push dest bank
+
+	; overwrite current lines entry (at ptr0-3) with new bank+ptr
+	lda #ptr0
+	jsr set_extmem_wptr
+	lda lines_extmem_bank
+	jsr set_extmem_wbank
+
+	ldy ptr0
+	dey
+	dey
+	dey
+	sty ptr0         ; ptr0 -= 3
+
+	pla              ; pull dest bank
+	ldy #0
+	jsr writef_byte_extmem_y ; write bank
+
+	iny
+	rep #$20
+	.a16
+	lda ptr2
+	jsr writef_byte_extmem_y ; write ptr2
+
+	lda ptr0
+	clc
+	adc #3
+	sta ptr0         ; ptr0 += 3
+	sep #$20
+	.a8
+
+	; write [C_DIRECTIVE_RES][N_lo][N_hi] to allocated data space
+	lda #ptr2
+	jsr set_extmem_wptr
+	lda r2
+	jsr set_extmem_wbank
+
+	ldy #0
+	lda #C_DIRECTIVE_RES
+	jsr writef_byte_extmem_y
+
+	iny
+	rep #$20
+	.a16
+	lda ptr3         ; N
+	jsr writef_byte_extmem_y
+	sep #$20
+	.a8
+
+	jmp @end_second_parse_loop_iter
+
 @not_res_directive:
 	; error here, invalid directive
 	jmp invalid_directive_err
@@ -928,16 +1029,20 @@ second_parse:
 	plx
 	jsr set_label_value 
 	
-	bra @end_second_parse_loop_iter
+	jmp @end_second_parse_loop_iter
 
 @not_equ_directive:
 	; error here, invalid directive
 	jmp invalid_directive_err
 
 @end_second_parse_loop_iter:
-	lda #'$'
-	jsr CHROUT
-	
+	lda verbose_flag
+	beq :+
+
+	lda #<verbose_pc_str
+	ldx #>verbose_pc_str
+	jsr print_str
+
 	lda current_pc + 1
 	jsr GET_HEX_NUM
 	jsr CHROUT
@@ -949,9 +1054,10 @@ second_parse:
 	jsr CHROUT
 	txa
 	jsr CHROUT
-	
+
 	lda #NEWLINE
 	jsr CHROUT
+	:
 
 	ldx ptr0 ; lines_extmem_ptr through loop
 	cpx lines_extmem_ptr
@@ -960,9 +1066,12 @@ second_parse:
 	:
 
 third_parse:
+	lda verbose_flag
+	beq :+
 	lda #3
 	jsr print_parse_msg
-	
+	:
+
 	; open file for output
 	lda output_filename_pointer
 	ldx output_filename_pointer + 1
@@ -996,6 +1105,10 @@ third_parse:
 	cmp #C_DIRECTIVE_PROCESSED
 	bne :+
 	jmp @third_parse_processed_directive
+	:
+	cmp #C_DIRECTIVE_RES
+	bne :+
+	jmp @third_parse_res_directive
 	:
 	cmp #C_DIRECTIVE
 	bne :+
@@ -1105,6 +1218,24 @@ third_parse:
 	jsr write_byte_output
 	jmp @end_third_parse_loop_iter
 
+@third_parse_res_directive:
+	ldy #1
+	rep #$20
+	.a16
+	jsr readf_byte_extmem_y ; read N (16-bit)
+	tax                     ; X = N
+	sep #$20
+	.a8
+@res_write_loop:
+	cpx #0
+	beq @end_third_parse_loop_iter
+	lda #0
+	phx
+	jsr write_byte_output
+	plx
+	dex
+	bra @res_write_loop
+
 @third_parse_processed_directive:
 	iny
 	rep #$20
@@ -1130,31 +1261,7 @@ third_parse:
 	bra @write_loop
 	
 @third_parse_unprocessed_directive:
-	; first copy data to prog mem to make stuff easier ;
-	ldx #line_buf
-	ldy #1
-	:
-	jsr readf_byte_extmem_y
-	sta $00, X
-	cmp #0
-	beq :+
-	inx
-	iny
-	bne :-
-	:
-	inx
-	iny ; increment .X & .Y so string isn't appended
-	:
-	jsr readf_byte_extmem_y
-	sta $00, X
-	cmp #0
-	beq :+
-	inx
-	iny
-	bne :-
-	:
-	; a lot of this code is copied from second_parse_directive ;
-	; let's look at the directive ;
+	jsr read_directive_to_line_buf
 	ldx #line_buf
 	jsr get_directive_num
 	cmp #$FF ; Has been checked before but why not do it again
@@ -1175,21 +1282,30 @@ third_parse:
 	jsr handle_fixed_len_directives_data
 	jmp @end_third_parse_loop_iter
 
-@end_third_parse_loop_iter:	
+@end_third_parse_loop_iter:
+	lda verbose_flag
+	beq :+
+
+	lda #<verbose_pc_str
+	ldx #>verbose_pc_str
+	jsr print_str
+
 	lda current_pc + 1
 	jsr GET_HEX_NUM
 	jsr CHROUT
 	txa
 	jsr CHROUT
+
 	lda current_pc
 	jsr GET_HEX_NUM
 	jsr CHROUT
 	txa
-	jsr CHROUT	
-	
+	jsr CHROUT
+
 	lda #NEWLINE
 	jsr CHROUT
-	
+	:
+
 	ldx ptr0 ; lines_extmem_ptr through loop
 	cpx lines_extmem_ptr
 	bcs :+
@@ -2442,13 +2558,12 @@ print_usage:
 @usage_str:
 	.byte "Usage: asm [OPTIONS] FILE", NEWLINE
 	.byte "Options:", NEWLINE
-	.byte "  -h: Display this message", NEWLINE
-	.byte "  -o: Specify a filename for output. Default is a.out", NEWLINE
-	.byte "  -p, --pc: Specify an address to start assembling from. Default is 0xA300", NEWLINE
+	.byte "  -h           Display this message", NEWLINE
+	.byte "  -o FILE      Output filename (default: a.out)", NEWLINE
+	.byte "  -p, --pc ADDR  Start assembling at ADDR (default: 0xA300)", NEWLINE
+	.byte "  -v           Verbose: print instr/mode/operand each pass", NEWLINE
 	.byte NEWLINE
 	.byte "Assemble a 6502 program specified by FILE.", NEWLINE
-	.byte "If no FILE is provided, read from stdin", NEWLINE
-	.byte NEWLINE
 	.byte 0
 
 
@@ -2803,12 +2918,17 @@ output_filename_pointer:
 	.word 0
 starting_pc:
 	.word 0
+verbose_flag:
+	.byte 0
 
 current_pc:
 	.word 0
 
 a_out_str:
 	.asciiz "a.out"
+
+verbose_pc_str:
+	.byte "  pc=$", 0
 
 ;
 ; strings for diff directives
