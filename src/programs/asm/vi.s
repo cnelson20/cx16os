@@ -307,7 +307,7 @@ reposition_cursor:
 
     lda screen_row
     ldx screen_col
-    jmp set_cursor_pos
+    jsr set_cursor_pos
 
 ;;; ============================================================
 ;;; update_viewport: adjust vp_first_line if cursor out of view,
@@ -472,6 +472,8 @@ dispatch_normal:
     cmp #'O'
     beq @open_above
     cmp #'x'
+    beq @del_char
+    cmp #$7F        ; Delete key - forward delete (same as 'x')
     beq @del_char
     cmp #'d'
     beq @pend_d
@@ -1126,6 +1128,8 @@ dispatch_insert:
     beq @arrow_up
     cmp #CUR_DOWN
     jeq @arrow_down
+    cmp #$7F        ; Delete key - forward delete
+    beq @fwd_delete
     cmp #$20        ; printable?
     jcc @ignore     ; control chars < $20 ignored
     jsr insert_char_at_cursor
@@ -1153,37 +1157,31 @@ dispatch_insert:
 @backspace:
     jsr delete_char_before_cursor
     rts
+@fwd_delete:
+    jsr delete_char_at_cursor
+    rts
 @enter:
     jsr split_line_at_cursor
     rts
 @arrow_left:
-    jsr flush_insert_mode
-    jsr cmd_move_left
-    ;;; Reload new line into scratch
-    lda line_count
-    ora line_count + 1
+    ;;; Move left within the current line (no flush/reload)
+    lda cursor_col
     beq :+
-    jsr read_line_to_scratch
+    dec cursor_col
     :
+    jsr reposition_cursor
+    jsr render_current_insert_line
     rts
 @arrow_right:
-    jsr flush_insert_mode
-    ;;; Clamp before moving
-    lda cursor_lineno
-    ldx cursor_lineno + 1
-    jsr get_line_len
-    beq :+
-    dec A
-    cmp cursor_col
+    ;;; Move right within the current line (no flush/reload)
+    ;;; In insert mode cursor may sit at line_scratch_len (after last char)
+    lda cursor_col
+    cmp line_scratch_len
     bcs :+
-    sta cursor_col
+    inc cursor_col
     :
-    jsr cmd_move_right
-    lda line_count
-    ora line_count + 1
-    beq :+
-    jsr read_line_to_scratch
-    :
+    jsr reposition_cursor
+    jsr render_current_insert_line
     rts
 @arrow_up:
     jsr flush_insert_mode
@@ -1233,8 +1231,8 @@ insert_char_at_cursor:
     stz line_scratch, X        ; keep null terminated
 
     ;;; Render current line
-    jsr render_current_insert_line
     jsr reposition_cursor
+    jsr render_current_insert_line
 @full:
     rts
 @ch: .byte 0
@@ -1261,9 +1259,35 @@ delete_char_before_cursor:
     stz line_scratch, X         ; null terminate
     dec line_scratch_len
 
+    jsr reposition_cursor
     jsr render_current_insert_line
-    jmp reposition_cursor
+    rts
 @at_col0:
+    rts
+
+;;; delete_char_at_cursor: forward-delete - remove char AT cursor_col in insert mode
+delete_char_at_cursor:
+    lda cursor_col
+    cmp line_scratch_len
+    bcs @done           ; cursor is at/past end of line, nothing to delete
+    ldx cursor_col
+@shift:
+    inx
+    cpx line_scratch_len
+    beq @end_shift
+    lda line_scratch, X
+    dex
+    sta line_scratch, X
+    inx
+    bra @shift
+@end_shift:
+    dex
+    stz line_scratch, X ; null terminate
+    dec line_scratch_len
+    jsr reposition_cursor
+    jsr render_current_insert_line
+    rts
+@done:
     rts
 
 ;;; split_line_at_cursor: Enter key - split line at cursor_col
