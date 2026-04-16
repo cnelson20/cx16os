@@ -1,0 +1,27 @@
+.TH GUESSNUM(1),User Commands,GUESSNUM(1)
+
+.SH NAME
+guessnum - guess the number game
+
+.SH SYNOPSIS
+guessnum
+
+.SH DESCRIPTION
+guessnum picks a random number between 1 and 100 and asks you to guess it.
+After each guess it tells you whether your guess was too low, too high, or correct.
+When you guess correctly, it reports how many guesses you needed and asks if you want to play again.
+
+.SH EXAMPLES
+Start a game:
+
+$ guessnum
+Guess #1: 50
+Too low!
+Guess #2: 75
+Too high!
+Guess #3: 62
+Correct! Number of guesses: 3
+Play again (y/n)?
+
+.SH EXIT STATUS
+guessnum exits 0 when the player chooses not to play again.
