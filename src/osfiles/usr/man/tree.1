@@ -1,0 +1,32 @@
+.TH TREE(1),User Commands,TREE(1)
+
+.SH NAME
+tree - list contents of directories in a tree-like format
+
+.SH SYNOPSIS
+tree [directory]
+
+.SH DESCRIPTION
+tree prints a recursive, indented listing of directory contents. If no directory is given, the current working directory is used.
+
+Each entry is printed on its own line, prefixed with |---- and indented according to its depth in the tree. Trailing '/' (directory) and '*' (executable) markers emitted by ls -F are stripped before display.
+
+tree is implemented by piping the output of ls -F and recursively invoking itself on each subdirectory. Because entries are streamed as they are read, files in a directory are printed before the contents of its subdirectories, rather than interleaved.
+
+.SH LIMITS
+Recursion depth is capped at 6. At most 8 subdirectories per level are followed; additional subdirectories at the same level are listed but not descended into. There is no limit on the number of files displayed per directory.
+
+.SH EXAMPLES
+List the current directory:
+
+$ tree
+
+List a specific directory:
+
+$ tree /bin
+
+.SH EXIT STATUS
+tree exits 0 on success.
+
+.SH SEE ALSO
+ls(1)
