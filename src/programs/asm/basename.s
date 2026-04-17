@@ -75,7 +75,7 @@ step2: ; If string is "//", it is implementation-defined whether steps 3 to 6 ar
 step3: 
 	ldx #copy_buff
 	lda $00, X
-	beq step3 ; if str is empty, skip to step4
+	beq step4 ; if str is empty, skip to step4
 	:
 	lda $00, X
 	beq :+
