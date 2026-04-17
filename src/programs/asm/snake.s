@@ -145,9 +145,9 @@ keyboard_done:
 	bcc notDead
 	
 dead:
-	lda #$01
+	lda #>$01FD
 	xba
-	lda #$FE
+	lda #<$01FD
 	tcs
 	rts
 
