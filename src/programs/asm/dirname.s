@@ -69,7 +69,7 @@ parse_name:
 step2:
 	ldx #copy_buff
 	lda $00, X
-	beq step3 ; if str is empty, skip to step3
+	beq step4 ; if str is empty, skip to step4 (outputs ".")
 	:
 	lda $00, X
 	beq :+
