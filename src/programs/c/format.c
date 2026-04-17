@@ -335,18 +335,9 @@ int parse_line(unsigned linenum, char *line) {
 	
 	(void)linenum;
 	
-	// printf("%d: %s\n", linenum, line);
-	
-	// What to do on an empty line
 	ptr = line;
-	while (*ptr && isspace(*ptr)) ++ptr;
-	
 	// If the first char in the str is '.', it is a command
-	if (*ptr == '\0') {
-		paragraph_add(NULL);
-	} else if (*ptr != '.') {
-		paragraph_add(ptr);
-	} else {
+	if (ptr[0] == '.') {
 		// directive
 		char *tok = strtok(++ptr, " \t\r\n");
 		
@@ -366,6 +357,13 @@ int parse_line(unsigned linenum, char *line) {
 			print_str(" \x01\n\n");
 		} else {
 			errx(1, "error on line %u: invalid directive .%s\n", linenum, tok);
+		}
+	} else {
+		while (*ptr && isspace(*ptr)) ++ptr;
+		if (*ptr == '\0') { // If line empty, insert break
+			paragraph_add(NULL);
+		} else {
+			paragraph_add(ptr);
 		}
 	}
 	
