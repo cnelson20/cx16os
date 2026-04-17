@@ -44,6 +44,8 @@ void print_formatted_paragraph(char space_last_line, char *prefix_str);
 void paragraph_add_word(char *word);
 void paragraph_add(char *str);
 
+#define CHROUT_ADDRESS 0x9D03
+
 void parse_options(int argc, char **argv) {
 	(void)argc;
 	
@@ -108,7 +110,8 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
-char line_buff[257];
+#define LINE_BUFF_SIZE 384
+char line_buff[LINE_BUFF_SIZE + 1];
 
 void parse_file(int fd) {
 	static char *cptr;
@@ -158,8 +161,17 @@ char temp_line_buff[TEMP_LINE_SIZE + 1];
 
 char print_spaces(char count) {
 	static char i;
-	for (i = 0; i != count; ++i) chrout(' ');
-	
+
+	i = count;
+	__asm__ ("lda #%b", ' ');
+	__asm__ ("ldx %v", i);
+	__asm__ ("beq %g", print_spaces_loop_end);
+	print_spaces_loop:
+	__asm__ ("jsr %w", CHROUT_ADDRESS);
+	__asm__ ("dex");
+	__asm__ ("bne %g", print_spaces_loop);
+	print_spaces_loop_end:	
+
 	return count;
 }
 
