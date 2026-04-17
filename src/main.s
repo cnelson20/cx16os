@@ -387,6 +387,13 @@ irq_re_caller:
 	jmp program_exit
 	:
 
+	;lda STORE_PROG_SP + 1
+	;cmp #>$0200
+	;bcc :+
+	;lda #RETURN_PAGE_BREAK
+	;jmp program_exit
+	;:
+
 	lda keyhandler_queue_pass_active_process
 	beq :+
 	jsr pass_active_process
