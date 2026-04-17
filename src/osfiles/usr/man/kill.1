@@ -1,0 +1,26 @@
+.TH KILL(1),User Commands,KILL(1)
+
+.SH NAME
+kill - terminate a process
+
+.SH SYNOPSIS
+kill pid
+
+.SH DESCRIPTION
+kill terminates the process whose bank number (process ID) is pid.
+
+pid is parsed as a number in decimal, or in hexadecimal with a leading $ or 0x.
+
+Only a single pid is accepted.
+No signal selection is supported; the target process is killed unconditionally.
+
+.SH DIAGNOSTICS
+kill: ARG: argument must be process ID / bank - the pid could not be parsed as a number.
+
+kill: (ARG) - No such process - no process currently occupies the given bank.
+
+.SH EXIT STATUS
+kill exits 0 whether or not the target process existed.
+
+.SH SEE ALSO
+ps(1)

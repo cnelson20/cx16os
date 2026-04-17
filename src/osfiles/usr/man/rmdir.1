@@ -1,0 +1,29 @@
+.TH RMDIR(1),User Commands,RMDIR(1)
+
+.SH NAME
+rmdir - remove directories
+
+.SH SYNOPSIS
+rmdir directory ...
+
+.SH DESCRIPTION
+rmdir removes each named directory.
+At least one operand is required.
+
+A directory must be empty to be removed.
+rmdir does not recursively delete contents.
+
+.SH DIAGNOSTICS
+rmdir: missing operand - no arguments were given.
+
+Error deleting directory 'X' - the directory could not be removed (not empty, does not exist, not a directory, etc.).
+rmdir continues with any remaining operands after reporting the error.
+
+.SH EXIT STATUS
+0: No operands were missing.
+rmdir exits 0 even if some removals failed.
+
+1: No operand was given.
+
+.SH SEE ALSO
+mkdir(1), rm(1)

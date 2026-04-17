@@ -1,0 +1,32 @@
+.TH TIME(1),User Commands,TIME(1)
+
+.SH NAME
+time - measure how long a command takes to run
+
+.SH SYNOPSIS
+time command [arg ...]
+
+.SH DESCRIPTION
+time runs command with the given arguments via shell -c, waits for it to finish, and prints the elapsed wall-clock time to standard error.
+
+The arguments are joined with single spaces and handed to shell(1), so shell quoting, pipelines, and redirections are honoured.
+
+After the command exits, time writes the elapsed time on its own line in the format:
+
+MmSS.sss
+
+where M is minutes (no leading zero), SS is seconds, and sss is a 3-digit fractional component derived from jiffies.
+
+The target command's own stdout and stderr are not redirected;
+the timing line is printed to stderr after the command returns so it does not interleave with normal output when stdout is captured.
+
+.SH EXIT STATUS
+0: Always.
+time reports its own exit rather than propagating the exit status of the timed command.
+
+.SH BUGS
+Elapsed time only tracks jiffies, seconds, and minutes.
+A command that runs across an hour boundary will report an incorrect minutes field.
+
+.SH SEE ALSO
+date(1), sleep(1)

@@ -1,0 +1,70 @@
+.TH ED(1),User Commands,ED(1)
+
+.SH NAME
+ed - line-oriented text editor
+
+.SH SYNOPSIS
+ed [file]
+
+.SH DESCRIPTION
+ed is a line-oriented text editor in the style of the classic Unix ed(1).
+The buffer holds the text being edited, and a command prompt is used to view and modify it one or more lines at a time.
+
+If file is given, it is read into the buffer on startup and becomes the current filename.
+
+Each command line consists of an optional address (or address range) followed by a single command letter and optional arguments.
+Addresses may be line numbers, or the special forms . (current line), $ (last line), or a relative expression such as +N or -N.
+
+.SH COMMANDS
+a: Append. Enter input mode after the addressed line. Terminate input with a single . on its own line.
+
+i: Insert. Enter input mode before the addressed line.
+
+c: Change. Replace the addressed lines with text typed in input mode.
+
+d: Delete the addressed lines.
+
+p: Print the addressed lines.
+
+n: Print addressed lines, each prefixed by its line number.
+
+l: Print addressed lines with non-printable characters shown.
+
+m: Move lines to a new address.
+
+t: Copy (transfer) lines to a new address.
+
+j: Join the addressed lines into one.
+
+y: Yank (copy) addressed lines.
+
+o: Paste (output) yanked lines.
+
+N: Show the number of lines in the buffer.
+
+r file: Read file and append to buffer after the addressed line.
+
+e file: Replace buffer with file contents.
+
+E file: Like e but discard unsaved changes without warning.
+
+w [file]: Write buffer to file (or current filename if omitted).
+
+W [file]: Append buffer to file.
+
+f [file]: Show or set the current filename.
+
+q: Quit. Refuses if the buffer is modified and not yet written.
+
+Q: Quit without warning.
+
+x: Execute an external command.
+
+h: Print the last error.
+
+v, V: Reserved / extension commands.
+
+.SH EXIT STATUS
+0: Normal exit.
+
+Non-zero: Startup error, such as failure to read the file given on the command line.

@@ -1,0 +1,39 @@
+.TH SENDMSG(1),User Commands,SENDMSG(1)
+
+.SH NAME
+sendmsg - send a message on a general hook
+
+.SH SYNOPSIS
+sendmsg -h hook [-c byte]... [-s string]...
+
+.SH DESCRIPTION
+sendmsg assembles a message in an internal buffer from its flag arguments and then sends the resulting bytes on the specified general hook.
+
+Flags are processed left to right.
+Each -c and -s appends to the buffer in the order given;
+-h chooses the destination hook.
+The message is sent once, after all arguments have been processed.
+
+Hook numbers must be in the range 0 through 15 ($00..$0F).
+
+.SH OPTIONS
+-h hook: Destination hook number.
+Parsed as decimal, or hex with a leading $ or 0x.
+Required.
+
+-c byte: Append a single byte to the message buffer.
+Parsed the same way as hook numbers.
+
+-s string: Append the NUL-terminated string to the message buffer, including the terminating NUL.
+
+.SH DIAGNOSTICS
+Error: invalid flag "ARG" - an argument did not begin with - or used an unknown letter.
+
+Error: no hook num provided - no -h was given.
+
+Error: invalid hook num $XX - the hook number was 16 or greater.
+
+.SH EXIT STATUS
+0: Message sent.
+
+1: Invalid flag, missing hook number, or hook number out of range.

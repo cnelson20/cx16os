@@ -1,0 +1,26 @@
+.TH PRNFNT(1),User Commands,PRNFNT(1)
+
+.SH NAME
+prnfnt - print the current font as a character table
+
+.SH SYNOPSIS
+prnfnt
+
+.SH DESCRIPTION
+prnfnt prints every byte value 0x00..0xFF as a 16x16 grid using the currently loaded console font.
+The header row shows the low nibble 0..F across the top;
+the leftmost column of each row shows the high nibble.
+
+Each cell is emitted with the CHROUT literal prefix byte 0x80, so control codes are rendered as their glyphs rather than being interpreted.
+
+prnfnt takes no arguments.
+
+.SH DISPLAY
+On terminals at least 40 columns wide (the usual case), each row is separated by two blank lines so that 8-pixel-tall and 16-pixel-tall fonts both render cleanly.
+On narrower terminals a single blank line is used so the grid still fits.
+
+.SH EXIT STATUS
+0: Table printed.
+
+.SH SEE ALSO
+font(1)

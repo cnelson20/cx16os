@@ -1,0 +1,26 @@
+.TH MKDIR(1),User Commands,MKDIR(1)
+
+.SH NAME
+mkdir - create directories
+
+.SH SYNOPSIS
+mkdir directory ...
+
+.SH DESCRIPTION
+mkdir creates each named directory.
+At least one operand is required.
+
+A single trailing slash on any operand is stripped before the directory is created.
+
+mkdir does not create intermediate parent directories; every component up to the final name must already exist.
+
+.SH DIAGNOSTICS
+mkdir: missing operand - no arguments were given.
+
+Error creating directory 'X' - the directory could not be created (already exists, parent missing, filesystem error, etc.).
+mkdir continues with any remaining operands after reporting the error.
+
+.SH EXIT STATUS
+0: All directories created successfully.
+
+1: No operand was given, or at least one directory failed to be created.

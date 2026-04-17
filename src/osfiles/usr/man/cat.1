@@ -1,0 +1,35 @@
+.TH CAT(1),User Commands,CAT(1)
+
+.SH NAME
+cat - concatenate and print files
+
+.SH SYNOPSIS
+cat [file ...]
+
+.SH DESCRIPTION
+cat reads each file in sequence and writes its contents to standard output.
+If no file operands are given, cat reads from standard
+input one byte at a time until end-of-input.
+
+Files are processed in the order given on the command line.
+If a file cannot be opened,
+cat prints an error message identifying the file and the error code, then continues with the next file.
+
+Unlike the typical POSIX cat, no formatting options
+(numbering, visible characters, etc.) are supported.
+
+.SH EXAMPLES
+Print a single file:
+
+$ cat /etc/motd
+
+Concatenate multiple files:
+
+$ cat header.txt body.txt
+
+Echo standard input:
+
+$ cat
+
+.SH EXIT STATUS
+cat exits 0 after processing all operands, regardless of whether individual files failed to open.

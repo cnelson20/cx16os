@@ -1,0 +1,19 @@
+.TH FONT(1),User Commands,FONT(1)
+
+.SH NAME
+font - load a Unifont-derived 8x16 text-mode font
+
+.SH SYNOPSIS
+font
+
+.SH DESCRIPTION
+font switches the console into 80x30 text mode and uploads an 8x16 glyph set derived from GNU Unifont into VERA tile memory.
+After font completes, subsequent text output uses the new glyphs until the display mode is changed again.
+
+font locks the VERA registers for the duration of the upload and restores them before exiting.
+It takes no options or arguments.
+
+.SH EXIT STATUS
+0: Font loaded successfully.
+
+1: Failed to acquire the VERA register lock.

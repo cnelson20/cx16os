@@ -1,0 +1,27 @@
+.TH MV(1),User Commands,MV(1)
+
+.SH NAME
+mv - rename a file
+
+.SH SYNOPSIS
+mv source destination
+
+.SH DESCRIPTION
+mv renames source to destination using the underlying filesystem rename operation.
+Exactly two operands are required.
+
+Only a single source/destination pair is supported.
+mv does not copy data between filesystems; source and destination must live on the same filesystem.
+
+.SH DIAGNOSTICS
+mv: missing file operand - no arguments were given.
+
+mv: missing destination file operand after 'SOURCE' - only a single operand was given.
+
+.SH EXIT STATUS
+0: Rename issued.
+
+1: No operand was given, or only a source was given.
+
+.SH SEE ALSO
+cp(1)

@@ -1,0 +1,47 @@
+.TH SWAPTERM(1),User Commands,SWAPTERM(1)
+
+.SH NAME
+swapterm - multi-terminal console multiplexer
+
+.SH SYNOPSIS
+swapterm
+
+.SH DESCRIPTION
+swapterm takes over the system CHROUT hook and general hook 1 and presents up to four virtual terminals sharing the screen.
+Each running process is bound to one of the four terminals, and only the currently displayed terminal is rendered;
+the others remain live but hidden.
+
+swapterm allocates an extended-memory bank as a ring buffer for incoming CHROUT bytes, and a second as per-process line buffers.
+Output from every process is tagged with its PID, buffered, and then drawn into the VERA tilemap associated with that process's assigned terminal.
+
+The program runs until it is killed.
+
+.SH HOOK 1 PROTOCOL
+Other programs control the multiplexer by sending two-byte messages on general hook 1:
+
+byte 0: target PID
+
+byte 1: command
+
+If command is 0..3, the target process is reassigned to that terminal index.
+If command is 4..7, the currently displayed terminal is switched to index (command - 4);
+the PID byte is ignored in this case.
+
+.SH DIAGNOSTICS
+swapterm exits with status 1 if:
+
+- the VERA register lock cannot be acquired (another program owns it)
+
+- the CHROUT hook is already in use
+
+- general hook 1 is already in use
+
+No error message is printed.
+
+.SH EXIT STATUS
+0: Normal exit (not reachable from the main loop - swapterm runs until killed).
+
+1: A required hook or VERA lock could not be claimed.
+
+.SH SEE ALSO
+kill(1), ps(1)

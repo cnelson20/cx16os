@@ -1,0 +1,44 @@
+.TH TOP(1),User Commands,TOP(1)
+
+.SH NAME
+top - continuously display running processes
+
+.SH SYNOPSIS
+top
+
+.SH DESCRIPTION
+top clears the screen and redraws a table of every running process about once per second, refreshing when the system-clock seconds value changes.
+
+Each refresh shows the current wall-clock time followed by one line per live process.
+
+.SH OUTPUT
+Header:
+
+cx16top  HH:MM:SS
+
+Column header:
+
+PID PRI A PAR EXT NAME
+
+PID: process ID in decimal.
+
+PRI: scheduling priority.
+
+A: marked * if the process is the active process, blank otherwise.
+
+PAR: parent PID in decimal.
+
+EXT: number of extended-memory banks owned by the process.
+
+NAME: up to 16 characters of the recorded process name.
+
+.SH KEYS
+q, Q: quit.
+
+All other keys are ignored.
+
+.SH EXIT STATUS
+0: User pressed q.
+
+.SH SEE ALSO
+kill(1), ps(1)

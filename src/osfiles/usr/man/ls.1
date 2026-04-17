@@ -1,0 +1,33 @@
+.TH LS(1),User Commands,LS(1)
+
+.SH NAME
+ls - list directory contents
+
+.SH SYNOPSIS
+ls [-aACFhl] [file ...]
+
+.SH DESCRIPTION
+ls lists each file argument.
+For directories, the contents of the directory are listed; for regular files, the filename is printed.
+With no argument, ls lists the current working directory.
+
+When multiple files are given, each is listed in turn.
+Flag letters may be bundled after a single - (for example, -aF).
+
+.SH OPTIONS
+-a: List all entries including those starting with . (dotfiles) and the implied . and .. entries.
+
+-A: List dotfiles but omit the implied . and .. entries.
+
+-C: Colorise output. Directories are shown in blue and executable files in green.
+
+-F: Classify. Append / to directory names and * to executable filenames.
+
+-l: Use a long listing format with additional metadata.
+
+-h: Print a short usage summary and exit 0.
+
+.SH EXIT STATUS
+0: All arguments listed successfully.
+
+1: An unknown option was given or a file could not be opened.

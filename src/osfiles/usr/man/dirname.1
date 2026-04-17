@@ -1,0 +1,40 @@
+.TH DIRNAME(1),User Commands,DIRNAME(1)
+
+.SH NAME
+dirname - strip the last component from a pathname
+
+.SH SYNOPSIS
+dirname string [string ...]
+
+.SH DESCRIPTION
+dirname prints the directory portion of each string.
+For each argument, trailing slashes are removed, then the final slash-delimited component is stripped, and any remaining trailing slashes are removed again.
+
+If the resulting string would be empty, a single slash is printed when the input began with slashes, and a single dot is printed otherwise.
+
+If the input is exactly //, the implementation prints // (preserved).
+
+Each result is printed on its own line.
+
+.SH EXAMPLES
+$ dirname /usr/bin/sort
+
+ /usr/bin
+
+$ dirname stdio.h
+
+ .
+
+$ dirname /
+
+ /
+
+$ dirname /usr/local/ include/stdio.h
+
+ /usr
+ include
+
+.SH EXIT STATUS
+0: At least one operand was processed.
+
+1: No operand was given.

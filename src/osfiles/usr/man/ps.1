@@ -1,0 +1,48 @@
+.TH PS(1),User Commands,PS(1)
+
+.SH NAME
+ps - list running processes
+
+.SH SYNOPSIS
+ps [-aeh] [-p pid[,pid...]]
+
+.SH DESCRIPTION
+ps prints one line per process showing PID, instance ID, parent PID, and command name.
+
+By default, ps lists only processes that share an ancestor with itself, so a ps run from a shell shows the shell and its descendants.
+With -a or -e, every live process in the system is shown.
+With -p, only the processes whose PIDs are listed are shown.
+
+PIDs given to -p may be separated by commas or spaces.
+PIDs are parsed as numbers in decimal, or in hexadecimal with a leading $ or 0x.
+
+.SH OUTPUT
+The first line is a header:
+
+ PID  IID PPID CMD
+
+PID is printed as a 3-digit decimal bank number.
+IID is printed as 0xNN.
+PPID is the parent PID in decimal.
+CMD is the command name recorded for the process.
+
+.SH OPTIONS
+-a, -e: List all processes in the system.
+
+-p pid[,pid...]: List only the named processes.
+Overrides the default ancestor filter.
+
+-h: Print a short usage summary and exit 0.
+
+.SH DIAGNOSTICS
+ps: unknown option -- X - an unrecognised flag was given.
+
+ps: option requires an argument -- X - -p was given with no argument.
+
+.SH EXIT STATUS
+0: Listing completed.
+
+1: An unknown option was given or -p was missing its argument.
+
+.SH SEE ALSO
+kill(1), top(1)

@@ -1,0 +1,37 @@
+.TH COWSAY(1),User Commands,COWSAY(1)
+
+.SH NAME
+cowsay - print a message as ASCII art spoken by a cow
+
+.SH SYNOPSIS
+cowsay [-l] [-w width] [-h] [message ...]
+
+.SH DESCRIPTION
+cowsay prints a speech bubble containing the given message,
+followed by an ASCII-art cow pointing at the bubble.
+
+If no message is given on the command line, cowsay reads the message from standard input.
+Input read from stdin is split into words at newlines.
+
+Message words are flowed across multiple lines as needed to fit within the bubble width.
+
+.SH OPTIONS
+-w width: Set the maximum bubble width in characters.
+The default is 40.
+
+-l: Literal mode.
+Print each argument on its own line instead of flowing words across lines.
+
+-h: Print a short usage summary and exit 0.
+
+.SH EXAMPLES
+$ cowsay hello world
+
+$ cowsay -w 20 the quick brown fox
+
+$ echo "moo" | cowsay
+
+.SH EXIT STATUS
+0: Message printed.
+
+1: Option -w was given without a width argument.

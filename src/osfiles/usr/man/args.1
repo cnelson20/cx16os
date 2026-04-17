@@ -1,0 +1,22 @@
+.TH ARGS(1),User Commands,ARGS(1)
+
+.SH NAME
+args - print each command-line argument
+
+.SH SYNOPSIS
+args [argument ...]
+
+.SH DESCRIPTION
+args prints each argument it receives, one per line, prefixed with a hexadecimal index and quoted.
+It is primarily useful for debugging argument parsing, quoting, and word-splitting behavior in the shell.
+
+Each line has the form [NN]: 'argument' where NN is a two-digit hex index starting at 00.
+
+.SH EXAMPLES
+$ args hello world
+
+ [00]: 'hello'
+ [01]: 'world'
+
+.SH EXIT STATUS
+args always exits 0.

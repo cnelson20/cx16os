@@ -1,0 +1,36 @@
+.TH FACTOR(1),User Commands,FACTOR(1)
+
+.SH NAME
+factor - print the prime factorization of a number
+
+.SH SYNOPSIS
+factor number
+
+.SH DESCRIPTION
+factor prints number followed by a colon and each of its prime factors separated by spaces.
+Repeated prime factors are printed once per occurrence.
+
+number is parsed as a 32-bit integer.
+It may be given in decimal, or in hexadecimal when prefixed with $ or 0x.
+
+Factors below 2 produce no factorization: the number is printed followed by the colon and a newline.
+
+Trial division is used, so the time to factor a number grows with the square root of its largest prime factor.
+
+.SH EXAMPLES
+$ factor 60
+
+ 60: 2 2 3 5
+
+$ factor 4294967291
+
+ 4294967291: 4294967291
+
+$ factor 0xFF
+
+ 255: 3 5 17
+
+.SH EXIT STATUS
+0: Factorization printed successfully.
+
+1: No number was given, or the argument could not be parsed as a number.

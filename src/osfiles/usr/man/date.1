@@ -1,0 +1,87 @@
+.TH DATE(1),User Commands,DATE(1)
+
+.SH NAME
+date - print the current date and time
+
+.SH SYNOPSIS
+date [+format]
+
+.SH DESCRIPTION
+date prints the current date and time read from the system clock.
+With no argument, it uses the default format "%a %b %e %H:%M:%S %Z %Y".
+
+If an argument is given, it must begin with a + sign.
+The rest of the string is treated as a format specifier in which %-escapes are substituted with date fields and all other characters are copied verbatim.
+
+.SH FORMAT SPECIFIERS
+%a: abbreviated weekday name (Sun, Mon, ...)
+
+%A: full weekday name
+
+%b, %h: abbreviated month name (Jan, Feb, ...)
+
+%B: full month name
+
+%d: day of month, two-digit zero-padded
+
+%D, %x: MM/DD/YYYY
+
+%e: day of month, space-padded
+
+%H: hour (00-23)
+
+%I: hour (01-12)
+
+%j: day of year, three-digit zero-padded
+
+%m: month (01-12)
+
+%M: minute (00-59)
+
+%p: AM or PM
+
+%r: 12-hour time with AM/PM
+
+%S: second (00-59)
+
+%T, %X: HH:MM:SS
+
+%u: day of week (1=Monday, 7=Sunday)
+
+%U: week of year, Sunday-based
+
+%V: week of year, ISO-style (Monday-based)
+
+%w: day of week (0=Sunday, 6=Saturday)
+
+%y: year, last two digits
+
+%Y: year, four digits
+
+%Z: time zone (always empty on cx16os)
+
+%n: newline
+
+%t: tab
+
+%%: literal percent sign
+
+Unrecognized % escapes print a literal % followed by the escape character.
+
+.SH EXAMPLES
+Default output:
+
+$ date
+
+ISO-style date:
+
+$ date +%Y-%m-%d
+
+24-hour time only:
+
+$ date +%T
+
+.SH EXIT STATUS
+0: Date printed.
+
+1: More than one operand given, or format string does not begin with +.

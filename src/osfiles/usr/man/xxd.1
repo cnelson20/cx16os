@@ -1,0 +1,42 @@
+.TH XXD(1),User Commands,XXD(1)
+
+.SH NAME
+xxd - hex dump of a file
+
+.SH SYNOPSIS
+xxd [-h] [-c cols] [-w width] [file ...]
+
+.SH DESCRIPTION
+xxd prints each named file as a hex dump.
+Each output line has an offset, a group of hex-encoded bytes, and a text rendering in which non-printable bytes are shown as a dot.
+
+With no file operand, xxd reads from standard input.
+
+When multiple files are given, their dumps are concatenated with no separator;
+the offset is shared across files and continues to grow.
+
+.SH OPTIONS
+-c cols: Number of bytes per row.
+Default is 16.
+cols is parsed as decimal, or hex with a leading $ or 0x.
+
+-w width: Width of the printed offset, in hex digits, 1 through 4.
+Default is 4.
+Values outside 1..4 are silently ignored.
+
+-h: Print a short usage summary and exit 0.
+
+.SH DIAGNOSTICS
+xxd: unknown option -- X - an unrecognised flag was given.
+
+xxd: option requires an argument -- X - -c or -w was given with no argument.
+
+xxd: FILE: No such file exists - a named file could not be opened.
+
+.SH EXIT STATUS
+0: All files dumped.
+
+1: A file could not be opened, or an invalid option was supplied.
+
+.SH SEE ALSO
+strings(1)

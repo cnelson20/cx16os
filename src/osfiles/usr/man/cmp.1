@@ -1,0 +1,40 @@
+.TH CMP(1),User Commands,CMP(1)
+
+.SH NAME
+cmp - compare two files byte by byte
+
+.SH SYNOPSIS
+cmp [-lsh] [--] file1 file2
+
+.SH DESCRIPTION
+cmp reads file1 and file2 one byte at a time and reports the first position at which they differ.
+A filename of - reads from standard input.
+
+With no options, cmp prints a message of the form "file1 file2 differ: char N, line M" at the first differing byte and exits 1.
+If one file is a prefix of the other, cmp prints "EOF on FILE after byte N" and exits 1.
+If the files are identical, cmp exits 0 with no output.
+
+.SH OPTIONS
+-l: Print each pair of differing bytes as "byte-number octal1 octal2" and continue comparing rather than stopping at the first difference.
+
+-s: Silent. Suppress all output; only the exit status indicates the result.
+
+-h: Print a brief usage summary and exit 0.
+
+--: End of options. Subsequent arguments are treated as filenames even if they begin with -.
+
+.SH EXIT STATUS
+0: Files are identical.
+
+1: Files differ or one is a prefix of the other.
+
+2: Invalid usage, missing filename, or failure to open a file.
+
+.SH EXAMPLES
+Quiet check (exit status only):
+
+$ cmp -s a.bin b.bin
+
+Report every differing byte:
+
+$ cmp -l a.bin b.bin

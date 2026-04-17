@@ -1,0 +1,54 @@
+.TH DIFF(1),User Commands,DIFF(1)
+
+.SH NAME
+diff - compare two text files line by line
+
+.SH SYNOPSIS
+diff [-uqih] [-U N] [--] file1 file2
+
+.SH DESCRIPTION
+diff compares file1 and file2 line by line and reports the differences.
+Either filename may be - or #stdin to read from standard input.
+
+diff uses the Myers O(ND) algorithm and loads both files into extended memory banks.
+The maximum supported input is 300 lines per file, with each line up to 127 characters long.
+The edit distance is capped at 35; files that differ by more than 35 line-level insertions or deletions cannot be diffed.
+
+By default, diff prints a minimal summary of changes.
+The -u option produces unified-diff output with context, suitable for patch(1) tools.
+
+.SH OPTIONS
+-u: Unified output format.
+Print a standard unified-diff with context lines around each hunk.
+
+-U N: Like -u, but use N lines of context around each hunk.
+Default context is 3 lines.
+
+-q: Quiet.
+Report only whether the files differ, suppressing the actual diff output.
+
+-i: Ignore case when comparing lines.
+
+-h: Print a short usage summary and exit 2.
+
+--: End of options. Subsequent arguments are treated as filenames.
+
+.SH EXIT STATUS
+0: Files are identical.
+
+1: Files differ.
+
+2: Usage error, file could not be read, or diff exceeded internal limits.
+
+.SH EXAMPLES
+Unified diff:
+
+$ diff -u old.c new.c
+
+Quiet check:
+
+$ diff -q a.txt b.txt
+
+Case-insensitive:
+
+$ diff -i README readme

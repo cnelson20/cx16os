@@ -1,0 +1,32 @@
+.TH 2048(1),User Commands,2048(1)
+
+.SH NAME
+2048 - sliding tile puzzle game
+
+.SH SYNOPSIS
+2048
+
+.SH DESCRIPTION
+2048 is an implementation of the classic 4x4 sliding tile puzzle.
+Tiles labelled with powers of two are combined by sliding the board in one of four directions;
+two tiles with the same value merge into a single tile of twice the value.
+A new tile (value 2 or 4) appears after each move that changes the board.
+The goal is to create a tile with the value 2048, but play may continue after that.
+
+The current score and the highest tile reached are displayed above the board.
+
+.SH CONTROLS
+W or up-arrow: slide up
+
+A or left-arrow: slide left
+
+S or down-arrow: slide down
+
+D or right-arrow: slide right
+
+Q: quit
+
+The game ends when no move can change the board.
+
+.SH EXIT STATUS
+2048 exits 0 when the player quits or no moves remain.

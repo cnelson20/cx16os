@@ -1,0 +1,64 @@
+.TH CRON(1),User Commands,CRON(1)
+
+.SH NAME
+cron - run commands on a schedule
+
+.SH SYNOPSIS
+cron crontab
+
+.SH DESCRIPTION
+cron reads the named crontab file once at startup, then wakes every minute and runs any command whose schedule matches the current time.
+
+cron runs in the foreground at priority 4 and never returns on its own;
+kill it with kill(1) when you're done.
+
+.SH CRONTAB FORMAT
+Each non-empty line has five time fields followed by a command:
+
+minute hour day-of-month month day-of-week command
+
+Field values:
+
+minute: 0-59
+
+hour: 0-23
+
+day-of-month: 1-31
+
+month: 1-12
+
+day-of-week: 0-6 (0 is Sunday)
+
+Each field may be:
+
+A single number - match only that value.
+
+A range X-Y - match any value from X through Y inclusive.
+
+A comma-separated list - each element may itself be a number or a range, e.g. 0,15,30-45.
+
+* - match every value.
+
+Up to 12 ranges may appear in one field.
+
+Commands are executed via shell -c, so pipes, redirections, and shell built-ins are available.
+Lines longer than 511 characters are truncated.
+
+.SH MATCHING
+For a given minute, a command runs if all five fields match the current minute, hour, month, and either day-of-month or day-of-week.
+The day fields are OR-ed: a command with day-of-month=1 and day-of-week=0 runs on every Sunday AND on the first of every month.
+
+.SH DIAGNOSTICS
+cron: missing crontab file to open - no argument was given.
+
+Error opening file 'FILE', code #:NN - the crontab could not be opened.
+
+A line containing a malformed field is echoed back to stderr and cron exits.
+
+.SH EXIT STATUS
+0: Never reached on the main path.
+
+1: No crontab was supplied, the file could not be opened, or a line failed to parse.
+
+.SH SEE ALSO
+kill(1), sleep(1)

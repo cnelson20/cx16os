@@ -1,0 +1,115 @@
+.TH VI(1),User Commands,VI(1)
+
+.SH NAME
+vi - screen-oriented text editor
+
+.SH SYNOPSIS
+vi [file]
+
+.SH DESCRIPTION
+vi is a modal, screen-oriented text editor.
+If file is given, it is loaded into the edit buffer;
+otherwise the editor starts on an empty buffer.
+
+Lines are stored in extended-memory banks, and the editor maintains its own ordered line index.
+vi takes over stdin in unbuffered mode while running.
+
+.SH MODES
+Normal: the starting mode.
+Keys are interpreted as commands.
+
+Insert: text typed is inserted at the cursor.
+Enter with i, I, a, A, o, or O.
+Leave with Esc.
+
+Command-line: accessed by pressing :.
+A line is typed at the bottom of the screen and executed on Enter.
+Esc cancels.
+
+.SH NORMAL-MODE COMMANDS
+h, left arrow: move cursor one column left
+
+l, right arrow: move cursor one column right
+
+j, down arrow: move cursor one line down
+
+k, up arrow: move cursor one line up
+
+0: move cursor to start of line
+
+$: move cursor to end of line
+
+w: move forward one word
+
+b: move back one word
+
+gg: move to first line
+
+G: move to last line
+
+i: insert before cursor
+
+I: insert at beginning of line
+
+a: insert after cursor
+
+A: insert at end of line
+
+o: open a new line below and insert
+
+O: open a new line above and insert
+
+x, Delete: delete character under cursor
+
+dd: delete the current line
+
+yy: yank (copy) the current line
+
+p: put yanked line after the current line
+
+P: put yanked line before the current line
+
+/: begin a search prompt
+
+n: repeat last search forward
+
+N: repeat last search backward
+
+:: enter command-line mode
+
+.SH COMMAND-LINE COMMANDS
+:q: quit.
+Refused if the buffer has unsaved changes.
+
+:q!: quit without saving.
+
+:w: write buffer to the current filename.
+
+:w FILE: set the filename to FILE and write.
+
+:wq: write and quit.
+
+:x: write and quit.
+
+:e FILE: load FILE, replacing the current buffer.
+
+:N: move the cursor to line N (decimal).
+
+:M,Nd: delete lines M through N inclusive.
+
+.SH SEARCH
+/ reads a pattern at the status line;
+Enter runs the search.
+n and N repeat it forward or backward, starting from the line after (or before) the cursor line.
+
+.SH LIMITS
+Line length is limited to 255 characters by the edit scratch buffers.
+Filenames, search patterns, and command-line input each have their own fixed-size buffers.
+
+.SH EXIT STATUS
+0: Clean exit (including :q! with unsaved changes).
+
+1: Failed to reserve the extended-memory banks the editor needs to start.
+
+.SH SEE ALSO
+ed(1)

@@ -1,0 +1,46 @@
+.TH CP(1),User Commands,CP(1)
+
+.SH NAME
+cp - copy files
+
+.SH SYNOPSIS
+cp [-h] [--] source dest
+
+cp [-h] [--] source ... directory
+
+.SH DESCRIPTION
+cp copies each source file to dest.
+In the two-operand form, source is copied to dest.
+If more than two operands are given, the last operand must be an existing directory and each source is copied into it, keeping its basename.
+
+If the final operand is not a directory and more than two operands are given, cp prints an error and exits without copying.
+
+.SH OPTIONS
+-h: Print a short usage summary and exit 0.
+
+--: End of options. Subsequent arguments are treated as filenames even if they begin with -.
+
+.SH DIAGNOSTICS
+cp: missing file operand - no arguments were given.
+
+cp: missing destination file operand after 'X' - only one operand was given.
+
+cp: target 'X' is not a directory - more than two operands were given but the final one is not a directory.
+
+cp: source file 'X' does not exist - a named source could not be opened.
+
+cp: unable to copy file 'X' to path 'Y' - the copy operation failed.
+
+.SH EXIT STATUS
+0: All files copied successfully.
+
+1: Usage error or at least one copy failed.
+
+.SH EXAMPLES
+Copy one file:
+
+$ cp a.txt b.txt
+
+Copy multiple files into a directory:
+
+$ cp README Makefile /tmp/

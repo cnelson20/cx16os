@@ -1,0 +1,34 @@
+.TH RM(1),User Commands,RM(1)
+
+.SH NAME
+rm - remove files
+
+.SH SYNOPSIS
+rm file ...
+
+.SH DESCRIPTION
+rm unlinks each named file.
+At least one operand is required.
+
+rm opens each file for reading before unlinking, so a non-existent file is reported rather than silently ignored.
+
+rm does not remove directories;
+use rmdir(1) for those.
+
+.SH DIAGNOSTICS
+rm: missing operand - no arguments were given.
+
+rm: error removing 'X': No such file - the file did not exist.
+
+rm: error removing 'X': Unknown error - unlink failed for some other reason (permission, directory, etc.).
+
+After reporting an error, rm continues with the remaining operands.
+
+.SH EXIT STATUS
+0: No operands were missing.
+rm exits 0 even if some removals failed.
+
+1: No operand was given.
+
+.SH SEE ALSO
+rmdir(1)

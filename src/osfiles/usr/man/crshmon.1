@@ -1,0 +1,22 @@
+.TH CRSHMON(1),User Commands,CRSHMON(1)
+
+.SH NAME
+crshmon - crash monitor: report when processes exit abnormally
+
+.SH SYNOPSIS
+crshmon
+
+.SH DESCRIPTION
+crshmon runs in the background and polls the system process table.
+When it detects a process transitioning from a running state to a terminated state with an exit status >= $80 (abnormal termination), it prints a line of the form:
+
+  pid $NN exited with code $XX
+
+where NN is the process bank number and XX is the exit code, both in hexadecimal.
+
+crshmon lowers its own priority so it consumes minimal CPU time, and runs until killed.
+
+It is intended as a diagnostic aid for watching for unexpected process crashes during development; no options are accepted.
+
+.SH EXIT STATUS
+crshmon does not exit on its own; it must be terminated with kill.

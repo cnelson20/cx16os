@@ -1,0 +1,40 @@
+.TH FORMAT(1),User Commands,FORMAT(1)
+
+.SH NAME
+format - format a text document with justified paragraphs
+
+.SH SYNOPSIS
+format [-h] [file]
+
+.SH DESCRIPTION
+format reads file (or standard input if no file is given) and prints it as text flowed into paragraphs justified to the current terminal width.
+Consecutive non-blank lines are combined into a single paragraph; blank lines separate paragraphs.
+All but the last line of each paragraph have their words spaced apart to reach the full terminal width, and paragraphs are indented with a tab.
+
+format also recognises a small subset of troff-style directives.
+Any line beginning with a period is interpreted as a directive:
+
+ .TH title,section,header: Print a centered title line with the given fields separated by commas.
+
+ .SH heading: Print a section heading in plain text.
+
+ .I heading: Print a section heading in inverted colors.
+
+Other directives are a fatal error.
+This makes format the renderer used by man(1) for cx16os man pages.
+
+.SH OPTIONS
+-h: Print a short usage summary and exit 0.
+
+.SH LIMITS
+Lines longer than 256 characters are a fatal error.
+The internal paragraph buffer holds 4096 bytes;
+when full, format flushes the current paragraph and continues.
+
+.SH EXIT STATUS
+0: File processed successfully.
+
+1: File could not be opened, a line was too long, or an unknown directive was encountered.
+
+.SH SEE ALSO
+man(1)

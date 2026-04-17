@@ -1,0 +1,30 @@
+.TH BASENAME(1),User Commands,BASENAME(1)
+
+.SH NAME
+basename - strip directory and suffix from a pathname
+
+.SH SYNOPSIS
+basename string [suffix]
+
+.SH DESCRIPTION
+basename prints the final component of string, with any trailing slashes removed.
+If string is entirely slashes, a single slash is printed.
+If string is empty, the output is implementation-defined.
+
+If the optional suffix is given and is not identical to the remaining component
+but does match as a trailing suffix, it is removed from the printed result.
+It is not an error for suffix not to match.
+
+The result is followed by a newline.
+
+.SH EXAMPLES
+$ basename /usr/bin/sort
+
+ sort
+
+$ basename /usr/local/include/stdio.h .h
+
+ stdio
+
+.SH EXIT STATUS
+basename exits 0 on success, or 1 if no string operand is given.

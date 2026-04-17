@@ -1,0 +1,43 @@
+.TH STRINGS(1),User Commands,STRINGS(1)
+
+.SH NAME
+strings - print printable character sequences from files
+
+.SH SYNOPSIS
+strings [-fh] [-n length] [-t {d,x}] file ...
+
+.SH DESCRIPTION
+strings reads each named file and prints every run of at least length consecutive printable bytes, one run per output line.
+A byte is printable if it lies in the range 0x20..0x7E.
+The default minimum run length is 4.
+
+At least one file operand is required;
+strings does not read from standard input.
+
+When -t is given, the file offset of the start of each run is printed before the run itself.
+When -f is given, the filename is printed before each run.
+
+.SH OPTIONS
+-f: Print the name of the file before each string.
+
+-n length: Minimum run length (default 4).
+length is parsed as decimal, or hex with a leading $ or 0x.
+
+-t d: Print the byte offset of each run in decimal.
+
+-t x, -t $: Print the byte offset of each run in hexadecimal.
+
+-h: Print a short usage summary and exit 0.
+
+.SH LIMITS
+Up to 16 file operands may be given on a single command line.
+
+.SH DIAGNOSTICS
+strings: missing file operand - no file was given.
+
+strings: error opening file 'X', code #:NN - a named file could not be opened.
+
+.SH EXIT STATUS
+0: All files processed.
+
+1: No file was given, a file could not be opened, or an invalid option was supplied.

@@ -1,0 +1,29 @@
+.TH TOUCH(1),User Commands,TOUCH(1)
+
+.SH NAME
+touch - create empty files
+
+.SH SYNOPSIS
+touch [-c] file ...
+
+.SH DESCRIPTION
+touch ensures that each named file exists.
+For every operand, touch first tries to open the file for reading;
+if that fails, it creates an empty file of the same name.
+
+At least one file operand is required.
+
+touch does not update access or modification times on files that already exist.
+
+.SH OPTIONS
+-c: Do not create missing files.
+Files that already exist are still opened and closed;
+files that do not exist are silently skipped.
+
+.SH DIAGNOSTICS
+touch: FILE: ... - a file could not be created.
+
+.SH EXIT STATUS
+0: All named files exist or were created.
+
+1: No operand was given, an invalid option was supplied, or a file could not be created.

@@ -1,0 +1,42 @@
+.TH PASTE(1),User Commands,PASTE(1)
+
+.SH NAME
+paste - merge corresponding lines of files
+
+.SH SYNOPSIS
+paste [-s] [-d delimiters] [file ...]
+
+.SH DESCRIPTION
+paste writes lines from each named file to standard output, separated by a delimiter.
+A file operand of - refers to standard input.
+If no file is given, paste reads from standard input.
+
+In the default parallel mode, paste reads one line from each file in turn and writes them on a single output line separated by delimiters.
+Output continues until every file reaches end-of-file;
+a file that has run out contributes an empty field to the remaining lines.
+
+With -s, paste operates on one file at a time, joining every line of that file onto a single output line before moving on to the next file.
+
+The delimiter list is cycled: the first delimiter is used between the first pair of fields, the second between the second pair, and so on, wrapping to the beginning of the list as needed.
+
+.SH OPTIONS
+-d delimiters: Use the characters of delimiters as the separator list instead of the default tab.
+Up to 15 delimiter characters are accepted.
+
+-s: Serial mode. Concatenate every line of each file onto a single output line before processing the next file.
+
+.SH LIMITS
+At most 8 files may be merged at once.
+Lines longer than 127 characters are split across multiple output records.
+
+.SH DIAGNOSTICS
+paste: invalid delimiter list - -d was given an empty or over-long argument.
+
+paste: too many files (max 8) - more than 8 file operands were supplied.
+
+paste: FILE: ... - a named file could not be opened.
+
+.SH EXIT STATUS
+0: All input processed successfully.
+
+1: A file could not be opened, an invalid option was given, or too many files were supplied.

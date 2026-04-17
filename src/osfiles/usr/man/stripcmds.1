@@ -1,0 +1,27 @@
+.TH STRIPCMDS(1),User Commands,STRIPCMDS(1)
+
+.SH NAME
+stripcmds - strip control characters from text
+
+.SH SYNOPSIS
+stripcmds [-bch]
+
+.SH DESCRIPTION
+stripcmds reads standard input and writes it to standard output, dropping bytes that would be interpreted as control codes by the terminal.
+
+By default, only LF (0x0A), CR (0x0D), printable ASCII (0x20..0x7E), extended characters (0xA0..0xFF), and VERBATIM_MODE (0x80) are passed through.
+All other bytes - including color-change codes and cursor controls - are removed.
+
+When VERBATIM_MODE (0x80) is emitted, the byte immediately following it is also passed through unconditionally, regardless of the filter in effect.
+
+.SH OPTIONS
+-b: Pass all printable bytes through, but still strip color-change control codes (SWAP_COLORS and the COLOR_* codes).
+Useful for capturing output that should keep its layout but lose its colors.
+
+-c: Allow color-change control codes to pass through.
+The filter still removes other non-printable bytes.
+
+-h: Print a short usage summary and exit 0.
+
+.SH EXIT STATUS
+0: End of input reached.

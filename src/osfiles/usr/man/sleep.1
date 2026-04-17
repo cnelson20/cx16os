@@ -1,0 +1,53 @@
+.TH SLEEP(1),User Commands,SLEEP(1)
+
+.SH NAME
+sleep - suspend execution for a given interval
+
+.SH SYNOPSIS
+sleep interval
+
+.SH DESCRIPTION
+sleep suspends the current process until the system clock reaches a target time equal to the current time plus interval.
+
+interval is either a plain number of seconds, or a sequence of value-unit pairs such as 1h30m or 2m15s500j.
+Recognised units are:
+
+h: hours
+
+m: minutes
+
+s: seconds
+
+j: jiffies (1/60 of a second)
+
+Each numeric component must be less than the natural limit for its unit (s and m below 60, h below 24, j below 60).
+The pairs may appear in any order and may be repeated;
+their values are summed.
+
+sleep yields the CPU to other processes while waiting.
+
+.SH EXAMPLES
+sleep 5
+
+Wait five seconds.
+
+sleep 1h30m
+
+Wait one and a half hours.
+
+sleep 200j
+
+Wait 200 jiffies (about 3.3 seconds).
+
+.SH DIAGNOSTICS
+sleep: missing operand - no interval was given.
+
+sleep: invalid time interval 'ARG' - the argument could not be parsed, contained an unknown unit, or a component was out of range.
+
+.SH EXIT STATUS
+0: Interval elapsed.
+
+1: Missing operand or invalid interval.
+
+.SH SEE ALSO
+date(1), time(1)

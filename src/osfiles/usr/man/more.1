@@ -1,0 +1,39 @@
+.TH MORE(1),User Commands,MORE(1)
+
+.SH NAME
+more - view a file one screen at a time
+
+.SH SYNOPSIS
+more [-h] [file]
+
+.SH DESCRIPTION
+more displays file one screenful at a time.
+After each full screen it prints a --More-- prompt and waits for a keystroke.
+If no file is given, more reads from standard input.
+
+If standard input is not a keyboard (for example, when more is at the end of a pipeline), more prints the entire input without pausing.
+
+The cx16os less(1) is the same program as more and accepts the same keys.
+
+.SH KEYS
+space, f, PgDn: advance one full page
+
+Enter, cursor-down: advance one line
+
+q: quit
+
+.SH OPTIONS
+-h: Print a short usage summary and exit 0.
+
+.SH DIAGNOSTICS
+more: unknown option -- X - an unrecognised flag was given.
+
+more: FILE: No such file exists - the named file could not be opened.
+
+.SH EXIT STATUS
+0: File displayed to completion, or quit requested.
+
+1: The specified file could not be opened, or an unknown option was given.
+
+.SH SEE ALSO
+less(1)
