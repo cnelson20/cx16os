@@ -74,23 +74,36 @@ init:
 
 	bra @args_loop
 @no_args:
-	
+
 	lda #0
 	sta fd
-@loop:	
+@loop:
 	ldx fd
 	jsr fgetc
 	cpx #0
 	bne end_of_file
+	ldx verbatim_pending
+	beq :+
+	stz verbatim_pending
+	jsr CHROUT
+	bra @loop
+	:
 	tax
 	lda valid_c_table, X
 	beq @loop
+	cpx #$80
+	bne :+
+	stx verbatim_pending
+	:
 	txa
 	jsr CHROUT
 	bra @loop
 end_of_file:
 	lda #0
 	rts
+
+verbatim_pending:
+	.byte 0
 
 get_next_arg:
 	; loop until (ptr0) is \0
@@ -141,7 +154,8 @@ valid_c_table:
 	.res $10, 0						; $10 - $1F
 	.res $5F, 1						; $20 - $7E
 	.byte 0							; $7F (DEL)
-	.res $20, 0						; $80 - $9F
+	.byte 1							; $80 (VERBATIM_MODE)
+	.res $1F, 0						; $81 - $9F
 	.res $100 - $A0, 1				; $A0 - $FF
 
 no_colors_table:
