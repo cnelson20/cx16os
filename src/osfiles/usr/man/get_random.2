@@ -1,0 +1,22 @@
+.TH get_random(2),System Calls Manual,get_random(2)
+.SH ADDRESS
+$9DC9
+.SH DESCRIPTION
+- Returns 24 bits of entropy by calling the X16 KERNAL's `entropy_get` routine
+
+- Suitable for games and general-purpose randomness; not cryptographically secure
+.SH ARGUMENTS
+- None
+.SH RETURN VALUES
+- A -> low byte of random value
+
+- X -> middle byte of random value
+
+- Y -> high byte of random value
+
+
+
+Tramples
+
+- r0.L (used internally to preserve .A across the ROM bank restore)
+
