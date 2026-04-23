@@ -77,3 +77,4 @@
 .equ surrender_process_time $9D8D
 .equ detach_self $9DA2
 .equ strerror $9DC6
+.equ get_random $9DC9

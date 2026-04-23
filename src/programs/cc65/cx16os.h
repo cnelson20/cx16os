@@ -49,4 +49,6 @@ void __fastcall__ detach_self(unsigned char);
 unsigned char __fastcall__ lock_vera_regs(void);
 unsigned char __fastcall__ lock_vera_regs(void);
 
+unsigned short __fastcall__ get_random(void);
+
 #endif

@@ -58,6 +58,7 @@
 | $9DC0 | [`seek_file`](#9dc0-seek_file) | .A, r0, r1 | .A | .X, .Y | &mdash; |
 | $9DC3 | [`tell_file`](#9dc3-tell_file) | .A | .A, r0, r1, r2, r3 | .X, .Y | &mdash; |
 | $9DC6 | [`strerror`](#9dc6-strerror) | .A | .AX | .Y | &cross; |
+| $9DC9 | [`get_random`](#9dc9-get_random) | | .A, .X, .Y | r0.L | &check; |
 
 ### Note:
 Functions with an '&mdash;' under the `C Wrapper Implemented?` column mean that existing C builtins or functions provide the same functionality and are not necessary.  
@@ -503,4 +504,22 @@ Arguments:
 
 Return values:
 - AX: pointer to string
+
+---
+
+### $9DC9: get_random
+
+- Returns 24 bits of entropy by calling the X16 KERNAL's `entropy_get` routine
+- Suitable for games and general-purpose randomness; not cryptographically secure
+
+Arguments:
+- None
+
+Return values:
+- A -> low byte of random value
+- X -> middle byte of random value
+- Y -> high byte of random value
+
+Tramples:
+- r0.L (used internally to preserve .A across the ROM bank restore)
 

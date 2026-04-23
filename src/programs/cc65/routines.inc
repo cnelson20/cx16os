@@ -121,4 +121,6 @@ detach_self := $9DA2
 
 strerror := $9DC6
 
+get_random := $9DC9
+
 

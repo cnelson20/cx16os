@@ -35,6 +35,7 @@ clock_get_date_time := $FF50
 kbdbuf_get_modifiers := $FEC0
 i2c_read_byte := $FEC6
 i2c_write_byte := $FEC9
+entropy_get := $FECF
 
 ;
 ; colors

@@ -55,3 +55,6 @@ _lock_vera_regs = lock_vera_regs
 
 .export _unlock_vera_regs
 _unlock_vera_regs = unlock_vera_regs
+
+.export _get_random
+_get_random = get_random

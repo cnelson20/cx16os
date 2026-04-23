@@ -116,6 +116,7 @@ call_table:
 	jmp CALL_seek_file ; $9DC0
 	jmp CALL_tell_file ; $9DC3
 	jmp CALL_strerror ; $9DC6
+	jmp CALL_get_random ; $9DC9
 	.res 3, $FF
 .export call_table_end
 call_table_end:
@@ -736,6 +737,22 @@ CALL_strerror:
 	ldx #>unspec_error_str
 	bra @return
 @return:
+	restore_p_816
+	rts
+
+;
+; get_random: returns 24 bits of entropy via the X16 KERNAL entropy_get
+;             .A = low byte, .X = mid byte, .Y = high byte
+;             Tramples r0.L (used to stash .A while restoring ROM_BANK)
+;
+CALL_get_random:
+	save_p_816_8bitmode
+	pha_byte ROM_BANK
+	stz ROM_BANK
+	jsr entropy_get
+	sta r0
+	pla_byte ROM_BANK
+	lda r0
 	restore_p_816
 	rts
 
