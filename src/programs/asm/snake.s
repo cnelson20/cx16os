@@ -285,18 +285,7 @@ gen_food_xy:
 	rts 
 
 rand_byte:
-    lda rng_state
-    lsr A
-    bcc @no_feedback
-    eor #$B8        ; Galois LFSR taps for maximal 255-period
-@no_feedback:
-    sta rng_state
-    rts
-
-.SEGMENT "DATA"
-
-rng_state:
-    .byte $A5       ; seed (must be nonzero)
+    jmp get_random  ; .A = low byte of 24-bit KERNAL entropy; tail-call returns
 
 .SEGMENT "BSS"
 

@@ -9,12 +9,8 @@ NEWLINE = $0A
 NUM_FORTUNES = 30
 
 main:
-	/* Get a pseudo-random index from the clock */
-	jsr get_time
-	lda r3		; jiffies (0-59)
-	clc
-	adc r2 + 1	; + seconds
-	adc r2		; + minutes
+	/* Get a random index */
+	jsr get_random	; .A = low byte of 24-bit entropy
 
 	/* A mod NUM_FORTUNES */
 	ldx #0

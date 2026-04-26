@@ -1,15 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "cx16os.h"
 
 char buffer[128];
 
-#define GET_TIME 0x9D9F
-#define R2H (unsigned char *)0x07
-#define R3L (unsigned char *)0x08
-
 int main() {
-    __asm__ ("jsr %w", GET_TIME);
-    srand(((*R2H) << 8) | *R3L);
+    srand(get_random());
 
     while (1) {
         unsigned short target, guess, guess_count;

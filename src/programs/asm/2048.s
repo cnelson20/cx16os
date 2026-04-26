@@ -46,21 +46,6 @@ start:
     lda #1
     jsr set_stdin_read_mode     /* non-blocking getc */
 
-    /* seed LFSR from RTC */
-    jsr get_time                /* r2L=minutes, r2H=seconds, r3L=jiffies */
-    lda r2
-    sta rand_lo
-    lda r2 + 1
-    eor r3
-    sta rand_hi
-    ora rand_lo
-    bne :+
-    lda #$AC                    /* fallback non-zero seed */
-    sta rand_lo
-    lda #$E3
-    sta rand_hi
-:
-
     stz score
     stz score + 1
     stz win_shown
@@ -167,30 +152,27 @@ game_loop:
     rts
 
 /* ------------------------------------------------------------------
- * wait_key - spin until a key is pressed, advancing LFSR each iter
+ * wait_key - spin until a key is pressed
  * Returns key in A
  * ------------------------------------------------------------------ */
 wait_key:
     jsr getc
     cmp #0
     bne @done
-    jsr advance_rand
     jsr surrender_process_time
     bra wait_key
 @done:
     rts
 
 /* ------------------------------------------------------------------
- * advance_rand - 16-bit Galois LFSR, polynomial $B400
+ * advance_rand - refill rand_lo/rand_hi with 16 bits of KERNAL entropy
+ * Tramples r0.L (via get_random)
  * ------------------------------------------------------------------ */
 advance_rand:
-    lsr rand_hi
-    ror rand_lo
-    bcc :+
-    lda rand_hi
-    eor #$B4
-    sta rand_hi
-:   rts
+    jsr get_random
+    sta rand_lo
+    stx rand_hi
+    rts
 
 /* ------------------------------------------------------------------
  * do_move - slide board in direction A
