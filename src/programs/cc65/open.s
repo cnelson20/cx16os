@@ -30,8 +30,9 @@
 	and #(O_RDWR | O_CREAT)
 	cmp #O_RDONLY
 	beq @do_read
-	cmp #(O_WRONLY | O_CREAT)
-	beq @do_write
+	lda tmp3
+	and #O_WRONLY
+	bne @do_write
 	
 	lda #$FF
 	tax
