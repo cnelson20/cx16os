@@ -363,7 +363,7 @@ parse_num_kernal:
 
 ;
 ; returns base-16 representation of byte in .A in .X & .A
-; returns low byte in .X, high byte in .A, preserves .Y
+; returns low digit in .X, high digit in .A, preserves .Y
 ;
 .export hex_num_to_string_kernal
 hex_num_to_string_kernal:
