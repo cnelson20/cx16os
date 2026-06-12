@@ -23,7 +23,7 @@ int errno;
  * Circular buffer of line start offsets.
  * We store all input into a flat buffer and track where each line starts.
  */
-#define MAX_LINES 124
+#define MAX_LINES 110
 #define BUF_SIZE  768
 
 static char buf[BUF_SIZE];
