@@ -168,14 +168,14 @@ Return values:
 
 ### $9D18: hex_num_to_string
 - Also known as `GET_HEX_NUM`
-- Returns the ASCII conversion of the high nybble of .A in .X and the conversion of the low nybble in .A
+- Returns the ASCII conversion of the high nybble of .A in .A and the conversion of the low nybble in .X
 - Example output:
-  - .A = $4F  -->  .X = '4', .A = 'F'
+  - .A = $4F  -->  .A = '4', .X = 'F'
 - Preserves .Y
 
 Return values:
-- .X = ASCII conversion of num's hi nybble
-- .A = low nybble
+- .A = ASCII conversion of num's hi nybble
+- .X = low nybble
 
 ---
 
