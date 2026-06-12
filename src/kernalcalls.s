@@ -721,8 +721,8 @@ CALL_strerror:
 @neg_errs:
 	cmp #$100 - STRERROR_NEG_TABLE_SIZE
 	bcc @unk_error
-	dec A
 	eor #$FF
+	dec A
 	asl A
 	tax
 	lda strerror_neg_table, X

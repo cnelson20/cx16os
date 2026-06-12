@@ -79,9 +79,9 @@ init:
 	
 	; sync internal jiffy clock with i2c rtc
 	; rtc seconds are at device $6F, addr $00
-	lda #<1865 * 2
+	lda #<(1865 * 2)
 	sta r1
-	lda #>1865 * 2
+	lda #>(1865 * 2)
 	sta r1 + 1
 	ldx #$6F
 	ldy #$00
@@ -1920,6 +1920,7 @@ setup_kernal_processes:
 	.a8
 	.i8
 	
+	sec
 	jsr MEMTOP
 	and #$FE ; $FF - 1
 	sta r0

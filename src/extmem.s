@@ -132,10 +132,14 @@ CALL_free_extmem_bank:
 	rts
 
 free_extmem_bank:
-	jsr check_process_owns_bank
-	bne :+
 	phx
-	
+	pha
+	jsr check_process_owns_bank
+	bne @not_owned
+	pla
+	and #$FE
+	tax
+
 	dec process_table, X
 
 	inc RAM_BANK
@@ -143,7 +147,10 @@ free_extmem_bank:
 	dec RAM_BANK
 
 	plx
-	:
+	rts
+@not_owned:
+	pla
+	plx
 	rts
 
 ;
@@ -231,18 +238,14 @@ set_extmem_rptr:
 	cmp #$20
 	bcs :+
 	; first zp set ;
-	sta STORE_PROG_EXTMEM_RPTR
-	restore_p_816
-	rts
+	bra @valid_rptr
 	:
 	cmp #$30
 	bcc :+
 	cmp #$50
 	bcs :+
 	; second zp set ;
-	sta STORE_PROG_EXTMEM_RPTR
-	restore_p_816
-	rts
+	bra @valid_rptr
 	:
 	; not valid zp space, fail ;
 	lda #0
@@ -377,10 +380,10 @@ writef_byte_extmem_y:
 .export share_extmem_bank
 share_extmem_bank:
 	save_p_816_8bitmode
+	sta KZE0 ; save bank before check_process_owns_bank clobbers .A
 	jsr check_process_owns_bank
 	bne @failure_return ; doesn't own bank
 
-	sta KZE0
 	txa
 	jsr is_valid_process
 	cmp #0

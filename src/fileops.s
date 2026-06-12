@@ -648,18 +648,21 @@ pass_fd_other_process:
 	bcs :+
 	rts ; stdin/out/err
 	:
-	
+
 	cpy #$10
-	bcc :+
+	bcc @disk_file
 	cpy #$30
-	bcs :+
+	bcs @done ; NO_FILE / not a sys filenum, nothing to count
 	pha
 	phx
 	jsr pass_pipe_other_process
 	plx
 	pla
-	:
-	
+@done:
+	rts
+
+@disk_file:
+	; sys filenums 3-14 are refcounted in file_table_count
 	pha
 	lda RAM_BANK
 	pha
@@ -671,7 +674,6 @@ pass_fd_other_process:
 	pla
 	sta RAM_BANK
 	pla
-	; dont increase counter for files on disk
 	rts
 
 .export CALL_open_file
@@ -1374,8 +1376,8 @@ try_read_slow:
 	ldx KZE3
 	jsr CHKIN
 	bcs read_error_chkin
-	
-	lda r2
+
+	lda KZE2 ; dest bank (current_program_id if r2 = 0)
 	sta RAM_BANK
 	
 @read_slow_loop:
