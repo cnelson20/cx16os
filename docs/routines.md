@@ -170,7 +170,7 @@ Return values:
 - Also known as `GET_HEX_NUM`
 - Returns the ASCII conversion of the high nybble of .A in .X and the conversion of the low nybble in .A
 - Example output:
-  - .A = $4F  -->  .X = '4', .A = 'F'
+  - .A = $4F  -->  .X = 'F', .A = '4'
 - Preserves .Y
 
 Return values:
