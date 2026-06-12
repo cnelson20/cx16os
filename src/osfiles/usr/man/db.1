@@ -1,0 +1,52 @@
+.TH DB(1),User Commands,DB(1)
+
+.SH NAME
+db - small sql database
+
+.SH SYNOPSIS
+db FILE
+db FILE 'statement'
+
+.SH DESCRIPTION
+The db utility stores tables of data in a single database file and queries them with a small subset of SQL. With only a file argument it starts an interactive prompt; with a second argument it executes that one statement and exits.
+
+The whole database file is rewritten after every statement that changes data, so quitting at any time is safe. A power loss during a write can corrupt the file.
+
+.SH SQL STATEMENTS
+CREATE TABLE t (col INT, col TEXT, ...)
+
+DROP TABLE t
+
+INSERT INTO t VALUES (1, 'text')
+
+SELECT * FROM t [WHERE col op value]
+
+SELECT col, col FROM t [WHERE ...]
+
+UPDATE t SET col = value [WHERE ...]
+
+DELETE FROM t [WHERE ...]
+
+INT is a signed 16-bit number (-32768 to 32767). TEXT is a string of up to 100 bytes, quoted with single quotes; use '' for a literal quote. WHERE supports = != <> < > <= >= for INT and = != for TEXT (case-sensitive). Keywords and names are case-insensitive. Every INSERT must supply a value for every column.
+
+.SH DOT COMMANDS
+.tables: list table names.
+
+.schema: print the CREATE statement for each table.
+
+.help: short usage summary.
+
+.quit (or .exit): leave the prompt.
+
+.SH LIMITS
+8 tables per file, 8 columns per table, names up to 10 characters, rows up to 255 encoded bytes, about 8 kilobytes of row data per table. No JOIN, NULL, ORDER BY, aggregates, or transactions.
+
+.SH EXIT STATUS
+Exits 0 on success. In one-shot mode, exits 1 if the statement failed.
+
+.SH EXAMPLES
+$ db test.db "CREATE TABLE people (name TEXT, age INT)"
+
+$ db test.db "INSERT INTO people VALUES ('bob', 42)"
+
+$ db test.db "SELECT name FROM people WHERE age > 18"

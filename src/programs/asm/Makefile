@@ -9,7 +9,7 @@ PROGRAMS = shell echo ps kill looptest args cat xxd clear ls pwd ed vi \
 	rm mv cp mkdir rmdir guiterm gui sendmsg crshmon strings cron swapterm \
 	asm neofetch dirname basename scripter font more less fastterm grep time \
 	sleep true false stripcmds prnfnt man testprog beep splitterm awk tr fortune \
-	factor figlet sl 2048 snake top
+	factor figlet sl 2048 snake top db
 
 all: bindir $(PROGRAMS)
 	cp $(PROGRAMS) $(MNT_DIR)/bin
@@ -99,6 +99,9 @@ prnfnt: prnfnt.s $(INCL_DIR)/routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
 
 ed: ed.s $(INCL_DIR)/routines.inc
+	$(CC) $(FLAGS) -o $@ $@.s
+
+db: db.s $(INCL_DIR)/routines.inc
 	$(CC) $(FLAGS) -o $@ $@.s
 
 vi: vi.s $(INCL_DIR)/routines.inc
