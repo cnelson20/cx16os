@@ -13,7 +13,7 @@ char *first_line_ptr;
 char *file_names_list[64];
 unsigned file_names_len = 0;
 
-int parse_options(int, char **);
+int parse_options(int, char *[]);
 char *new_str_node(char *);
 int sort_file(FILE *);
 char *insert_line_buff_into_list();
