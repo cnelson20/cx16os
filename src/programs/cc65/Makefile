@@ -9,6 +9,18 @@ OBJS := $(patsubst %.s,%.o,$(wildcard *.s))
 
 INCS = routines.inc time.inc
 
+CC65_PREFIX := $(dir $(shell which cc65))..
+SUPERVISION_LIB := $(firstword $(wildcard $(CC65_PREFIX)/lib/supervision.lib $(CC65_PREFIX)/share/cc65/lib/supervision.lib))
+
+CC65_ZP_INC := $(firstword $(wildcard $(CC65_PREFIX)/asminc/zeropage.inc $(CC65_PREFIX)/share/cc65/asminc/zeropage.inc))
+ifneq ($(shell grep -sl c_sp $(CC65_ZP_INC) /dev/null),)
+A_FLAGS += -D CC65_HAS_C_SP
+endif
+
+supervision.lib: $(SUPERVISION_LIB)
+	@test -n "$(SUPERVISION_LIB)" || { echo "supervision.lib not found in cc65 installation ($(CC65_PREFIX))"; exit 1; }
+	cp $(SUPERVISION_LIB) $@
+
 stripped.lib: supervision.lib
 	cp supervision.lib stripped.lib
 	ar65 d stripped.lib joy-kernel.o joy_count.o joy_load.o joy_read.o joy_stat_stddrv.o joy_unload.o
