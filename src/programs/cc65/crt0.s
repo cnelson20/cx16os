@@ -12,6 +12,13 @@
 
 .include "routines.inc" ; cx16os routines
 
+; Newer cc65 renames the C stack pointer from 'sp' to 'c_sp' and deprecates
+; 'sp' (linker warning). The Makefile defines CC65_HAS_C_SP when the installed
+; cc65 uses the new name; alias the old name so both versions assemble cleanly.
+.ifndef CC65_HAS_C_SP
+c_sp = sp
+.endif
+
 ; ---------------------------------------------------------------------------
 ; Place the startup code in a special segment
 
@@ -26,9 +33,9 @@ _init:
 	.byte $EA, $EA
 	.endif
 	lda     #<(__RAM_START__ + __RAM_SIZE__)
-    sta     sp
+    sta     c_sp
     lda     #>(__RAM_START__ + __RAM_SIZE__)
-    sta     sp+1
+    sta     c_sp+1
 
 	; Initialize memory storage
     jsr     zerobss              ; Clear BSS segment

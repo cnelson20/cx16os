@@ -50,14 +50,14 @@ build: os.prg programs
 sd: copy build
 ifneq ($(USE_MTOOLS),)
 	mkdir -p mnt_dir/OS/
-	cp mnt/* -r mnt_dir/OS/
+	cp -r mnt/* mnt_dir/OS/
 	mcopy -i cx16os.img@@1M -smno mnt_dir/* ::
 else
 ifeq ($(OS),Windows_NT)
 	rm -f /cygdrive/c/x16image.vhdx
 	diskpart < scripts/diskpart_mount.in
 	mkdir -p /cygdrive/v/OS/
-	cp mnt/* -r /cygdrive/v/OS/
+	cp -r mnt/* /cygdrive/v/OS/
 	diskpart < scripts/diskpart_detach.in
 	qemu-img convert -f vhdx "C:\x16image.vhdx" -O raw cx16os.img
 else
